@@ -1,61 +1,110 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  Users, 
-  Plus, 
-  ChevronLeft, 
-  ChevronRight, 
-  MoreVertical,
-  FileDown,
-  Grid, 
+import {
+  Grid,
+  Plus,
+  Clock,
+  Users,
   Columns,
+  FileDown,
+  AlertCircle,
+  ChevronLeft,
   ListOrdered,
-  AlertCircle, 
-  Check,
-  X,
+  ChevronRight,
+  MoreVertical,
   AlertTriangle,
+  Calendar as CalendarIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isToday, isPast, parseISO } from "date-fns";
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
-import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-
-interface Session {
-  id: number;
-  date: string;
-  startTime: string;
-  endTime: string;
-  volunteers: Volunteer[];
-  pendingVolunteers: Volunteer[];
-  status: "open" | "full" | "cancelled";
-  notes: string;
-  maxVolunteers: number;
-  isRecurring?: boolean;
-  recurrence?: {
-    frequency: "weekly" | "biweekly" | "monthly";
-    endDate: string | null;
-  };
-}
+import { Textarea } from "@/components/ui/textarea";
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isToday, isPast } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import { useResidents } from "@/hooks/useFirestoreResidents";
 
 interface Volunteer {
-  id: number;
-  name: string;
-  email: string;
+  id: string;
+  userId: string;
+  fullName: string;
+  birthDate: string; // YYYY-MM-DD
+  gender: "male" | "female";
+  phoneNumber: string;
+  languages: string[];
   skills?: string[];
+  hobbies?: string[];
+  groupAffiliation?: string | null;
+  reasonForVolunteering?: "scholarship" | "communityService" | "personalInterest" | "other" | null;
+  matchingPreference?: "oneOnOne" | "groupActivity" | "noPreference" | null;
+  isActive: boolean;
+  createdAt: string; // ISO timestamp
+  notes?: string | null;
+}
+
+interface VolunteerRequest {
+  volunteerId: string;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string; // ISO timestamp
+  approvedAt?: string; // ISO timestamp
+  rejectedAt?: string; // ISO timestamp
+  rejectedReason?: string | null;
+  matchScore?: number;
+  assignedBy: "ai" | "manager";
+}
+
+interface CalendarSlot {
+  id: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  period: "morning" | "afternoon" | "evening" | null;
+  isCustom: boolean;
+  customLabel: string | null;
+  residentIds: string[];
+  maxCapacity: number;
+  volunteerRequests: VolunteerRequest[];
+  approvedVolunteers: string[]; // Track approved volunteers separately
+  status: "open" | "full" | "canceled";
+  appointmentId: string | null;
+  isOpen: boolean;
+  createdAt: string; // ISO timestamp
+  notes: string | null;
+}
+
+interface Appointment {
+  id: string;
+  calendarSlotId: string;
+  residentIds: string[];
+  volunteerIds: string[];
+  status: "upcoming" | "inProgress" | "completed" | "canceled";
+  updatedAt: string; // ISO timestamp
+  createdAt: string; // ISO timestamp
+  notes: string | null;
+}
+
+interface ExternalGroup {
+  id: string;
+  appointmentId: string;
+  groupName: string;
+  contactPerson: string;
+  contactPhoneNumber: string;
+  purposeOfVisit: string;
+  numberOfParticipants: number;
+  assignedDepartment?: string;
+  activityContent?: string;
+  createdAt: string; // ISO timestamp
+  notes?: string | null;
 }
 
 type CalendarView = "month" | "week" | "day";
@@ -82,22 +131,97 @@ const formatIsraelTime = (date: Date | string, formatStr: string = 'yyyy-MM-dd')
   return formatInTimeZone(date, TIMEZONE, formatStr);
 };
 
-const isSessionInPast = (session: Session): boolean => {
+const isSlotInPast = (slot: CalendarSlot): boolean => {
   const now = toIsraelTime(new Date());
-  const sessionDate = toIsraelTime(session.date);
-  
+  const slotDate = toIsraelTime(slot.date);
+
   // Compare dates in Israel timezone
   const today = toIsraelTime(now);
   today.setHours(0, 0, 0, 0);
-  sessionDate.setHours(0, 0, 0, 0);
-  
-  return sessionDate < today;
+  slotDate.setHours(0, 0, 0, 0);
+
+  return slotDate < today;
 };
+
+// Mock data
+const mockVolunteers: Volunteer[] = [
+  {
+    id: "vol_001",
+    userId: "user_001",
+    fullName: "Sarah Cohen",
+    birthDate: "1995-05-15",
+    gender: "female",
+    phoneNumber: "+972501234567",
+    languages: ["Hebrew", "English", "Russian"],
+    skills: ["First Aid", "Music"],
+    hobbies: ["Reading", "Hiking"],
+    groupAffiliation: null,
+    reasonForVolunteering: "communityService",
+    matchingPreference: "oneOnOne",
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00Z",
+    notes: "Very reliable and punctual"
+  },
+  {
+    id: "vol_002",
+    userId: "user_002",
+    fullName: "David Levi",
+    birthDate: "1990-08-20",
+    gender: "male",
+    phoneNumber: "+972502345678",
+    languages: ["Hebrew", "English", "Arabic"],
+    skills: ["Cooking", "Art"],
+    hobbies: ["Photography", "Chess"],
+    groupAffiliation: null,
+    reasonForVolunteering: "personalInterest",
+    matchingPreference: "groupActivity",
+    isActive: true,
+    createdAt: "2024-01-15T00:00:00Z",
+    notes: "Great with elderly residents"
+  }
+];
+
+const mockCalendarSlots: CalendarSlot[] = [
+  {
+    id: "slot_001",
+    date: "2025-05-09",
+    startTime: "09:00",
+    endTime: "12:00",
+    period: "morning",
+    isCustom: false,
+    customLabel: null,
+    residentIds: ["resident_001"],
+    maxCapacity: 2,
+    volunteerRequests: [
+      {
+        volunteerId: "vol_001",
+        status: "pending",
+        requestedAt: "2025-05-01T10:00:00Z",
+        matchScore: 0.85,
+        assignedBy: "ai"
+      },
+      {
+        volunteerId: "vol_002",
+        status: "pending",
+        requestedAt: "2025-05-01T14:00:00Z",
+        matchScore: 0.75,
+        assignedBy: "ai"
+      }
+    ],
+    approvedVolunteers: [],
+    status: "open",
+    appointmentId: "app_001",
+    isOpen: true,
+    notes: "Resident prefers Hebrew speakers",
+    createdAt: "2025-04-30T09:00:00Z"
+  }
+];
 
 const ManagerCalendar = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   // Calendar state
   const [calendarView, setCalendarView] = useState<CalendarView>("month");
@@ -105,7 +229,7 @@ const ManagerCalendar = () => {
     const now = new Date();
     return toIsraelTime(now);
   });
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [slots, setSlots] = useState<CalendarSlot[]>(mockCalendarSlots);
 
   // Filter state
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>(() => {
@@ -127,34 +251,55 @@ const ManagerCalendar = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPendingRequestsDialogOpen, setIsPendingRequestsDialogOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [newSession, setNewSession] = useState<Partial<Session>>({
-    id: Date.now(),
+  const [selectedSlot, setSelectedSlot] = useState<CalendarSlot | null>(null);
+  const [newSlot, setNewSlot] = useState<Partial<CalendarSlot> & { externalGroup?: Partial<ExternalGroup> }>({
     date: formatIsraelTime(new Date(), 'yyyy-MM-dd'),
     startTime: "09:00",
-    endTime: "11:00",
-    volunteers: [],
-    pendingVolunteers: [],
+    endTime: "12:00",
+    period: "morning",
+    isCustom: false,
+    customLabel: null,
+    residentIds: [],
+    maxCapacity: 3,
+    volunteerRequests: [],
     status: "open",
+    isOpen: true,
     notes: "",
-    maxVolunteers: 5,
-    isRecurring: false
+    createdAt: new Date().toISOString(),
+    externalGroup: undefined
   });
 
   // Add new state for day sessions dialog
   const [isDaySessionsDialogOpen, setIsDaySessionsDialogOpen] = useState(false);
-  const [selectedDaySessions, setSelectedDaySessions] = useState<Session[]>([]);
+  const [selectedDaySessions, setSelectedDaySessions] = useState<CalendarSlot[]>([]);
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
 
   // Add state for pending requests
-  const [pendingRequests, setPendingRequests] = useState<Session[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<CalendarSlot[]>([]);
   const [isPendingViewActive, setIsPendingViewActive] = useState(false);
 
   // Add state to track which volunteer action is in progress
-  const [pendingVolunteerAction, setPendingVolunteerAction] = useState<{[key:string]: boolean}>({});
+  const [pendingVolunteerAction, setPendingVolunteerAction] = useState<{ [key: string]: boolean }>({});
 
   // Add this state near the other state declarations
-  const [fadingVolunteers, setFadingVolunteers] = useState<{[key: string]: boolean}>({});
+  const [fadingVolunteers, setFadingVolunteers] = useState<{ [key: string]: boolean }>({});
+
+  // Add new state for external groups
+  const [externalGroups, setExternalGroups] = useState<{ [key: string]: ExternalGroup }>({});
+
+  // Add state for appointments
+  const [appointments, setAppointments] = useState<{ [key: string]: Appointment }>({});
+
+  // Add Firestore hooks
+  const { volunteers, loading: volunteersLoading } = useVolunteers();
+  const { residents, loading: residentsLoading } = useResidents();
+
+  // Log header height when view changes
+  useEffect(() => {
+    if (headerRef.current) {
+      console.log(`Header height on ${isPendingViewActive ? 'Pending' : calendarView} view:`, headerRef.current.offsetHeight, 'px');
+    }
+  }, [calendarView, isPendingViewActive]);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -187,33 +332,66 @@ const ManagerCalendar = () => {
   // Update useEffect to filter pending requests when view changes
   useEffect(() => {
     // Filter sessions that have pending volunteers and are not in the past
-    const sessionsWithPending = sessions.filter(session => {
+    const sessionsWithPending = slots.filter(session => {
       const sessionDate = toIsraelTime(session.date);
       sessionDate.setHours(0, 0, 0, 0);
       const today = toIsraelTime(new Date());
       today.setHours(0, 0, 0, 0);
-      return session.pendingVolunteers.length > 0 && sessionDate >= today;
+      return session.volunteerRequests.some(request => request.status === "pending") && sessionDate >= today;
     });
-    
+
     setPendingRequests(sessionsWithPending);
-    
+
     // Close the dialog if there are no pending requests
-    if (sessionsWithPending.length === 0 && isPendingRequestsDialogOpen) {
+    if (sessionsWithPending.length === 0) {
       setIsPendingRequestsDialogOpen(false);
+      // If we're in pending view and there are no more pending requests, go back to calendar
+      if (isPendingViewActive) {
+        setIsPendingViewActive(false);
+      }
     }
-  }, [sessions, isPendingRequestsDialogOpen]);
+  }, [slots, isPendingRequestsDialogOpen, isPendingViewActive]);
+
+  // Add this useEffect near the other useEffect hooks
+  useEffect(() => {
+    const checkAndUpdatePastSlots = () => {
+      const now = toIsraelTime(new Date());
+      now.setHours(0, 0, 0, 0);
+
+      setSlots(prevSlots =>
+        prevSlots.map(slot => {
+          const slotDate = toIsraelTime(slot.date);
+          slotDate.setHours(0, 0, 0, 0);
+
+          // If the slot is in the past, not canceled, and not full
+          if (slotDate < now && slot.status !== "canceled" && slot.approvedVolunteers.length < slot.maxCapacity) {
+            return {
+              ...slot,
+              status: "canceled"
+            };
+          }
+          return slot;
+        })
+      );
+    };
+
+    // Check immediately and then every hour
+    checkAndUpdatePastSlots();
+    const interval = setInterval(checkAndUpdatePastSlots, 60 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Apply filters to sessions
-  const filteredSessions = sessions.filter(session => {
-    const sessionDate = toIsraelTime(session.date);
-    const inDateRange = sessionDate >= dateRange.start && sessionDate <= dateRange.end;
+  const filteredSessions = slots.filter(slot => {
+    const slotDate = toIsraelTime(slot.date);
+    const inDateRange = slotDate >= dateRange.start && slotDate <= dateRange.end;
 
     const matchesStatus =
       statusFilter === "all" ||
-      (statusFilter === "open" && session.status === "open") ||
-      (statusFilter === "full" && session.status === "full") ||
-      (statusFilter === "cancelled" && session.status === "cancelled") ||
-      (statusFilter === "pending" && session.pendingVolunteers.length > 0);
+      (statusFilter === "open" && slot.status === "open" && slot.approvedVolunteers.length < slot.maxCapacity) ||
+      (statusFilter === "full" && slot.approvedVolunteers.length >= slot.maxCapacity) ||
+      (statusFilter === "canceled" && slot.status === "canceled");
 
     return inDateRange && matchesStatus;
   });
@@ -314,8 +492,8 @@ const ManagerCalendar = () => {
   // Handle create session
   const handleCreateSession = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newSession.date || !newSession.startTime || !newSession.endTime || !newSession.maxVolunteers) {
+
+    if (!newSlot.date || !newSlot.startTime || !newSlot.endTime) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
@@ -324,7 +502,31 @@ const ManagerCalendar = () => {
       return;
     }
 
-    if (newSession.startTime >= newSession.endTime) {
+    if (!newSlot.externalGroup && !newSlot.maxCapacity) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in max capacity for regular sessions.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newSlot.externalGroup) {
+      if (!newSlot.externalGroup.groupName ||
+        !newSlot.externalGroup.contactPerson ||
+        !newSlot.externalGroup.contactPhoneNumber ||
+        !newSlot.externalGroup.purposeOfVisit ||
+        !newSlot.externalGroup.numberOfParticipants) {
+        toast({
+          title: "Missing external group information",
+          description: "Please fill in all required fields for the external group.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    if (newSlot.startTime >= newSlot.endTime) {
       toast({
         title: "Invalid time range",
         description: "End time must be after start time.",
@@ -334,59 +536,79 @@ const ManagerCalendar = () => {
     }
 
     // Create session with Israel time
-    const createdSession: Session = {
-      id: Date.now(),
-      date: formatIsraelTime(toIsraelTime(newSession.date)),
-      startTime: newSession.startTime,
-      endTime: newSession.endTime,
-      volunteers: [],
-      pendingVolunteers: [],
-      status: "open",
-      notes: newSession.notes || "",
-      maxVolunteers: newSession.maxVolunteers,
-      isRecurring: newSession.isRecurring || false,
-      recurrence: newSession.isRecurring ? {
-        frequency: newSession.recurrence?.frequency || "weekly",
-        endDate: newSession.recurrence?.endDate ? formatIsraelTime(toIsraelTime(newSession.recurrence.endDate)) : null
-      } : undefined
+    const createdSlot: CalendarSlot = {
+      id: Date.now().toString(),
+      date: formatIsraelTime(toIsraelTime(newSlot.date)),
+      startTime: newSlot.startTime,
+      endTime: newSlot.endTime,
+      period: newSlot.period || "morning",
+      isCustom: newSlot.isCustom || false,
+      customLabel: newSlot.customLabel || null,
+      residentIds: newSlot.residentIds || [],
+      maxCapacity: newSlot.externalGroup ? newSlot.externalGroup.numberOfParticipants : newSlot.maxCapacity,
+      volunteerRequests: [],
+      approvedVolunteers: newSlot.externalGroup ? Array(newSlot.externalGroup.numberOfParticipants).fill("external_group") : [],
+      status: newSlot.externalGroup ? "full" : "open",
+      appointmentId: null,
+      isOpen: true,
+      notes: newSlot.notes || "",
+      createdAt: new Date().toISOString()
     };
 
-    if (newSession.isRecurring && newSession.recurrence?.endDate) {
-      const newSessions: Session[] = [];
-      const startDate = toIsraelTime(newSession.date);
-      const endDate = toIsraelTime(newSession.recurrence.endDate);
-      const interval = newSession.recurrence.frequency === "weekly" ? 7 : 14;
+    setSlots(prev => [...prev, createdSlot]);
 
-      let currentDate = new Date(startDate);
-      let sessionCount = 0;
-      while (currentDate <= endDate) {
-        newSessions.push({
-          ...createdSession,
-          id: Date.now() + sessionCount,
-          date: formatIsraelTime(currentDate)
-        });
-        currentDate = new Date(currentDate);
-        currentDate.setDate(currentDate.getDate() + interval);
-        sessionCount++;
-      }
+    // Store external group data if present
+    if (newSlot.externalGroup) {
+      const externalGroup: ExternalGroup = {
+        id: createdSlot.id,
+        appointmentId: createdSlot.id,
+        groupName: newSlot.externalGroup.groupName,
+        contactPerson: newSlot.externalGroup.contactPerson,
+        contactPhoneNumber: newSlot.externalGroup.contactPhoneNumber,
+        purposeOfVisit: newSlot.externalGroup.purposeOfVisit,
+        numberOfParticipants: newSlot.externalGroup.numberOfParticipants,
+        assignedDepartment: newSlot.externalGroup.assignedDepartment,
+        activityContent: newSlot.externalGroup.activityContent,
+        notes: newSlot.externalGroup.notes,
+        createdAt: new Date().toISOString()
+      };
+      setExternalGroups(prev => ({
+        ...prev,
+        [createdSlot.id]: externalGroup
+      }));
 
-      setSessions(prev => [...prev, ...newSessions]);
-    } else {
-      setSessions(prev => [...prev, createdSession]);
+      // Create appointment for external group
+      const newAppointment: Appointment = {
+        id: Date.now().toString(),
+        calendarSlotId: createdSlot.id,
+        residentIds: createdSlot.residentIds,
+        volunteerIds: createdSlot.approvedVolunteers,
+        status: "upcoming",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        notes: createdSlot.notes
+      };
+      setAppointments(prev => ({
+        ...prev,
+        [createdSlot.id]: newAppointment
+      }));
     }
 
       setIsCreateDialogOpen(false);
-    setNewSession({
-        id: Date.now(),
+    setNewSlot({
       date: formatIsraelTime(new Date(), 'yyyy-MM-dd'),
       startTime: "09:00",
-      endTime: "11:00",
-        volunteers: [],
-      pendingVolunteers: [],
+      endTime: "12:00",
+      period: "morning",
+      isCustom: false,
+      customLabel: null,
+      residentIds: [],
+      maxCapacity: 3,
+      volunteerRequests: [],
       status: "open",
+      isOpen: true,
       notes: "",
-      maxVolunteers: 5,
-      isRecurring: false
+      createdAt: new Date().toISOString()
     });
 
     toast({
@@ -397,22 +619,39 @@ const ManagerCalendar = () => {
 
   // Handle delete session
   const handleDeleteSession = () => {
-    if (!selectedSession) return;
+    if (!selectedSlot) return;
 
-    // Check if there are approved volunteers
-    if (selectedSession.volunteers.length > 0) {
+    // Check if appointment exists (has approved volunteers or is an external group)
+    if (selectedSlot.approvedVolunteers.length > 0 || selectedSlot.approvedVolunteers[0] === "external_group") {
       toast({
-        title: "Cannot delete session",
-        description: "This session has approved volunteers and cannot be deleted.",
+        title: "Cannot Delete Session",
+        description: "This session has approved volunteers or is an external group. Please change its status to 'canceled' instead.",
         variant: "destructive"
       });
-      setIsDeleteDialogOpen(false);
       return;
     }
 
-    setSessions(sessions.filter(session => session.id !== selectedSession.id));
+    // Delete associated appointment if exists
+    if (appointments[selectedSlot.id]) {
+      setAppointments(prev => {
+        const newAppointments = { ...prev };
+        delete newAppointments[selectedSlot.id];
+        return newAppointments;
+      });
+    }
+
+    // Delete associated external group if exists
+    if (externalGroups[selectedSlot.id]) {
+      setExternalGroups(prev => {
+        const newExternalGroups = { ...prev };
+        delete newExternalGroups[selectedSlot.id];
+        return newExternalGroups;
+      });
+    }
+
+    setSlots(slots.filter(session => session.id !== selectedSlot.id));
     setIsDeleteDialogOpen(false);
-    setSelectedSession(null);
+    setSelectedSlot(null);
 
     toast({
       title: "Session deleted",
@@ -422,10 +661,10 @@ const ManagerCalendar = () => {
 
   // Handle edit session
   const handleEditSession = () => {
-    if (!selectedSession) return;
+    if (!selectedSlot) return;
 
     // Validate time range
-    if (selectedSession.startTime >= selectedSession.endTime) {
+    if (selectedSlot.startTime >= selectedSlot.endTime) {
       toast({
         title: "Invalid time range",
         description: "End time must be after start time.",
@@ -435,17 +674,29 @@ const ManagerCalendar = () => {
     }
 
     // Update session with Israel time
-    const updatedSession = {
-      ...selectedSession,
-      date: formatIsraelTime(toIsraelTime(selectedSession.date))
+    const updatedSlot = {
+      ...selectedSlot,
+      date: formatIsraelTime(toIsraelTime(selectedSlot.date))
     };
 
-    setSessions(sessions.map(session =>
-      session.id === selectedSession.id ? updatedSession : session
+    setSlots(slots.map(session =>
+      session.id === selectedSlot.id ? updatedSlot : session
     ));
 
+    // Update appointment status if slot is canceled
+    if (selectedSlot.status === "canceled" && appointments[selectedSlot.id]) {
+      setAppointments(prev => ({
+        ...prev,
+        [selectedSlot.id]: {
+          ...prev[selectedSlot.id],
+          status: "canceled",
+          updatedAt: new Date().toISOString()
+        }
+      }));
+    }
+
     setIsEditDialogOpen(false);
-    setSelectedSession(null);
+    setSelectedSlot(null);
 
     toast({
       title: "Session updated",
@@ -455,22 +706,22 @@ const ManagerCalendar = () => {
 
   // Handle volunteer request actions
   const handleVolunteerRequest = (
-    sessionId: number, 
-    volunteerId: number, 
+    sessionId: string,
+    volunteerId: string,
     action: 'approve' | 'reject'
   ) => {
     // Prevent multiple clicks
     const actionKey = `${sessionId}-${volunteerId}`;
     if (pendingVolunteerAction[actionKey]) return;
-    
+
     // Check if the session is in the past
-    const session = sessions.find(s => s.id === sessionId);
+    const session = slots.find(s => s.id === sessionId);
     if (session) {
       const sessionDate = toIsraelTime(session.date);
       sessionDate.setHours(0, 0, 0, 0);
       const today = toIsraelTime(new Date());
       today.setHours(0, 0, 0, 0);
-      
+
       if (sessionDate < today) {
         toast({
           title: "Cannot process request",
@@ -480,59 +731,125 @@ const ManagerCalendar = () => {
       return;
       }
     }
-    
+
     setPendingVolunteerAction(prev => ({ ...prev, [actionKey]: true }));
     setFadingVolunteers(prev => ({ ...prev, [actionKey]: true }));
 
     // Wait for fade animation before updating state
     setTimeout(() => {
       // Update sessions state
-      setSessions(prev => prev.map(session => {
+      setSlots(prev => prev.map(session => {
         if (session.id !== sessionId) return session;
-        
-        const pendingVolunteer = session.pendingVolunteers.find(v => v.id === volunteerId);
-        if (!pendingVolunteer) return session;
-        
+
+        const updatedVolunteerRequests = session.volunteerRequests.filter(v => v.volunteerId !== volunteerId);
+        let updatedApprovedVolunteers = [...session.approvedVolunteers];
+        let updatedStatus = session.status;
+
         if (action === 'approve') {
-          return {
-            ...session,
-            volunteers: [...session.volunteers, pendingVolunteer],
-            pendingVolunteers: session.pendingVolunteers.filter(v => v.id !== volunteerId),
-            status: session.volunteers.length + 1 >= session.maxVolunteers ? 'full' : 'open'
-          };
+          updatedApprovedVolunteers = [...updatedApprovedVolunteers, volunteerId];
+          // Update status based on approved volunteers count
+          if (updatedApprovedVolunteers.length >= session.maxCapacity) {
+            updatedStatus = "full";
+          } else {
+            updatedStatus = "open";
+          }
+
+          // Create appointment if this is the first approved volunteer
+          if (updatedApprovedVolunteers.length === 1) {
+            const newAppointment: Appointment = {
+              id: Date.now().toString(),
+              calendarSlotId: sessionId,
+              residentIds: session.residentIds,
+              volunteerIds: [volunteerId],
+              status: "upcoming",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              notes: session.notes || null
+            };
+            setAppointments(prev => ({
+              ...prev,
+              [sessionId]: newAppointment
+            }));
+          } else if (updatedApprovedVolunteers.length > 1) {
+            // Update existing appointment with new volunteer
+            setAppointments(prev => ({
+              ...prev,
+              [sessionId]: {
+                ...prev[sessionId],
+                volunteerIds: updatedApprovedVolunteers,
+                updatedAt: new Date().toISOString()
+              }
+            }));
+          }
+        } else if (action === 'reject') {
+          // Remove volunteer from approved list if they were approved
+          updatedApprovedVolunteers = updatedApprovedVolunteers.filter(id => id !== volunteerId);
+
+          // Update appointment if it exists
+          if (appointments[sessionId]) {
+            if (updatedApprovedVolunteers.length === 0) {
+              // Delete appointment if no volunteers left
+              setAppointments(prev => {
+                const newAppointments = { ...prev };
+                delete newAppointments[sessionId];
+                return newAppointments;
+              });
         } else {
+              // Update appointment with remaining volunteers
+              setAppointments(prev => ({
+                ...prev,
+                [sessionId]: {
+                  ...prev[sessionId],
+                  volunteerIds: updatedApprovedVolunteers,
+                  updatedAt: new Date().toISOString()
+                }
+              }));
+            }
+          }
+        }
+
           return {
             ...session,
-            pendingVolunteers: session.pendingVolunteers.filter(v => v.id !== volunteerId)
+          volunteerRequests: updatedVolunteerRequests,
+          approvedVolunteers: updatedApprovedVolunteers,
+          status: updatedStatus
           };
-        }
       }));
 
       // Update selected session if it's the one being modified
-      if (selectedSession?.id === sessionId) {
-        setSelectedSession(prev => {
+      if (selectedSlot?.id === sessionId) {
+        setSelectedSlot(prev => {
           if (!prev) return null;
-          const updatedSession = { ...prev };
+          const updatedVolunteerRequests = prev.volunteerRequests.filter(v => v.volunteerId !== volunteerId);
+          let updatedApprovedVolunteers = [...prev.approvedVolunteers];
+          let updatedStatus = prev.status;
+
           if (action === 'approve') {
-            const volunteer = updatedSession.pendingVolunteers.find(v => v.id === volunteerId);
-            if (volunteer) {
-              updatedSession.volunteers = [...updatedSession.volunteers, volunteer];
-              updatedSession.pendingVolunteers = updatedSession.pendingVolunteers.filter(v => v.id !== volunteerId);
-              updatedSession.status = updatedSession.volunteers.length >= updatedSession.maxVolunteers ? 'full' : 'open';
-            }
+            updatedApprovedVolunteers = [...updatedApprovedVolunteers, volunteerId];
+            if (updatedApprovedVolunteers.length >= prev.maxCapacity) {
+              updatedStatus = "full";
           } else {
-            updatedSession.pendingVolunteers = updatedSession.pendingVolunteers.filter(v => v.id !== volunteerId);
+              updatedStatus = "open";
+            }
+          } else if (action === 'reject') {
+            updatedApprovedVolunteers = updatedApprovedVolunteers.filter(id => id !== volunteerId);
           }
-          return updatedSession;
+
+          return {
+            ...prev,
+            volunteerRequests: updatedVolunteerRequests,
+            approvedVolunteers: updatedApprovedVolunteers,
+            status: updatedStatus
+          };
         });
       }
 
       // Update pending requests view if active
       if (isPendingViewActive) {
-        setPendingRequests(prev => 
-          prev.filter(session => 
-            session.id !== sessionId || 
-            session.pendingVolunteers.some(v => v.id !== volunteerId)
+        setPendingRequests(prev =>
+          prev.filter(session =>
+            session.id !== sessionId ||
+            session.volunteerRequests.some(v => v.volunteerId !== volunteerId)
           )
         );
       }
@@ -551,11 +868,11 @@ const ManagerCalendar = () => {
 
       toast({
         title: action === 'approve' ? "Volunteer approved" : "Volunteer rejected",
-        description: action === 'approve' 
+        description: action === 'approve'
           ? "The volunteer has been added to the session."
           : "The volunteer request has been rejected."
       });
-    }, 300); // Match this with the CSS transition duration
+    }, 300);
   };
 
   // Handle logout
@@ -586,8 +903,14 @@ const ManagerCalendar = () => {
 
             <div className="divide-y">
               {pendingRequests.length === 0 ? (
-                <div className="p-8 text-center text-slate-500">
-                  No pending volunteer requests at this time.
+                <div className="p-8 text-center">
+                  <div className="text-slate-500 mb-4">No pending volunteer requests at this time.</div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsPendingViewActive(false)}
+                  >
+                    Back to Calendar
+                  </Button>
                 </div>
               ) : (
                 pendingRequests
@@ -601,11 +924,11 @@ const ManagerCalendar = () => {
                       key={session.id}
                       className="p-4 hover:bg-slate-50 cursor-pointer transition-colors"
                       onClick={() => {
-                        setSelectedSession(session);
+                        setSelectedSlot(session);
                         setIsPendingRequestsDialogOpen(true);
                       }}
                     >
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center">
                         <div>
                           <h4 className="text-lg font-medium">
                             {format(new Date(session.date), 'EEEE, MMMM d, yyyy')}
@@ -617,17 +940,23 @@ const ManagerCalendar = () => {
             </div>
                             <div className="flex items-center text-slate-600">
                               <Users className="h-4 w-4 mr-1" />
-                              <span>{session.volunteers.length}/{session.maxVolunteers} volunteers</span>
+                              <span>{session.approvedVolunteers.length}/{session.maxCapacity} filled</span>
           </div>
             </div>
           </div>
-          
-            <Button 
+
+            <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 bg-orange-50 border-orange-200 text-orange-700 self-start"
+                          className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:text-amber-800"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedSlot(session);
+                            setIsPendingRequestsDialogOpen(true);
+                          }}
                         >
-                          Review Requests
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                          {session.volunteerRequests.filter(v => v.status === "pending").length} pending request{session.volunteerRequests.filter(v => v.status === "pending").length !== 1 ? 's' : ''}
             </Button>
             </div>
             </div>
@@ -640,13 +969,14 @@ const ManagerCalendar = () => {
     }
 
     return (
+      <div>
       <Tabs value={calendarView} className="w-full">
         <TabsContent value="month" className="mt-0">
           {/* Month View */}
           <div className="p-4">
             <div className="grid grid-cols-7 gap-2 mb-2">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                <div key={day} className="text-center font-medium text-slate-600 py-2 text-base">
+                  <div key={day} className="text-center font-medium text-slate-600 py-2 text-sm">
                   {day}
               </div>
               ))}
@@ -665,7 +995,7 @@ const ManagerCalendar = () => {
                 // Add empty cells for days before the first day of the month
                 for (let i = 0; i < firstDayOfMonth; i++) {
                   days.push(
-                    <div key={`empty-${i}`} className="h-24 bg-slate-50/50 rounded-lg" />
+                      <div key={`empty-${i}`} className="h-24 p-2 border rounded-lg border-slate-200 bg-slate-100/80" />
                   );
                 }
 
@@ -682,7 +1012,7 @@ const ManagerCalendar = () => {
                       key={dateStr}
                       className={cn(
                         "h-24 p-2 border rounded-lg transition-colors overflow-hidden cursor-pointer",
-                        isCurrentDate ? "bg-slate-200/50 border-slate-200" : "border-slate-200 hover:bg-slate-50",
+                          isCurrentDate ? "border-slate-300 hover:bg-slate-50/80 ring-1 ring-black" : "border-slate-300 hover:bg-slate-50/80",
                         isPastDate ? "opacity-70" : ""
                       )}
                       onClick={() => {
@@ -697,27 +1027,27 @@ const ManagerCalendar = () => {
                         isCurrentDate ? "text-slate-900" : "text-slate-900"
                       )}>
                         <div className={cn(
-                          "w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200",
-                          formatIsraelTime(date, 'yyyy-MM-dd') === formatIsraelTime(selectedDate, 'yyyy-MM-dd') 
-                            ? "bg-primary/50 text-white"
+                            "w-6 h-6 flex items-center justify-center rounded-md transition-all duration-200",
+                          formatIsraelTime(date, 'yyyy-MM-dd') === formatIsraelTime(selectedDate, 'yyyy-MM-dd')
+                              ? "bg-slate-200 text-slate-700 shadow-sm shadow-slate-200"
                             : "hover:bg-slate-100"
                         )}>
                           <span className={cn(
-                            "text-base font-medium transition-colors duration-200",
+                              "text-sm font-medium transition-colors duration-200",
                             formatIsraelTime(date, 'yyyy-MM-dd') === formatIsraelTime(selectedDate, 'yyyy-MM-dd')
-                              ? "text-white"
+                                ? "text-slate-700"
                               : "text-slate-900"
                           )}>
                             {i}
                     </span>
                   </div>
                         {sessionsForDay.length > 0 && (
-                          <Badge variant="outline" className="text-xs font-normal px-1.5 py-0.5">
+                            <Badge variant="outline" className="text-xs font-normal px-1.5 py-0.5 bg-slate-50">
                             {sessionsForDay.length} session{sessionsForDay.length !== 1 ? 's' : ''}
                           </Badge>
                         )}
                 </div>
-                
+
                       <div className="space-y-1.5 overflow-y-auto max-h-[calc(100%-2.5rem)]">
                         {sessionsForDay
                           .sort((a, b) => a.startTime.localeCompare(b.startTime))
@@ -727,8 +1057,8 @@ const ManagerCalendar = () => {
                               key={session.id}
                               className={cn(
                                 "p-1.5 rounded-md text-xs border",
-                                session.status === "full" ? "border-orange-200 bg-orange-50" :
-                                session.status === "cancelled" ? "border-red-200 bg-red-50" :
+                                  session.status === "full" ? "border-amber-200 bg-amber-50" :
+                                    session.status === "canceled" ? "border-red-200 bg-red-50" :
                                 "border-slate-200 bg-slate-50"
                               )}
                             >
@@ -738,7 +1068,7 @@ const ManagerCalendar = () => {
                                 </span>
                                 <div className="flex items-center gap-1">
                                   <Users className="h-3 w-3" />
-                                  <span>{session.volunteers.length}/{session.maxVolunteers}</span>
+                                    <span>{session.approvedVolunteers.length}/{session.maxCapacity}</span>
                 </div>
               </div>
                             </div>
@@ -787,7 +1117,7 @@ const ManagerCalendar = () => {
                           {format(date, 'd')}
                           </div>
                     </div>
-                    
+
                       <div
                         className={cn(
                           "flex-1 border border-t-0 rounded-b-lg p-2 space-y-2 overflow-y-auto min-h-[500px]",
@@ -802,13 +1132,13 @@ const ManagerCalendar = () => {
                                 <TooltipTrigger asChild>
                                   <div
                                     className={cn(
-                                      "p-2 rounded-md text-sm cursor-pointer hover:bg-slate-100 transition-colors border",
-                                      session.status === "full" ? "border-orange-200 bg-orange-50" :
-                                      session.status === "cancelled" ? "border-red-200 bg-red-50" :
+                                        "p-2 rounded-md text-sm cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-colors border",
+                                        session.status === "full" ? "border-amber-200 bg-amber-50" :
+                                          session.status === "canceled" ? "border-red-200 bg-red-50" :
                                       "border-slate-200 bg-slate-50"
                                     )}
                                     onClick={() => {
-                                      setSelectedSession(session);
+                                        setSelectedSlot(session);
                                       setIsEditDialogOpen(true);
                                     }}
                                   >
@@ -816,29 +1146,28 @@ const ManagerCalendar = () => {
                                       <span className="font-medium">
                                         {session.startTime} - {session.endTime}
                                       </span>
-                                    {session.pendingVolunteers.length > 0 && !isSessionInPast(session) && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 px-1 text-amber-600"
+                                        {session.volunteerRequests.some(v => v.status === "pending") && !isSlotInPast(session) && (
+                                          <Badge
+                                            variant="outline"
+                                            className="h-6 px-2 text-amber-600 bg-amber-50 border-amber-200"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setSelectedSession(session);
+                                              setSelectedSlot(session);
                                           setIsPendingRequestsDialogOpen(true);
                                         }}
                                       >
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {session.pendingVolunteers.length}
-                                      </Button>
+                                            <AlertCircle className="h-3 w-3 mr-1 inline" />
+                                            {session.volunteerRequests.filter(v => v.status === "pending").length}
+                                          </Badge>
                                     )}
                                     </div>
                                     <div className="flex items-center text-slate-600">
                                       <Users className="h-4 w-4 mr-1" />
-                                      <span>{session.volunteers.length}/{session.maxVolunteers} filled</span>
+                                        <span>{session.approvedVolunteers.length}/{session.maxCapacity} filled</span>
                                       </div>
-                                    {session.isRecurring && (
+                                      {session.isCustom && (
                                       <Badge variant="outline" className="mt-2 bg-blue-50 border-blue-200">
-                                        Recurring
+                                          Custom
                                       </Badge>
                                     )}
                                       </div>
@@ -848,14 +1177,14 @@ const ManagerCalendar = () => {
                                     <div className="font-medium">{format(new Date(session.date), 'MMMM d, yyyy')}</div>
                                     <div>{session.startTime} - {session.endTime}</div>
                                     <div className="text-sm text-slate-600">
-                                      {session.volunteers.length}/{session.maxVolunteers} volunteers
+                                        {session.approvedVolunteers.length}/{session.maxCapacity} volunteers
                                       </div>
-                                    {session.volunteers.length > 0 && (
+                                      {session.volunteerRequests.length > 0 && (
                                       <div className="text-sm">
                                         <div className="font-medium mb-1">Volunteers:</div>
                                         <ul className="list-disc pl-4">
-                                          {session.volunteers.map(volunteer => (
-                                            <li key={volunteer.id}>{volunteer.name}</li>
+                                            {session.volunteerRequests.map(volunteer => (
+                                              <li key={volunteer.volunteerId}>{volunteer.volunteerId}</li>
                                           ))}
                                         </ul>
                                     </div>
@@ -903,11 +1232,11 @@ const ManagerCalendar = () => {
                           <div
                             key={session.id}
                             className={cn(
-                              "p-4 hover:bg-slate-50 cursor-pointer transition-colors text-center",
-                              isPast(new Date(`${session.date}T${session.endTime}`)) ? "opacity-70" : ""
+                                "p-4 hover:bg-slate-50/80 cursor-pointer transition-colors text-center",
+                                isSlotInPast(session) ? "opacity-70" : ""
                             )}
                             onClick={() => {
-                              setSelectedSession(session);
+                                setSelectedSlot(session);
                               setIsEditDialogOpen(true);
                             }}
                           >
@@ -920,19 +1249,19 @@ const ManagerCalendar = () => {
                                 <div className="mt-1 flex justify-center space-x-3">
                                   <div className="flex items-center text-slate-600">
                                     <Users className="h-4 w-4 mr-1" />
-                                    <span>{session.volunteers.length}/{session.maxVolunteers} volunteers</span>
+                                      <span>{session.approvedVolunteers.length}/{session.maxCapacity} volunteers</span>
                             </div>
-                            
-                                  {session.isRecurring && (
+
+                                    {session.isCustom && (
                                     <Badge variant="outline" className="bg-blue-50 border-blue-200">
-                                      Recurring
+                                        Custom
                                     </Badge>
                                   )}
 
                                   <Badge
                                     className={
-                                      session.status === "full" ? "bg-orange-500" :
-                                      session.status === "cancelled" ? "bg-red-500" :
+                                        session.status === "full" ? "bg-amber-500" :
+                                          session.status === "canceled" ? "bg-red-500" :
                                       "bg-emerald-500"
                                     }
                                   >
@@ -940,40 +1269,28 @@ const ManagerCalendar = () => {
                                   </Badge>
                               </div>
                             </div>
-                            
+
                               {session.notes && (
                                 <p className="text-sm text-slate-600 mt-2 max-w-md text-center">{session.notes}</p>
                               )}
 
-                              {session.volunteers.length > 0 && (
-                                <div className="mt-3">
-                                  <h5 className="text-sm font-medium mb-1">Volunteers:</h5>
-                                  <div className="flex flex-wrap justify-center gap-1">
-                                    {session.volunteers.map(volunteer => (
-                                      <Badge key={volunteer.id} variant="outline" className="bg-slate-100">
-                                        {volunteer.name}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                              </div>
-                            )}
-                          </div>
-                          
-                            {session.pendingVolunteers.length > 0 && !isSessionInPast(session) && (
-                            <Button 
-                              variant="outline" 
+                                {session.volunteerRequests.some(v => v.status === "pending") && !isSlotInPast(session) && (
+                            <Button
+                              variant="outline"
                               size="sm"
-                                className="h-8 bg-amber-50 border-amber-200 text-amber-700 mt-4"
-                                onClick={(e) => {
+                                    className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:text-amber-800"
+                                    onClick={e => {
                                   e.stopPropagation();
-                                  setSelectedSession(session);
+                                      setSelectedSlot(session);
+                                      setIsDaySessionsDialogOpen(false);
                                   setIsPendingRequestsDialogOpen(true);
                                 }}
                               >
                                 <AlertCircle className="h-4 w-4 mr-1" />
-                                {session.pendingVolunteers.length} pending
+                                    {session.volunteerRequests.filter(v => v.status === "pending").length} pending request{session.volunteerRequests.filter(v => v.status === "pending").length !== 1 ? 's' : ''}
                             </Button>
                             )}
+                              </div>
                           </div>
                         ))}
                     </>
@@ -986,17 +1303,18 @@ const ManagerCalendar = () => {
           </div>
         </TabsContent>
       </Tabs>
+      </div>
     );
   };
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm z-10">
-        <div className="px-6 py-4 flex justify-between items-center">
+      <header className="bg-white border-b border-slate-200 shadow-sm z-10 h-[69px]">
+        <div className="px-6 h-full flex items-center justify-between">
           {/* Left section - Logo and menu */}
           <div className="flex items-center space-x-4 w-[200px]">
-            <Button 
+            <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -1011,12 +1329,13 @@ const ManagerCalendar = () => {
           </div>
 
           {/* Center section - Date selector with conditional width */}
+          {!isPendingViewActive && (
           <div className={cn(
             "flex items-center justify-center",
             calendarView === "day" ? "flex-1" : "w-[400px]"
           )}>
             <div className="flex items-center">
-              <Button 
+              <Button
                 variant="outline"
                 size="icon"
                 onClick={goToPrevious}
@@ -1049,8 +1368,8 @@ const ManagerCalendar = () => {
                 <ChevronRight className="h-4 w-4" />
               </Button>
 
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                 onClick={() => setSelectedDate(new Date())}
                 className="hover:bg-slate-100 ml-3"
@@ -1059,6 +1378,7 @@ const ManagerCalendar = () => {
                             </Button>
                           </div>
                         </div>
+          )}
 
           {/* Right section - Empty div for balance */}
           <div className="w-[200px]"></div>
@@ -1126,8 +1446,7 @@ const ManagerCalendar = () => {
                           <SelectItem value="all">All Sessions</SelectItem>
                           <SelectItem value="open">Open</SelectItem>
                           <SelectItem value="full">Full</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                          <SelectItem value="pending">Has Requests</SelectItem>
+                          <SelectItem value="canceled">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -1148,9 +1467,9 @@ const ManagerCalendar = () => {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      
+
                       {/* New Session Button */}
-                      <Button 
+                      <Button
                         variant="default"
                         size="sm"
                         onClick={() => setIsCreateDialogOpen(true)}
@@ -1161,17 +1480,17 @@ const ManagerCalendar = () => {
                       </Button>
                     </>
                   )}
-                  
+
                   {/* Pending Button - Only visible when there are pending requests */}
                   {pendingRequests.length > 0 && (
-                    <Button 
+                    <Button
                       variant="outline"
                       size="sm"
                       className={cn(
                         "transition-all duration-200 border",
-                        isPendingViewActive 
+                        isPendingViewActive
                           ? "hover:bg-slate-100"
-                          : "bg-orange-500 hover:bg-orange-500/90 text-white hover:text-white border-orange-500"
+                          : "bg-amber-500 hover:bg-amber-500/90 text-white hover:text-white border-amber-500"
                       )}
                         onClick={() => {
                         setIsPendingViewActive(!isPendingViewActive);
@@ -1186,8 +1505,10 @@ const ManagerCalendar = () => {
                       )} />
                       {isPendingViewActive ? "Back to Calendar" : "Pending"}
                       {!isPendingViewActive && (
-                        <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-white text-orange-700">
-                          {pendingRequests.length}
+                        <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-white text-amber-700">
+                          {pendingRequests.reduce((total, session) =>
+                            total + session.volunteerRequests.filter(v => v.status === "pending").length, 0
+                          )}
                         </Badge>
                       )}
                       </Button>
@@ -1203,137 +1524,428 @@ const ManagerCalendar = () => {
           </div>
         </main>
       </div>
-      
+
       {/* Create Session Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col">
+          <DialogHeader className="border-b border-slate-200 pb-3">
             <DialogTitle>Create New Session</DialogTitle>
             <DialogDescription>
               Schedule a new volunteer session. Fill in the details below.
             </DialogDescription>
           </DialogHeader>
-          
+
+          <div className="space-y-4 overflow-y-auto flex-1 px-4 pr-5 pt-4 pb-4">
           <form onSubmit={handleCreateSession} className="space-y-4">
+              <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
-                <Input 
-                  id="date" 
-                  type="date" 
-                  value={newSession.date}
-                  onChange={(e) => setNewSession(prev => ({ ...prev, date: e.target.value }))}
+                <Input
+                  id="date"
+                  type="date"
+                      value={newSlot.date}
+                      onChange={(e) => setNewSlot(prev => ({ ...prev, date: e.target.value }))}
                   required
                 />
               </div>
-              
+
+                  {!newSlot.externalGroup && (
               <div className="space-y-2">
-                <Label htmlFor="maxVolunteers">Max Volunteers</Label>
-                <Input 
-                  id="maxVolunteers"
+                      <Label htmlFor="maxCapacity">Max Capacity</Label>
+                <Input
+                        id="maxCapacity"
                   type="number"
                   min="1"
-                  value={newSession.maxVolunteers}
-                  onChange={(e) => setNewSession(prev => ({ ...prev, maxVolunteers: parseInt(e.target.value) }))}
+                        value={newSlot.maxCapacity}
+                        onChange={(e) => setNewSlot(prev => ({ ...prev, maxCapacity: parseInt(e.target.value) }))}
                   required
                 />
               </div>
+                  )}
             </div>
-            
+
+                <div className="space-y-4">
+                  {!newSlot.isCustom && (
+                    <div className="space-y-2">
+                      <Label htmlFor="period">Period</Label>
+                      <Select
+                        value={newSlot.period || ""}
+                        onValueChange={(value) => {
+                          const period = value as "morning" | "afternoon" | "evening" | null;
+                          setNewSlot(prev => ({
+                            ...prev,
+                            period,
+                            startTime: period === "morning" ? "09:00" :
+                              period === "afternoon" ? "13:00" :
+                                period === "evening" ? "16:00" : "",
+                            endTime: period === "morning" ? "12:00" :
+                              period === "afternoon" ? "16:00" :
+                                period === "evening" ? "18:00" : ""
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="morning">Morning (9:00 - 12:00)</SelectItem>
+                          <SelectItem value="afternoon">Afternoon (13:00 - 16:00)</SelectItem>
+                          <SelectItem value="evening">Evening (16:00 - 18:00)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startTime">Start Time</Label>
                 <Input
                   id="startTime"
                   type="time"
-                  value={newSession.startTime}
-                  onChange={(e) => setNewSession(prev => ({ ...prev, startTime: e.target.value }))}
+                        value={newSlot.startTime}
+                        onChange={(e) => setNewSlot(prev => ({ ...prev, startTime: e.target.value }))}
                   required
+                        disabled={!newSlot.isCustom && newSlot.period !== null}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="endTime">End Time</Label>
-                <Input 
+                <Input
                   id="endTime"
                   type="time"
-                  value={newSession.endTime}
-                  onChange={(e) => setNewSession(prev => ({ ...prev, endTime: e.target.value }))}
+                        value={newSlot.endTime}
+                        onChange={(e) => setNewSlot(prev => ({ ...prev, endTime: e.target.value }))}
                   required
+                        disabled={!newSlot.isCustom && newSlot.period !== null}
                 />
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={newSession.notes}
-                onChange={(e) => setNewSession(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Add any additional information about the session..."
-              />
-                  </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="recurring"
-                  checked={newSession.isRecurring}
-                  onCheckedChange={(checked) => setNewSession(prev => ({ ...prev, isRecurring: checked }))}
-                />
-                <Label htmlFor="recurring">Make this a recurring session</Label>
-              </div>
-
-              {newSession.isRecurring && (
-                <div className="space-y-4 pl-4 border-l-2 border-slate-200">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="frequency">Frequency</Label>
-                      <Select
-                        value={newSession.recurrence?.frequency}
-                        onValueChange={(value: "weekly" | "biweekly" | "monthly") => setNewSession(prev => ({
-                          ...prev,
-                          recurrence: { ...prev.recurrence, frequency: value }
-                        }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select frequency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                        </SelectContent>
-                      </Select>
-            </div>
-            
+                  {newSlot.isCustom && (
             <div className="space-y-2">
-                      <Label htmlFor="endDate">End Date</Label>
+                      <Label htmlFor="customLabel">Custom Label</Label>
                       <Input
-                        id="endDate"
-                        type="date"
-                        value={newSession.recurrence?.endDate || ""}
-                        onChange={(e) => setNewSession(prev => ({
+                        id="customLabel"
+                        value={newSlot.customLabel || ""}
+                        onChange={(e) => setNewSlot(prev => ({ ...prev, customLabel: e.target.value }))}
+                        placeholder="Add a label for this custom session"
+              />
+                    </div>
+                  )}
+                  </div>
+
+                <div className="bg-slate-50 rounded-lg p-4 space-y-3 border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor="isCustom" className="text-base font-medium">Custom Session</Label>
+                      <p className="text-sm text-slate-500">Enable to create a session with custom time and label</p>
+                    </div>
+                <Switch
+                      id="isCustom"
+                      checked={newSlot.isCustom}
+                      onCheckedChange={(checked) => {
+                        setNewSlot(prev => ({
                           ...prev,
-                          recurrence: { ...prev.recurrence, endDate: e.target.value }
+                          isCustom: checked,
+                          period: checked ? null : "morning", // Default to morning when switching to non-custom
+                          startTime: checked ? "09:00" : "09:00", // Default to morning time
+                          endTime: checked ? "12:00" : "12:00" // Default to morning time
+                        }));
+                      }}
+                    />
+                  </div>
+              </div>
+
+                <div className="bg-slate-50 rounded-lg p-4 space-y-3 border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor="isExternalGroup" className="text-base font-medium">One Time External Group</Label>
+                      <p className="text-sm text-slate-500">Enable for external group visits</p>
+                    </div>
+                    <Switch
+                      id="isExternalGroup"
+                      checked={!!newSlot.externalGroup}
+                      onCheckedChange={(checked) => {
+                        setNewSlot(prev => ({
+                          ...prev,
+                          externalGroup: checked ? {
+                            groupName: "",
+                            contactPerson: "",
+                            contactPhoneNumber: "",
+                            purposeOfVisit: "",
+                            numberOfParticipants: 1,
+                            createdAt: new Date().toISOString()
+                          } : undefined
+                        }));
+                      }}
+                    />
+                  </div>
+
+                  {newSlot.externalGroup && (
+                    <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="groupName">Group Name</Label>
+                        <Input
+                          id="groupName"
+                          value={newSlot.externalGroup.groupName || ""}
+                          onChange={(e) => setNewSlot(prev => ({
+                          ...prev,
+                            externalGroup: { ...prev.externalGroup!, groupName: e.target.value }
                         }))}
+                          placeholder="Enter group name"
+                          required
+                        />
+            </div>
+
+            <div className="space-y-2">
+                        <Label htmlFor="contactPerson">Contact Person</Label>
+                      <Input
+                          id="contactPerson"
+                          value={newSlot.externalGroup.contactPerson || ""}
+                          onChange={(e) => setNewSlot(prev => ({
+                          ...prev,
+                            externalGroup: { ...prev.externalGroup!, contactPerson: e.target.value }
+                        }))}
+                          placeholder="Enter contact person name"
+                          required
               />
             </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="contactPhoneNumber">Contact Phone Number</Label>
+                        <Input
+                          id="contactPhoneNumber"
+                          value={newSlot.externalGroup.contactPhoneNumber || ""}
+                          onChange={(e) => setNewSlot(prev => ({
+                            ...prev,
+                            externalGroup: { ...prev.externalGroup!, contactPhoneNumber: e.target.value }
+                          }))}
+                          placeholder="Enter contact phone number"
+                          required
+                        />
                   </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="purposeOfVisit">Purpose Of Visit</Label>
+                        <Textarea
+                          id="purposeOfVisit"
+                          value={newSlot.externalGroup.purposeOfVisit || ""}
+                          onChange={(e) => setNewSlot(prev => ({
+                            ...prev,
+                            externalGroup: { ...prev.externalGroup!, purposeOfVisit: e.target.value }
+                          }))}
+                          placeholder="Describe the purpose of the visit"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="numberOfParticipants">Number Of Participants</Label>
+                        <Input
+                          id="numberOfParticipants"
+                          type="number"
+                          min="1"
+                          value={newSlot.externalGroup.numberOfParticipants || ""}
+                          onChange={(e) => setNewSlot(prev => ({
+                            ...prev,
+                            externalGroup: { ...prev.externalGroup!, numberOfParticipants: parseInt(e.target.value) }
+                          }))}
+                          placeholder="Enter number of participants"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="assignedDepartment">Assigned Department</Label>
+                        <Input
+                          id="assignedDepartment"
+                          value={newSlot.externalGroup.assignedDepartment || ""}
+                          onChange={(e) => setNewSlot(prev => ({
+                            ...prev,
+                            externalGroup: { ...prev.externalGroup!, assignedDepartment: e.target.value }
+                          }))}
+                          placeholder="Enter assigned department"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="activityContent">Activity Content</Label>
+                        <Textarea
+                          id="activityContent"
+                          value={newSlot.externalGroup.activityContent || ""}
+                          onChange={(e) => setNewSlot(prev => ({
+                            ...prev,
+                            externalGroup: { ...prev.externalGroup!, activityContent: e.target.value }
+                          }))}
+                          placeholder="Describe the planned activities"
+                        />
+                      </div>
+
                 </div>
               )}
           </div>
-          
-          <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
+
+          {/* Add Volunteers Section */}
+          <div className="bg-slate-50 rounded-lg p-4 space-y-3 border border-slate-200">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Assign Volunteers</Label>
+              <p className="text-sm text-slate-500">Select volunteers to assign to this session</p>
+            </div>
+            <div className="space-y-2">
+              {volunteersLoading ? (
+                <div className="text-sm text-slate-500">Loading volunteers...</div>
+              ) : volunteers.length === 0 ? (
+                <div className="text-sm text-slate-500">No volunteers available</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {newSlot.residentIds
+                      .filter(id => volunteers.some(v => v.id === id))
+                      .map(volunteerId => {
+                        const volunteer = volunteers.find(v => v.id === volunteerId);
+                        return (
+                          <Badge
+                            key={volunteerId}
+                            variant="secondary"
+                            className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200"
+                          >
+                            {volunteer?.fullName}
+                            <button
+                              onClick={() => {
+                                setNewSlot(prev => ({
+                                  ...prev,
+                                  residentIds: prev.residentIds.filter(id => id !== volunteerId)
+                                }));
+                              }}
+                              className="ml-1 hover:text-red-500"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                  </div>
+                  <Select
+                    value=""
+                    onValueChange={(value) => {
+                      if (value && !newSlot.residentIds.includes(value)) {
+                        setNewSlot(prev => ({
+                          ...prev,
+                          residentIds: [...prev.residentIds, value]
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select volunteers..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {volunteers
+                        .filter(volunteer => !newSlot.residentIds.includes(volunteer.id))
+                        .map(volunteer => (
+                          <SelectItem key={volunteer.id} value={volunteer.id}>
+                            {volunteer.fullName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Add Residents Section */}
+          <div className="bg-slate-50 rounded-lg p-4 space-y-3 border border-slate-200">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Assign Residents</Label>
+              <p className="text-sm text-slate-500">Select residents to assign to this session</p>
+            </div>
+            <div className="space-y-2">
+              {residentsLoading ? (
+                <div className="text-sm text-slate-500">Loading residents...</div>
+              ) : residents.length === 0 ? (
+                <div className="text-sm text-slate-500">No residents available</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {newSlot.residentIds
+                      .filter(id => residents.some(r => r.id === id))
+                      .map(residentId => {
+                        const resident = residents.find(r => r.id === residentId);
+                        return (
+                          <Badge
+                            key={residentId}
+                            variant="secondary"
+                            className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200"
+                          >
+                            {resident?.fullName}
+                            <button
+                              onClick={() => {
+                                setNewSlot(prev => ({
+                                  ...prev,
+                                  residentIds: prev.residentIds.filter(id => id !== residentId)
+                                }));
+                              }}
+                              className="ml-1 hover:text-red-500"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                  </div>
+                  <Select
+                    value=""
+                    onValueChange={(value) => {
+                      if (value && !newSlot.residentIds.includes(value)) {
+                        setNewSlot(prev => ({
+                          ...prev,
+                          residentIds: [...prev.residentIds, value]
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select residents..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {residents
+                        .filter(resident => !newSlot.residentIds.includes(resident.id))
+                        .map(resident => (
+                          <SelectItem key={resident.id} value={resident.id}>
+                            {resident.fullName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={newSlot.notes}
+                    onChange={(e) => setNewSlot(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Add any additional information about the session..."
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <DialogFooter className="border-t border-slate-200 pt-5 flex justify-center items-center">
+            <Button type="submit" onClick={handleCreateSession} className="mx-auto">
+              Create Session
             </Button>
-              <Button type="submit">Create Session</Button>
           </DialogFooter>
-          </form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Edit Session Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -1343,63 +1955,64 @@ const ManagerCalendar = () => {
               Update the session details below.
             </DialogDescription>
           </DialogHeader>
-          
-          {selectedSession && (
+
+          {selectedSlot && (
             <form onSubmit={e => { e.preventDefault(); handleEditSession(); }} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-date">Date</Label>
-                  <Input 
-                    id="edit-date" 
-                    type="date" 
-                    value={selectedSession.date}
-                    onChange={(e) => setSelectedSession({ ...selectedSession, date: e.target.value })}
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={selectedSlot.date}
+                    onChange={(e) => setSelectedSlot({ ...selectedSlot, date: e.target.value })}
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label htmlFor="edit-maxVolunteers">Max Volunteers</Label>
-                  <Input 
-                    id="edit-maxVolunteers"
+                  <Label htmlFor="edit-maxCapacity">Max Capacity</Label>
+                  <Input
+                    id="edit-maxCapacity"
                     type="number"
                     min="1"
-                    value={selectedSession.maxVolunteers}
-                    onChange={(e) => setSelectedSession({ ...selectedSession, maxVolunteers: parseInt(e.target.value) })}
+                    value={selectedSlot.maxCapacity}
+                    onChange={(e) => setSelectedSlot({ ...selectedSlot, maxCapacity: parseInt(e.target.value) })}
                     required
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-startTime">Start Time</Label>
                   <Input
                     id="edit-startTime"
                     type="time"
-                    value={selectedSession.startTime}
-                    onChange={(e) => setSelectedSession({ ...selectedSession, startTime: e.target.value })}
+                    value={selectedSlot.startTime}
+                    onChange={(e) => setSelectedSlot({ ...selectedSlot, startTime: e.target.value })}
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="edit-endTime">End Time</Label>
-                  <Input 
+                  <Input
                     id="edit-endTime"
                     type="time"
-                    value={selectedSession.endTime}
-                    onChange={(e) => setSelectedSession({ ...selectedSession, endTime: e.target.value })}
+                    value={selectedSlot.endTime}
+                    onChange={(e) => setSelectedSlot({ ...selectedSlot, endTime: e.target.value })}
                     required
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
                 <Select
-                  value={selectedSession.status}
-                  onValueChange={(value: "open" | "full" | "cancelled") => setSelectedSession({ ...selectedSession, status: value })}
+                  value={selectedSlot.status}
+                  onValueChange={(value: "open" | "full" | "canceled") =>
+                    setSelectedSlot({ ...selectedSlot, status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -1407,62 +2020,57 @@ const ManagerCalendar = () => {
                   <SelectContent>
                     <SelectItem value="open">Open</SelectItem>
                     <SelectItem value="full">Full</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="canceled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-notes">Notes</Label>
                 <Textarea
                   id="edit-notes"
-                  value={selectedSession.notes}
-                  onChange={(e) => setSelectedSession({ ...selectedSession, notes: e.target.value })}
+                  value={selectedSlot.notes}
+                  onChange={(e) => setSelectedSlot({ ...selectedSlot, notes: e.target.value })}
                   placeholder="Add any additional information about the session..."
                 />
                     </div>
 
-              {selectedSession.volunteers.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Current Volunteers</Label>
+                <Label>Current Residents</Label>
                   <div className="flex flex-wrap gap-1">
-                    {selectedSession.volunteers.map(volunteer => (
-                      <Badge key={volunteer.id} variant="outline" className="bg-slate-100">
-                        {volunteer.name}
+                  {selectedSlot.residentIds.length > 0 ? (
+                    selectedSlot.residentIds.map(residentId => (
+                      <Badge key={residentId} variant="outline" className="bg-slate-100">
+                        {residentId}
                       </Badge>
-                  ))}
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-500">No residents assigned</span>
+                  )}
                 </div>
               </div>
-              )}
-              
-              {selectedSession.pendingVolunteers.length > 0 && !isSessionInPast(selectedSession) && (
+
+              {selectedSlot.approvedVolunteers.length > 0 && (
               <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Pending Requests</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditDialogOpen(false);
-                        setIsPendingRequestsDialogOpen(true);
-                      }}
-                    >
-                      Review Requests
-                    </Button>
-                  </div>
+                  <Label>Current Volunteers</Label>
                   <div className="flex flex-wrap gap-1">
-                    {selectedSession.pendingVolunteers.map(volunteer => (
-                      <Badge key={volunteer.id} variant="outline" className="bg-amber-50 border-amber-200">
-                        {volunteer.name}
+                    {selectedSlot.approvedVolunteers[0] === "external_group" ? (
+                      <Badge variant="outline" className="bg-slate-100">
+                        {externalGroups[selectedSlot.id]?.groupName} ({selectedSlot.approvedVolunteers.length} participants)
                       </Badge>
-                    ))}
+                    ) : (
+                      selectedSlot.approvedVolunteers.map(volunteerId => (
+                        <Badge key={volunteerId} variant="outline" className="bg-slate-100">
+                          {volunteerId}
+                        </Badge>
+                      ))
+                    )}
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
-            <Button 
+            <Button
                       type="button"
                       variant="destructive"
                       onClick={() => {
@@ -1482,7 +2090,7 @@ const ManagerCalendar = () => {
           )}
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Session Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -1492,44 +2100,56 @@ const ManagerCalendar = () => {
               Are you sure you want to delete this session? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
-          {selectedSession && (
-            <>
-              {selectedSession.volunteers.length > 0 ? (
+
+          {selectedSlot && !isSlotInPast(selectedSlot) && (
                 <div className="space-y-4">
+              {selectedSlot.approvedVolunteers.length > 0 ? (
+                <>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
                 <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="h-5 w-5" />
                       <span className="font-medium">Cannot Delete Session</span>
                     </div>
                     <p className="text-sm">
-                      This session has {selectedSession.volunteers.length} approved volunteer{selectedSession.volunteers.length !== 1 ? 's' : ''}.
-                      You must remove all volunteers before deleting the session.
+                      This session has {selectedSlot.approvedVolunteers.length} approved volunteer{selectedSlot.approvedVolunteers.length !== 1 ? 's' : ''}.
+                      You must change its status to "canceled" instead of deleting it.
                     </p>
                 </div>
-                
+
                   <div className="space-y-2">
                     <Label>Current Volunteers</Label>
                     <div className="flex flex-wrap gap-1">
-                      {selectedSession.volunteers.map(volunteer => (
-                        <Badge key={volunteer.id} variant="outline" className="bg-slate-100">
-                          {volunteer.name}
+                      {selectedSlot.approvedVolunteers.map(volunteerId => (
+                        <Badge key={volunteerId} variant="outline" className="bg-slate-100">
+                          {volunteerId}
                   </Badge>
                       ))}
                   </div>
                 </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsDeleteDialogOpen(false);
+                        setIsEditDialogOpen(true);
+                      }}
+                    >
+                      Change Status to Canceled
+                    </Button>
               </div>
+                </>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                     <div className="font-medium mb-2">Session Details</div>
                     <div className="text-sm text-slate-600 space-y-1">
-                      <div>Date: {format(new Date(selectedSession.date), 'MMMM d, yyyy')}</div>
-                      <div>Time: {selectedSession.startTime} - {selectedSession.endTime}</div>
-                      <div>Status: {selectedSession.status}</div>
+                      <div>Date: {format(new Date(selectedSlot.date), 'MMMM d, yyyy')}</div>
+                      <div>Time: {selectedSlot.startTime} - {selectedSlot.endTime}</div>
+                      <div>Status: {selectedSlot.status}</div>
                     </div>
                 </div>
-                
+
                   <div className="flex justify-end gap-3">
                     <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
                       Cancel
@@ -1543,68 +2163,70 @@ const ManagerCalendar = () => {
               </div>
             </div>
           )}
-          </>
+            </div>
         )}
         </DialogContent>
       </Dialog>
 
       {/* Pending Requests Dialog */}
-      <Dialog 
-        open={isPendingRequestsDialogOpen && selectedSession?.pendingVolunteers.length > 0 && !isSessionInPast(selectedSession)} 
+      <Dialog
+        open={isPendingRequestsDialogOpen && selectedSlot?.volunteerRequests.some(v => v.status === "pending") && !isSlotInPast(selectedSlot)}
         onOpenChange={setIsPendingRequestsDialogOpen}
       >
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col">
+          <DialogHeader className="border-b border-slate-200 pb-3">
             <DialogTitle>Pending Volunteer Requests</DialogTitle>
             <DialogDescription>
               Review and manage volunteer requests for this session.
             </DialogDescription>
           </DialogHeader>
-          
-          {selectedSession && !isSessionInPast(selectedSession) && (
+
+          <div className="space-y-4 overflow-y-auto flex-1 px-4 pr-5 pt-4 pb-4">
+            {selectedSlot && !isSlotInPast(selectedSlot) && (
             <div className="space-y-4">
-              <div className="bg-slate-50 rounded-lg p-4">
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div className="font-medium mb-2">Session Details</div>
                 <div className="text-sm text-slate-600 space-y-1">
-                  <div>Date: {format(new Date(selectedSession.date), 'MMMM d, yyyy')}</div>
-                  <div>Time: {selectedSession.startTime} - {selectedSession.endTime}</div>
-                  <div>Current Volunteers: {selectedSession.volunteers.length}/{selectedSession.maxVolunteers}</div>
+                    <div>Date: {format(new Date(selectedSlot.date), 'MMMM d, yyyy')}</div>
+                    <div>Time: {selectedSlot.startTime} - {selectedSlot.endTime}</div>
+                    <div>Current Volunteers: {selectedSlot.approvedVolunteers.length}/{selectedSlot.maxCapacity}</div>
                   </div>
                 </div>
-              
+
               <div className="space-y-4">
-                {selectedSession.pendingVolunteers
-                  .sort((a, b) => a.name.localeCompare(b.name))
+                  {selectedSlot.volunteerRequests
+                    .filter(volunteer => volunteer.status === "pending")
+                    .sort((a, b) => a.volunteerId.localeCompare(b.volunteerId))
                   .map(volunteer => (
-                    <div 
-                      key={volunteer.id}
+                    <div
+                        key={volunteer.volunteerId}
                       className="flex items-center justify-between p-3 border rounded-lg"
                     >
                       <div>
-                        <div className="font-medium">{volunteer.name}</div>
-                        <div className="text-sm text-slate-500">{volunteer.email}</div>
+                          <div className="font-medium">{volunteer.volunteerId}</div>
+                          <div className="text-sm text-slate-500">{volunteer.volunteerId}</div>
               </div>
 
                       <div className="flex gap-2">
-                        {pendingVolunteerAction[`${selectedSession.id}-${volunteer.id}`] ? (
+                          {pendingVolunteerAction[`${selectedSlot.id}-${volunteer.volunteerId}`] ? (
                           <div className="flex items-center justify-center w-20">
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
             </div>
                         ) : (
                           <>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
                               size="sm"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleVolunteerRequest(selectedSession.id, volunteer.id, 'reject')}
+                                onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'reject')}
             >
                               Reject
             </Button>
-            <Button 
+            <Button
                               variant="outline"
                               size="sm"
                               className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                              onClick={() => handleVolunteerRequest(selectedSession.id, volunteer.id, 'approve')}
+                                onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'approve')}
                             >
                               Approve
                             </Button>
@@ -1614,17 +2236,15 @@ const ManagerCalendar = () => {
                     </div>
                   ))}
               </div>
-          
-          <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPendingRequestsDialogOpen(false)}>
-                  Close
-            </Button>
-          </DialogFooter>
             </div>
           )}
+          </div>
+
+          <DialogFooter className="border-t border-slate-200 pt-5 flex justify-center items-center">
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Day Sessions Dialog */}
       <Dialog open={isDaySessionsDialogOpen} onOpenChange={setIsDaySessionsDialogOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col">
@@ -1641,18 +2261,19 @@ const ManagerCalendar = () => {
             {selectedDaySessions.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-slate-500 mb-4">No sessions scheduled for this day</div>
-            <Button 
-              variant="outline" 
+            <Button
+                  variant="default"
                   onClick={() => {
                     setIsDaySessionsDialogOpen(false);
-                    setNewSession({
-                      ...newSession,
+                    setNewSlot({
+                      ...newSlot,
                       date: selectedDayDate ? format(selectedDayDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
                     });
                     setIsCreateDialogOpen(true);
                   }}
+                  className="bg-primary hover:bg-primary/90"
                 >
-                  Create Session
+                  Create New Session
             </Button>
               </div>
             ) : (
@@ -1662,18 +2283,18 @@ const ManagerCalendar = () => {
                   .map(session => (
                     <div
                       key={session.id}
-                      className={`p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors
-                        ${selectedSession?.id === session.id ? "focus-visible:ring-2 ring-primary rounded-md focus:outline-none transition" : ""}
+                      className={`p-4 border rounded-lg bg-white hover:bg-slate-50 cursor-pointer min-h-[76px]
+                        ${selectedSlot?.id === session.id ? "focus-visible:ring-2 ring-primary rounded-md focus:outline-none transition" : ""}
                       `}
                       onClick={() => {
-                        setSelectedSession(session);
+                        setSelectedSlot(session);
                         setIsDaySessionsDialogOpen(false);
                         setIsEditDialogOpen(true);
                       }}
                       tabIndex={0}
                       onKeyDown={e => {
                         if (e.key === "Enter") {
-                          setSelectedSession(session);
+                          setSelectedSlot(session);
                           setIsDaySessionsDialogOpen(false);
                           setIsEditDialogOpen(true);
                         }
@@ -1686,13 +2307,13 @@ const ManagerCalendar = () => {
                             {session.startTime} - {session.endTime}
             </div>
                           <div className="text-sm text-slate-500 mt-1">
-                            {session.volunteers.length}/{session.maxVolunteers} volunteers
+                            {session.approvedVolunteers.length}/{session.maxCapacity} volunteers
             </div>
             </div>
                         <Badge
                           className={
-                            session.status === "full" ? "bg-orange-500" :
-                            session.status === "cancelled" ? "bg-red-500" :
+                            session.status === "full" ? "bg-amber-500" :
+                              session.status === "canceled" ? "bg-red-500" :
                             "bg-emerald-500"
                           }
                         >
@@ -1706,63 +2327,22 @@ const ManagerCalendar = () => {
             </div>
                       )}
 
-                      {session.pendingVolunteers.length > 0 && !isSessionInPast(session) && (
+                      {session.volunteerRequests.some(v => v.status === "pending") && !isSlotInPast(session) && (
                         <div className="flex flex-col gap-2 mt-3">
-            <Button 
+            <Button
                             variant="outline"
                             size="sm"
-                            className="bg-amber-50 border-amber-200 text-amber-700"
+                            className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:text-amber-800"
                             onClick={e => {
                               e.stopPropagation();
-                              setSelectedSession(session);
+                              setSelectedSlot(session);
                               setIsDaySessionsDialogOpen(false);
                               setIsPendingRequestsDialogOpen(true);
                             }}
                           >
                             <AlertCircle className="h-4 w-4 mr-1" />
-                            {session.pendingVolunteers.length} pending request{session.pendingVolunteers.length !== 1 ? 's' : ''}
+                            {session.volunteerRequests.filter(v => v.status === "pending").length} pending request{session.volunteerRequests.filter(v => v.status === "pending").length !== 1 ? 's' : ''}
             </Button>
-                          {/* Quick approve/reject for first pending volunteer */}
-                          <div className="flex gap-2">
-                            {session.pendingVolunteers.slice(0, 1).map(volunteer => (
-                              <div key={volunteer.id} className="flex items-center gap-1">
-                                <span className="text-xs">{volunteer.name}</span>
-                                {pendingVolunteerAction[`${session.id}-${volunteer.id}`] ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                ) : (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="text-emerald-600 hover:bg-emerald-50"
-                                      title="Approve"
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        handleVolunteerRequest(session.id, volunteer.id, 'approve');
-                                      }}
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="text-red-600 hover:bg-red-50"
-                                      title="Reject"
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        handleVolunteerRequest(session.id, volunteer.id, 'reject');
-                                      }}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                )}
-          </div>
-                            ))}
-                            {session.pendingVolunteers.length > 1 && (
-                              <span className="text-xs text-slate-400">+{session.pendingVolunteers.length - 1} more</span>
-                            )}
-                          </div>
                         </div>
                       )}
                     </div>
@@ -1773,17 +2353,17 @@ const ManagerCalendar = () => {
 
           <DialogFooter className="border-t border-slate-200 pt-5 flex justify-center items-center">
             {selectedDaySessions.length > 0 && (
-              <Button 
-                variant="outline"
-                className="mx-auto"
+              <Button
+                variant="default"
                 onClick={() => {
                   setIsDaySessionsDialogOpen(false);
-                  setNewSession({
-                    ...newSession,
+                  setNewSlot({
+                    ...newSlot,
                     date: selectedDayDate ? format(selectedDayDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
                   });
                   setIsCreateDialogOpen(true);
                 }}
+                className="mx-auto bg-primary hover:bg-primary/90"
               >
                 Create Another Session
               </Button>
@@ -1791,7 +2371,7 @@ const ManagerCalendar = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* More Filters Dialog */}
       <Dialog open={isMoreFiltersOpen} onOpenChange={setIsMoreFiltersOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -1860,4 +2440,4 @@ const ManagerCalendar = () => {
   );
 };
 
-export default ManagerCalendar; 
+export default ManagerCalendar;
