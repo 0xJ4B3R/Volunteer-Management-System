@@ -1,14 +1,14 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
-import { PersistGate } from "redux-persist/integration/react";
 import { store, persistor } from "@/store";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { PersistGate } from "redux-persist/integration/react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Pages
+// General Pages
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
@@ -23,11 +23,17 @@ import VolunteerProfile from "@/pages/volunteer/Profile";
 // Manager Pages
 import Dashboard from "@/pages/manager/Dashboard";
 import Calendar from "@/pages/manager/Calendar";
+import Appointments from "@/pages/manager/Appointments";
 import Volunteers from "@/pages/manager/Volunteers";
 import Residents from "@/pages/manager/Residents";
 import MatchingRules from "@/pages/manager/MatchingRules";
 import Reports from "@/pages/manager/Reports";
 import Settings from "@/pages/manager/Settings";
+
+// Test Pages
+import TestVolunteers from './pages/test/TestVolunteers';
+import TestResidents from './pages/test/TestResidents';
+import CalendarFirestoreTest from './pages/test/CalendarFirestoreTest';
 
 const queryClient = new QueryClient();
 
@@ -82,6 +88,10 @@ const App = () => (
                 element={<RoleRoute role="manager" element={<Calendar />} />}
               />
               <Route
+                path="/manager/appointments"
+                element={<RoleRoute role="manager" element={<Appointments />} />}
+              />
+              <Route
                 path="/manager/volunteers"
                 element={<RoleRoute role="manager" element={<Volunteers />} />}
               />
@@ -102,6 +112,11 @@ const App = () => (
                 element={<RoleRoute role="manager" element={<Settings />} />}
               />
 
+              {/* Test Routes */}
+              <Route path="/test/volunteers" element={<TestVolunteers />} />
+              <Route path="/test/residents" element={<TestResidents />} />
+              <Route path="/test/calendar-firestore-test" element={<CalendarFirestoreTest />} />
+              
               {/* Catch-all 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -112,4 +127,4 @@ const App = () => (
   </Provider>
 );
 
-export default App;
+export default App; 
