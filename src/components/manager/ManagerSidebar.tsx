@@ -14,7 +14,8 @@ import {
   Users2,
   ClipboardList,
   Bell,
-  Sliders
+  Sliders,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,17 @@ const ManagerSidebar = ({ isOpen, onClose, isMobile, onLogout }: ManagerSidebarP
           >
             <Calendar className="mr-3 h-5 w-5 text-slate-500" />
             Calendar Management
+          </Link>
+          
+          <Link 
+            to="/manager/appointments" 
+            className={cn(
+              "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+              isActive("/manager/appointments") ? "bg-slate-100 text-slate-900" : "text-slate-700 hover:bg-slate-50"
+            )}
+          >
+            <Clock className="mr-3 h-5 w-5 text-slate-500" />
+            Appointments & Attendance
           </Link>
           
           <Link 
