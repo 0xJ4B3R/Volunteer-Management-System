@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // General Pages
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
+import ForgotPassword from "@/pages/ForgotPassword";
 import NotFound from "@/pages/NotFound";
 
 // Volunteer Pages
@@ -55,6 +56,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="forgot-password" element={<ForgotPassword />}/>
 
               {/* Volunteer Routes */}
               <Route
