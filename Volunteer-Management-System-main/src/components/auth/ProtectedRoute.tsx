@@ -1,31 +1,38 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAppSelector } from '@/hooks';
-import { LoadingPage } from '@/components/ui/loading';
+import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  allowedRoles?: ('manager' | 'volunteer')[];
-}
+// This component checks if the user has the required role to access a route
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  
+  useEffect(() => {
+    // Get the user role from localStorage
+    const userRole = localStorage.getItem('role');
+    console.log("ProtectedRoute checking - User role from localStorage:", userRole);
+    console.log("ProtectedRoute checking - Allowed roles:", allowedRoles);
+    
+    // Check if the user's role is included in the allowed roles
+    const isAuthorized = userRole && allowedRoles.includes(userRole);
+    console.log("ProtectedRoute result - Is authorized:", isAuthorized);
+    
+    setAuthorized(isAuthorized);
+    setLoading(false);
+  }, [allowedRoles]);
 
-const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { isAuthenticated, user, isLoading } = useAppSelector((state) => state.auth);
-  const location = useLocation();
-
-  if (isLoading) {
-    return <LoadingPage />;
+  if (loading) {
+    // Show a loading indicator while checking authorization
+    return <div>Loading...</div>;
   }
 
-  if (!isAuthenticated) {
-    // Redirect to login page but save the attempted url
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  // If not authorized, redirect to login
+  if (!authorized) {
+    console.log("Not authorized, redirecting to login");
+    return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // Redirect to appropriate dashboard based on role
-    return <Navigate to={`/${user.role}`} replace />;
-  }
-
-  return <>{children}</>;
+  // If authorized, render the children
+  return children;
 };
 
-export default ProtectedRoute; 
+export default ProtectedRoute;

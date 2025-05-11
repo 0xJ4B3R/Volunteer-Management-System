@@ -10,47 +10,63 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-   if (!username || !password) {
-    setError("Please fill all the fields above");
-    return;
-   }
-
-   try {
-    const userCollection = collection (db, "Users");
-    const q = query(userCollection, where("username", "==", username));
-    const querySnapShot = await getDocs(q);
-
-    if (querySnapShot.empty) {
-      setError("User not found");
+    if (!username || !password) {
+      setError("Please fill all the fields above");
       return;
     }
-
-    const userDoc = querySnapShot.docs[0];
-    const userData = userDoc.data();
-    const role = userData.role;
-
-    // Save role where your ProtectedRoute reads it from
-    localStorage.setItem("role", role); // or dispatch to Redux
-
-    if (userData.password === password) {
-      if (role === "volunteer") {
-        navigate("/volunteer");
+  
+    try {
+      console.log("Attempting login for username:", username);
+      const userCollection = collection(db, "Users");
+      const q = query(userCollection, where("username", "==", username));
+      const querySnapShot = await getDocs(q);
+  
+      if (querySnapShot.empty) {
+        console.log("User not found in database");
+        setError("User not found");
+        return;
       }
-      else if (role === "manager") {
-        navigate("/manager")
+  
+      const userDoc = querySnapShot.docs[0];
+      const userData = userDoc.data();
+      const role = userData.role;
+      
+      console.log("User found with role:", role);
+  
+      // Save user data more completely
+      localStorage.setItem("role", role);
+      localStorage.setItem("userId", userDoc.id);
+      localStorage.setItem("user", JSON.stringify({
+        id: userDoc.id,
+        username: userData.username,
+        role: userData.role,
+        // Add other non-sensitive user data you might need
+      }));
+  
+      if (userData.password === password) {
+        console.log("Password matches, navigating to:", role === 'manager' ? '/manager' : '/volunteer');
+        
+        // Slight delay to ensure localStorage is set before navigation
+        setTimeout(() => {
+          if (role === 'volunteer') {
+            navigate('/volunteer');
+          }
+          else if (role === 'manager') {
+            navigate('/manager');
+          }
+          else {
+            console.log("Invalid role detected:", role);
+            setError("Invalid user role");
+          }
+        }, 100);
+      } else {
+        console.log("Password mismatch");
+        setError("Wrong password or username");
       }
-      else {
-        setError("Something went wrong")
-      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Couldn't login");
     }
-    else {
-      setError("Wrong password or username");
-    }
-   }
-   catch (error) {
-    setError("Couldn't login");
-    console.error(error);
-   }
   };
 
   return (

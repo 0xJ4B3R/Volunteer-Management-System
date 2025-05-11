@@ -58,28 +58,6 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="forgot-password" element={<ForgotPassword />}/>
 
-              {/* Volunteer Routes */}
-              <Route
-                path="/volunteer"
-                element={<RoleRoute role="volunteer" element={<VolunteerDashboard />} />}
-              />
-              <Route
-                path="/volunteer/calendar"
-                element={<RoleRoute role="volunteer" element={<VolunteerCalendar />} />}
-              />
-              <Route
-                path="/volunteer/appointments"
-                element={<RoleRoute role="volunteer" element={<VolunteerAppointments />} />}
-              />
-              <Route
-                path="/volunteer/attendance"
-                element={<RoleRoute role="volunteer" element={<VolunteerAttendance />} />}
-              />
-              <Route
-                path="/volunteer/profile"
-                element={<RoleRoute role="volunteer" element={<VolunteerProfile />} />}
-              />
-
               {/* Manager Routes */}
               <Route
                 path="/manager"
@@ -112,6 +90,28 @@ const App = () => (
               <Route
                 path="/manager/settings"
                 element={<RoleRoute role="manager" element={<Settings />} />}
+              />
+              
+              {/* Volunteer Routes */}
+              <Route
+                path="/volunteer"
+                element={<RoleRoute role="volunteer" element={<VolunteerDashboard />} />}
+              />
+              <Route
+                path="/volunteer/calendar"
+                element={<RoleRoute role="volunteer" element={<VolunteerCalendar />} />}
+              />
+              <Route
+                path="/volunteer/appointments"
+                element={<RoleRoute role="volunteer" element={<VolunteerAppointments />} />}
+              />
+              <Route
+                path="/volunteer/attendance"
+                element={<RoleRoute role="volunteer" element={<VolunteerAttendance />} />}
+              />
+              <Route
+                path="/volunteer/profile"
+                element={<RoleRoute role="volunteer" element={<VolunteerProfile />} />}
               />
 
               {/* Test Routes */}
