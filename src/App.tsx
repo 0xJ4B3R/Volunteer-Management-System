@@ -137,7 +137,6 @@ import { Layout } from '@/components/volunteer/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // General Pages
-import Index from '@/pages/Index';
 import Login from '@/pages/Login';
 import ForgotPassword from '@/pages/ForgotPassword';
 import NotFound from '@/pages/NotFound';
@@ -180,8 +179,7 @@ const LayoutRoute = ({
 const App = () => (
   <BrowserRouter>
     <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Manager Routes */}

@@ -1,58 +1,309 @@
+/* VolunteerCalendar.css */
+
+/* Main container */
 .calendar-container {
-  padding: 1rem;
-  width: 100%;
-  font-family: sans-serif;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-}
-
-.calendar-header-row {
-  background-color: #d1d5db; /* light gray */
-}
-
-.calendar-header-cell {
-  background-color: white;
-  padding: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-align: center;
-  border: 1px solid #e5e7eb;
-}
-
-.calendar-body {
-  border-left: 1px solid #d1d5db;
-  border-right: 1px solid #d1d5db;
-}
-
-.calendar-time-column {
+  background-color: #f9fafb;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #d1d5db;
+  padding: 1rem;
 }
 
-.calendar-time-cell {
-  height: 4rem;
-  border-bottom: 1px solid #e5e7eb;
+/* Header styles */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.month-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.view-button.active {
+  background-color: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: #1f2937;
+}
+
+.navigation-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Day header styles */
+.day-header {
+  display: flex;
+  margin-bottom: 0.25rem;
+}
+
+.time-column-spacer {
+  width: 4rem;
+}
+
+.days-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.day-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.day-name {
   font-size: 0.75rem;
-  text-align: right;
-  padding-right: 0.5rem;
-  padding-top: 0.25rem;
+  color: #6b7280;
 }
 
-.calendar-day-column {
-  position: relative;
+.day-number {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.current-day {
+  background-color: #111827;
+  color: white;
+}
+
+/* Calendar grid styles */
+.calendar-grid {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  flex-grow: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.time-column {
+  width: 4rem;
   border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  padding-top: 1.5rem;
 }
 
-.calendar-slot {
+.time-slot {
   height: 4rem;
-  border-bottom: 1px solid #e5e7eb;
-  cursor: pointer;
+  display: flex;
+  align-items: start;
+  justify-content: flex-end;
+  padding-right: 0.5rem;
 }
 
-.calendar-slot:hover {
-  background-color: #e0f2fe;
+.time-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.days-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  position: relative;
+}
+
+.grid-lines {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.grid-line {
+  height: 4rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.day-column {
+  position: relative;
+}
+
+.day-column.with-border {
+  border-right: 1px solid #f3f4f6;
+}
+
+.available-slot {
+  position: absolute;
+  top: 6rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  height: 4rem;
+  border: 2px dashed #d1d5db;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-button {
+  color: #9ca3af;
+}
+
+.add-button:hover {
+  color: #4b5563;
+}
+
+/* Event card styles */
+.event-card {
+  position: absolute;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  border-width: 1px;
+  left: 0.25rem;
+  right: 0.25rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.event-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.event-title {
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.event-time {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.event-attendees {
+  display: flex;
+  margin-top: 0.5rem;
+  margin-left: -0.25rem;
+}
+
+.attendee-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background-color: #d1d5db;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-icon {
+  color: #4b5563;
+}
+
+.attendee-count {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background-color: #e5e7eb;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: -0.25rem;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.event-details-modal {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem;
+  width: 20rem;
+  max-width: 28rem;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+}
+
+.modal-content {
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.detail-icon {
+  color: #6b7280;
+  margin-right: 0.5rem;
+}
+
+.detail-text {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.signup-button {
+  background-color: #2563eb;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.signup-button:hover {
+  background-color: #1d4ed8;
+}
+
+.close-button {
+  background-color: #f3f4f6;
+  color: #1f2937;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #e5e7eb;
 }
