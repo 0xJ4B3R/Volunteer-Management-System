@@ -731,17 +731,62 @@
 
 // export default VolunteerCalendar;
 
-import React from 'react';
+// import React from 'react';
 
-export function VolunteerCalendar() {
+// export function VolunteerCalendar() {
+//   return (
+//     <div className="p-6 bg-white rounded-lg shadow">
+//       <h1 className="text-2xl font-bold mb-4">Calendar</h1>
+//       <div className="border rounded-lg p-8 text-center text-gray-400">
+//         📅 Calendar View Coming Soon!
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default VolunteerCalendar;
+
+import React from "react";
+import "./styles/calendar.css"; // Import the styles
+
+const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const hours = Array.from({ length: 13 }, (_, i) => 6 + i); // 6 to 18
+
+const VolunteerCalendar = () => {
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-4">Calendar</h1>
-      <div className="border rounded-lg p-8 text-center text-gray-400">
-        📅 Calendar View Coming Soon!
+    <div className="calendar-container">
+      {/* Header Row */}
+      <div className="calendar-grid calendar-header-row">
+        <div className="calendar-header-cell">Time</div>
+        {days.map((day) => (
+          <div key={day} className="calendar-header-cell">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Main Grid */}
+      <div className="calendar-grid calendar-body">
+        {/* Time Column */}
+        <div className="calendar-time-column">
+          {hours.map((hour) => (
+            <div key={hour} className="calendar-time-cell">
+              {hour}:00
+            </div>
+          ))}
+        </div>
+
+        {/* Day Columns */}
+        {days.map((day) => (
+          <div key={day} className="calendar-day-column">
+            {hours.map((hour) => (
+              <div key={hour} className="calendar-slot" />
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
-}
+};
 
 export default VolunteerCalendar;
