@@ -1,9 +1,6 @@
-/* VolunteerCalendar.css */
-
-/* Main container */
 .calendar-container {
   background-color: #f9fafb;
-  min-height: 100vh;
+  height: 95vh;
   display: flex;
   flex-direction: column;
   padding: 1rem;
