@@ -10,11 +10,21 @@ export default function ForgotPassword() {
   return (
     <div 
     className="flex justify-center items-center min-h-screen p-4 bg-amber-50"
-    style={{ backgroundColor: '#416a42'}}
+    style={{
+          backgroundImage: 'url("/Background.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+    }}
     >
       <div 
       className="bg-amber-50/80 p-6 rounded-lg shadow-lg w-full max-w-md"
-      style={{ backgroundColor: '#f6ead1'}}
+      style={{
+          backgroundImage: 'url("Card.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+      }}
       >
         <h1 className="text-2xl font-semibold text-gray-700 mb-4">Reset your password</h1>
         <p className="text-gray-600 mb-6">

@@ -73,7 +73,12 @@ export default function LoginPage() {
   return (
     <div 
     className="flex justify-center items-center min-h-screen p-5 font-sans text-gray-700 leading-normal"
-    style={{ backgroundColor: '#416a42'}}
+    style={{
+          backgroundImage: 'url("/Background.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+    }}
     >
       <div className="flex flex-row w-full max-w-4xl h-[550px] rounded-2xl shadow-lg overflow-hidden bg-amber-50">
         {/* Left side with logo - preserved exactly as in original */}
@@ -91,7 +96,12 @@ export default function LoginPage() {
         {/* Right side with login form */}
         <div 
         className="flex-1 px-8 py-10 flex flex-col justify-center bg-amber-50"
-        style={{ backgroundColor: '#f1dfba'}}
+        style={{
+          backgroundImage: 'url("Card.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
         >
           <h1 className="text-3xl font-bold text-gray-700 text-center mb-2">Login!</h1>
           <p className="text-lg text-gray-700 text-center mb-4">Welcome! So good to have you back!</p>
