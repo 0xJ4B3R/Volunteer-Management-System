@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { db } from '@/lib/firebase';
 import {collection, getDocs, query, where} from "firebase/firestore";
 import { useNavigate } from 'react-router-dom';
+import './styles/Login.css';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -71,78 +72,59 @@ export default function LoginPage() {
   };
 
   return (
-    <div 
-    className="flex justify-center items-center min-h-screen p-5 font-sans text-gray-700 leading-normal"
-    style={{
-          backgroundImage: 'url("/Background.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-    }}
-    >
-      <div className="flex flex-row w-full max-w-4xl h-[550px] rounded-2xl shadow-lg overflow-hidden bg-amber-50">
+    <div className="login-page">
+      <div className="login-container">
         {/* Left side with logo - preserved exactly as in original */}
-        <div 
-        className="flex-1 bg-amber-100 flex justify-center items-center"
-        style={{ backgroundColor: '#f6ead1'}}
-        >
+        <div className="login-logo-section">
           <img
             src="./public/newLogo.png"
             alt="Login Logo"
-            className="w-full h-auto transition-all duration-300 ease-in-out"
+            className="login-logo"
           />
         </div>
 
         {/* Right side with login form */}
-        <div 
-        className="flex-1 px-8 py-10 flex flex-col justify-center bg-amber-50"
-        style={{
-          backgroundImage: 'url("Card.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-        >
-          <h1 className="text-3xl font-bold text-gray-700 text-center mb-2">Login!</h1>
-          <p className="text-lg text-gray-700 text-center mb-4">Welcome! So good to have you back!</p>
+        <div className="login-form-section">
+          <h1 className="login-title">Login!</h1>
+          <p className="login-subtitle">Welcome! So good to have you back!</p>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col">
-              <label className="mb-1 text-base font-medium text-gray-700" htmlFor="username">Username</label>
+          <div className="login-form">
+            <div className="form-group">
+              <label className="form-label" htmlFor="username">Username</label>
               <input
                 id="username"
                 type="text"
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="p-3.5 border border-amber-50 rounded-lg bg-amber-50/80 text-gray-800 text-base transition-all duration-300"
+                className="form-input"
               />
             </div>
 
-            <div className="flex flex-col">
-              <label className="mb-1 text-base font-medium text-gray-700" htmlFor="password">Password</label>
+            <div className="form-group">
+              <label className="form-label" htmlFor="password">Password</label>
               <input
                 id="password"
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="p-3.5 border border-amber-50 rounded-lg bg-amber-50/80 text-gray-800 text-base transition-all duration-300"
+                className="form-input"
               />
             </div>
 
             <button 
-              className="w-full py-3.5 bg-green-800 text-white text-lg font-semibold border-none rounded-lg cursor-pointer mt-2 transition-all duration-200 hover:bg-green-700 active:translate-y-px"
+              className="login-button"
               onClick={handleLogin}
             >
               Log in
             </button>
 
             {error && (
-              <p className="text-red-600 text-sm mt-2 text-center">{error}</p>
+              <p className="error-message">{error}</p>
             )}
 
-            <a href="/forgot-password" className="mt-2 text-center text-base text-green-800 no-underline transition-colors duration-200 hover:text-green-700">
+            <a href="/forgot-password" className="forgot-password-link">
               Forgot password?
             </a>
           </div>
