@@ -196,7 +196,7 @@
   margin-bottom: 1rem;
 }
 
-.find-opportunities-button {
+.browse-calendar-button {
   background-color: #4f46e5;
   color: white;
   border: none;
@@ -208,7 +208,7 @@
   transition: background-color 0.2s;
 }
 
-.find-opportunities-button:hover {
+.browse-calendar-button:hover {
   background-color: #4338ca;
 }
 

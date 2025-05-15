@@ -5,7 +5,7 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #f9fafb;
+  background-color: #f6ead1;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #333;
   gap: 20px;
@@ -15,7 +15,7 @@
 .spinner {
   height: 15px;
   aspect-ratio: 4;
-  --_g: no-repeat radial-gradient(farthest-side, #000 90%, #0000);
+  --_g: no-repeat radial-gradient(farthest-side, #416a42 90%, #0000);
   background:
     var(--_g) left,
     var(--_g) right;

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
+import { Link } from 'react-router-dom';
 import { Clock, CalendarClock, CheckCircle, Calendar, MapPin, UserCircle } from 'lucide-react';
 import { collection, getDocs, query, where, orderBy, limit, setDoc, doc } from 'firebase/firestore';
 import './styles/Dashboard.css';
@@ -210,9 +211,11 @@ function VolunteerDashboard() {
           <div className="no-appointments">
             <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="no-appointments-text">You don't have any upcoming appointments.</p>
-            <button className="find-opportunities-button">
-              Find Volunteer Opportunities
-            </button>
+            <Link to="./calendar">
+              <button className="browse-calendar-button">
+                Browse Calendar
+              </button>
+            </Link>
           </div>
         ) : (
           <div className="appointments-list">
