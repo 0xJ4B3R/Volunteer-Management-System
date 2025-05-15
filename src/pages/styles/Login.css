@@ -196,7 +196,9 @@
 }
 
 .lang-options {
-  margin-top: 0.5rem;
+  position: absolute;
+  bottom: 3.5rem; /* or bottom: 3.5rem depending on placement */
+  right: 0;
   background-color: #fffaf0;
   border: 1px solid #d8cfc0;
   border-radius: 0.5rem;
@@ -204,7 +206,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  width: 140px; /* <-- increase as needed */
 }
+
 
 .lang-options button {
   padding: 0.5rem 1rem;

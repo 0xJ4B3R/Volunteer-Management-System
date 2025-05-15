@@ -1,29 +1,37 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+  import i18n from 'i18next';
+  import { initReactI18next } from 'react-i18next';
+  import LanguageDetector from 'i18next-browser-languagedetector';
 
-import translationEN from './locales/en/translation.json';
-import translationHE from './locales/he/translation.json';
+  import LoginEN from './locales/en/Login.json';
+  import LoginHE from './locales/he/Login.json';
+  import ForgotPasswordEN from './locales/en/ForgotPassword.json';
+  import ForgotPasswordHE from './locales/he/ForgotPassword.json';
 
-// the translations
-const resources = {
-  en: {
-    translation: translationEN
-  },
-  he: {
-    translation: translationHE
-  }
-};
 
-i18n
-  .use(LanguageDetector) // Detect browser language
-  .use(initReactI18next) // Pass i18n to React
-  .init({
-    resources,
-    fallbackLng: 'en',
-    interpolation: {
-      escapeValue: false
+  const resources = {
+    en: {
+      translation: {
+        ... LoginEN,
+        ...ForgotPasswordEN
+      }
+    },
+    he: {
+      translation: {
+        ...LoginHE,
+        ...ForgotPasswordHE
+      }
     }
-  });
+  };
 
-export default i18n;
+  i18n
+    .use(LanguageDetector)
+    .use(initReactI18next)
+    .init({
+      resources,
+      fallbackLng: 'en',
+      interpolation: {
+        escapeValue: false
+      }
+    });
+
+  export default i18n;
