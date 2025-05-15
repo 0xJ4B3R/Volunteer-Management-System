@@ -1,80 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import {collection, getDocs, query, where} from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Globe } from 'lucide-react'; // Optional: for icon-based toggle
 import './styles/Login.css';
 
 export default function LoginPage() {
+  const { t, i18n } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [showLangOptions, setShowLangOptions] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
+  }, [i18n.language]);
 
   const handleLogin = async () => {
     if (!username || !password) {
-      setError("Please fill all the fields above");
+      setError(t("error_fill_fields"));
       return;
     }
-  
+
     try {
-      console.log("Attempting login for username:", username);
       const userCollection = collection(db, "Users");
       const q = query(userCollection, where("username", "==", username));
       const querySnapShot = await getDocs(q);
-  
+
       if (querySnapShot.empty) {
-        console.log("User not found in database");
-        setError("User not found");
+        setError(t("error_user_not_found"));
         return;
       }
-  
+
       const userDoc = querySnapShot.docs[0];
       const userData = userDoc.data();
       const role = userData.role;
-      
-      console.log("User found with role:", role);
-  
-      // Save user data to localStorage
+
       localStorage.setItem("role", role);
       localStorage.setItem("userId", userDoc.id);
-      localStorage.setItem("username", username); // This is critical - store the username
+      localStorage.setItem("username", username);
       localStorage.setItem("user", JSON.stringify({
         id: userDoc.id,
         username: userData.username,
         role: userData.role,
-        // Add other non-sensitive user data you might need
       }));
-  
+
       if (userData.password === password) {
-        console.log("Password matches, navigating to:", role === 'manager' ? '/manager' : '/volunteer');
-        
-        // Slight delay to ensure localStorage is set before navigation
         setTimeout(() => {
-          if (role === 'volunteer') {
-            navigate('/volunteer');
-          }
-          else if (role === 'manager') {
-            navigate('/manager');
-          }
-          else {
-            console.log("Invalid role detected:", role);
-            setError("Invalid user role");
-          }
+          if (role === 'volunteer') navigate('/volunteer');
+          else if (role === 'manager') navigate('/manager');
+          else setError(t("error_invalid_role"));
         }, 100);
       } else {
-        console.log("Password mismatch");
-        setError("Wrong password or username");
+        setError(t("error_wrong_credentials"));
       }
     } catch (error) {
       console.error("Login error:", error);
-      setError("Couldn't login");
+      setError(t("error_login_failed"));
     }
   };
 
   return (
     <div className="login-page">
+      {/* Language selector - bottom-right foldable */}
+      <div className="language-toggle">
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe size={18} />
+        </button>
+        {showLangOptions && (
+          <div className="lang-options">
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              🇬🇧 English
+            </button>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              🇮🇱 עברית
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="login-container">
-        {/* Left side with logo - preserved exactly as in original */}
         <div className="login-logo-section">
           <img
             src="./public/newLogo.png"
@@ -83,18 +90,17 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* Right side with login form */}
         <div className="login-form-section">
-          <h1 className="login-title">Login!</h1>
-          <p className="login-subtitle">Welcome! So good to have you back!</p>
+          <h1 className="login-title">{t("login_title")}</h1>
+          <p className="login-subtitle">{t("login_subtitle")}</p>
 
           <div className="login-form">
             <div className="form-group">
-              <label className="form-label" htmlFor="username">Username</label>
+              <label className="form-label" htmlFor="username">{t("username")}</label>
               <input
                 id="username"
                 type="text"
-                placeholder="Username"
+                placeholder={t("username")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="form-input"
@@ -102,11 +108,11 @@ export default function LoginPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="password">Password</label>
+              <label className="form-label" htmlFor="password">{t("password")}</label>
               <input
                 id="password"
                 type="password"
-                placeholder="Password"
+                placeholder={t("password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="form-input"
@@ -117,7 +123,7 @@ export default function LoginPage() {
               className="login-button"
               onClick={handleLogin}
             >
-              Log in
+              {t("login_button")}
             </button>
 
             {error && (
@@ -125,7 +131,7 @@ export default function LoginPage() {
             )}
 
             <a href="/forgot-password" className="forgot-password-link">
-              Forgot password?
+              {t("forgot_password")}
             </a>
           </div>
         </div>

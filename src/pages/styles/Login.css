@@ -136,3 +136,53 @@
 .forgot-password-link:hover {
   color: #276749;
 }
+
+.language-toggle {
+  position: absolute;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.lang-button {
+  background-color: #f6ead1;
+  border: 1px solid #d8cfc0;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: #1a4731;
+}
+
+.lang-button:hover {
+  background-color: #ede0c8;
+}
+
+.lang-options {
+  margin-top: 0.5rem;
+  background-color: #fffaf0;
+  border: 1px solid #d8cfc0;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.lang-options button {
+  padding: 0.5rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #1a4731;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.lang-options button:hover {
+  background-color: #f6ead1;
+}

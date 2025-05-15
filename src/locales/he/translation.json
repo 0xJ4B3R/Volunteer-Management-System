@@ -1,0 +1,13 @@
+{
+  "login_title": "התחברות!",
+  "login_subtitle": "ברוך הבא! שמחים לראותך שוב!",
+  "username": "שם משתמש",
+  "password": "סיסמה",
+  "login_button": "התחבר",
+  "forgot_password": "שכחת סיסמה?",
+  "error_fill_fields": "אנא מלא את כל השדות",
+  "error_user_not_found": "המשתמש לא נמצא",
+  "error_invalid_role": "תפקיד לא תקין",
+  "error_wrong_credentials": "שם משתמש או סיסמה שגויים",
+  "error_login_failed": "לא ניתן להתחבר"
+}
