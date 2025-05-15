@@ -1,0 +1,41 @@
+/* Centering and styling the loading screen */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f9fafb;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+  gap: 20px;
+}
+
+/* Loader animation */
+.spinner {
+  height: 15px;
+  aspect-ratio: 4;
+  --_g: no-repeat radial-gradient(farthest-side, #000 90%, #0000);
+  background:
+    var(--_g) left,
+    var(--_g) right;
+  background-size: 25% 100%;
+  display: flex;
+}
+
+.spinner::before {
+  content: "";
+  flex: 1;
+  background: inherit;
+  animation: l50 2s infinite;
+}
+
+@keyframes l50 {
+  0%    {transform: translate(37.5%) rotate(0)}
+  16.67%{transform: translate(37.5%) rotate(90deg)}
+  33.33%{transform: translate(-37.5%) rotate(90deg)}
+  50%   {transform: translate(-37.5%) rotate(180deg)}
+  66.67%{transform: translate(-37.5%) rotate(270deg)}
+  83.33%{transform: translate(37.5%) rotate(270deg)}
+  100%  {transform: translate(37.5%) rotate(360deg)}
+}

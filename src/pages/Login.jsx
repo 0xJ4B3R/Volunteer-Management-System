@@ -4,12 +4,14 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react'; // Optional: for icon-based toggle
+import LoadingScreen from '@/components/volunteer/LoadingScreen';
 import './styles/Login.css';
 
 export default function LoginPage() {
   const { t, i18n } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showLangOptions, setShowLangOptions] = useState(false);
   const navigate = useNavigate();
@@ -38,21 +40,26 @@ export default function LoginPage() {
       const userData = userDoc.data();
       const role = userData.role;
 
-      localStorage.setItem("role", role);
-      localStorage.setItem("userId", userDoc.id);
-      localStorage.setItem("username", username);
-      localStorage.setItem("user", JSON.stringify({
-        id: userDoc.id,
-        username: userData.username,
-        role: userData.role,
-      }));
-
       if (userData.password === password) {
+        setLoading(true);
+        
+        localStorage.setItem("role", role);
+        localStorage.setItem("userId", userDoc.id);
+        localStorage.setItem("username", username);
+        localStorage.setItem("user", JSON.stringify({
+          id: userDoc.id,
+          username: userData.username,
+          role: userData.role,
+        }));
+
         setTimeout(() => {
           if (role === 'volunteer') navigate('/volunteer');
           else if (role === 'manager') navigate('/manager');
-          else setError(t("error_invalid_role"));
-        }, 100);
+          else {
+            setError(t("error_invalid_role"));
+            setLoaing(false);
+          } 
+        }, 2000);
       } else {
         setError(t("error_wrong_credentials"));
       }
@@ -61,6 +68,8 @@ export default function LoginPage() {
       setError(t("error_login_failed"));
     }
   };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="login-page">

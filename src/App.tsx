@@ -49,10 +49,12 @@ const App = () => (
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Manager Routes */}
+      console.log("Got Here");
       <Route
         path="/manager"
         element={<LayoutRoute role="manager" element={<Dashboard />} />}
       />
+      console.log("I am in manager");
       <Route
         path="/manager/calendar"
         element={<LayoutRoute role="manager" element={<Calendar />} />}
