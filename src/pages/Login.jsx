@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff } from 'lucide-react';
 import { Globe } from 'lucide-react'; // Optional: for icon-based toggle
+
 import LoadingScreen from '@/components/volunteer/LoadingScreen';
 import './styles/Login.css';
 
@@ -29,7 +30,7 @@ export default function LoginPage() {
     }
 
     try {
-      const userCollection = collection(db, "Users");
+      const userCollection = collection(db, "users");
       const q = query(userCollection, where("username", "==", username));
       const querySnapShot = await getDocs(q);
 
@@ -41,8 +42,9 @@ export default function LoginPage() {
       const userDoc = querySnapShot.docs[0];
       const userData = userDoc.data();
       const role = userData.role;
-
-      if (userData.password === password) {
+      
+      if (userData.isActive) {
+        if (userData.password === password && userData.isActive) {
         setLoading(true);
         
         localStorage.setItem("role", role);
@@ -65,6 +67,7 @@ export default function LoginPage() {
       } else {
         setError(t("error_wrong_credentials"));
       }
+      } else setError(r("error_user_inactive"));
     } catch (error) {
       console.error("Login error:", error);
       setError(t("error_login_failed"));
@@ -78,15 +81,15 @@ export default function LoginPage() {
       {/* Language selector - bottom-right foldable */}
       <div className="language-toggle">
         <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-          <Globe size={18} />
+          <Globe size={35} />
         </button>
         {showLangOptions && (
           <div className="lang-options">
             <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
-              🇬🇧 English
+              English
             </button>
             <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
-              🇮🇱 עברית
+              עברית
             </button>
           </div>
         )}

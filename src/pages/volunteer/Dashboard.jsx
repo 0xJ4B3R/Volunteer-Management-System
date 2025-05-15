@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { Clock, CalendarClock, Calendar, MapPin, UserCircle, CheckCircle } from 'lucide-react';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-
+import { Clock, CalendarClock, CheckCircle, Calendar, MapPin, UserCircle } from 'lucide-react';
+import { collection, getDocs, query, where, orderBy, limit, setDoc, doc } from 'firebase/firestore';
 import './styles/Dashboard.css';
 
 function VolunteerDashboard() {
@@ -11,100 +10,86 @@ function VolunteerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Get username from localStorage
-  const username = localStorage.getItem('username');
+  // Get user info from localStorage
   const userObject = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
-  const usernameFromObject = userObject?.username;
+  const userId = userObject?.uid || userObject?.id;
+  const username = userObject?.username;
 
   useEffect(() => {
-    const fetchData = async () => {
-      const userIdentifier = username || usernameFromObject;
-      
-      if (userIdentifier) {
-        try {
-          // Fetch volunteer data
-          const volunteerRef = collection(db, 'Volunteer');
-          const q = query(volunteerRef, where('username', '==', userIdentifier));
-          const querySnapshot = await getDocs(q);
-          
-          if (!querySnapshot.empty) {
-            const volunteerDoc = querySnapshot.docs[0];
-            const data = volunteerDoc.data();
-            const volunteerId = volunteerDoc.id;
-
-            // Set the volunteer data to state
-            setVolunteerData({
-              ...data,
-              id: volunteerId,
-              skills: Array.isArray(data.skills) ? data.skills : [],
-              totalHoursVolunteered: data.totalHoursVolunteered || 0
-            });
-            
-            // Fetch appointments data
-            await fetchAppointments(volunteerId);
-          } else {
-            setError('Could not find your volunteer profile. Please contact support.');
-          }
-        } catch (err) {
-          console.error('Error fetching volunteer data:', err);
-          
-          if (err.code === 'permission-denied') {
-            setError('Access denied. You do not have permission to view this data. Please contact an administrator.');
-          } else {
-            setError(`Error loading your profile: ${err.message}`);
-          }
+    const fetchVolunteerData = async () => {
+      try {
+        let volunteerSnap = null;
+        if (userId) {
+          const q = query(collection(db, 'volunteers'), where('userId', '==', userId));
+          const snap = await getDocs(q);
+          if (!snap.empty) volunteerSnap = snap.docs[0];
         }
-      } else {
-        setError('You are not logged in. Please log in to view your dashboard.');
+        if (!volunteerSnap && username) {
+          const q2 = query(collection(db, 'volunteers'), where('username', '==', username));
+          const snap2 = await getDocs(q2);
+          if (!snap2.empty) volunteerSnap = snap2.docs[0];
+        }
+        if (!volunteerSnap && userId) {
+          // Create a new volunteer document if not found
+          const newVolunteer = {
+            userId,
+            username: username || `user_${userId.slice(0, 6)}`,
+            fullName: userObject?.displayName || 'New Volunteer',
+            avatar: null,
+            birthDate: null,
+            skills: [],
+            totalHoursVolunteered: 0,
+            createdAt: new Date().toISOString(),
+            appointmentsAttended: 0
+          };
+          await setDoc(doc(db, 'volunteers', userId), newVolunteer);
+          setVolunteerData({ ...newVolunteer, id: userId });
+        } else if (volunteerSnap) {
+          setVolunteerData({ ...volunteerSnap.data(), id: volunteerSnap.id });
+        } else {
+          setError('Could not find or create your volunteer profile.');
+        }
+      } catch (err) {
+        setError('Error loading your profile: ' + err.message);
       }
       setLoading(false);
     };
 
-    const fetchAppointments = async (volunteerId) => {
+    fetchVolunteerData();
+  }, [userId, username, userObject]);
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!volunteerData?.id) return;
       try {
-        const appointmentsRef = collection(db, 'Appointments');
         const q = query(
-          appointmentsRef, 
-          where('volunteerId', '==', volunteerId),
-          where('date', '>=', new Date().toISOString().split('T')[0]),
+          collection(db, 'appointments'),
+          where('volunteerIds', 'array-contains', volunteerData.id),
           orderBy('date', 'asc'),
           limit(5)
         );
-        
-        const querySnapshot = await getDocs(q);
-        const appointmentsData = [];
-        
-        querySnapshot.forEach((doc) => {
-          appointmentsData.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-        
-        setAppointments(appointmentsData);
+        const snap = await getDocs(q);
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAppointments(data);
       } catch (err) {
-        console.error('Error fetching appointments:', err);
+        // Appointments are optional, so don't set error
       }
     };
-
-    fetchData();
-  }, [username, usernameFromObject]);
+    fetchAppointments();
+  }, [volunteerData]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-    
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
       weekday: 'short',
-      month: 'short', 
+      month: 'short',
       day: 'numeric'
     }).format(date);
   };
 
   const formatTime = (timeString) => {
     if (!timeString) return '';
-    
-    // Handle both HH:MM format and full ISO strings
     let hours, minutes;
     if (timeString.includes('T')) {
       const date = new Date(timeString);
@@ -113,11 +98,9 @@ function VolunteerDashboard() {
     } else {
       [hours, minutes] = timeString.split(':').map(Number);
     }
-    
     const period = hours >= 12 ? 'PM' : 'AM';
     const formattedHours = hours % 12 || 12;
     const formattedMinutes = minutes.toString().padStart(2, '0');
-    
     return `${formattedHours}:${formattedMinutes} ${period}`;
   };
 
@@ -138,7 +121,7 @@ function VolunteerDashboard() {
     },
     {
       label: "Appointments Attended",
-      value: volunteerData.skills?.length || 0,
+      value: volunteerData.appointmentsAttended || 0,
       icon: CheckCircle,
       color: "bg-purple-50",
       border: "border-purple-200"
@@ -148,7 +131,7 @@ function VolunteerDashboard() {
   if (loading) {
     return <div className="dashboard-loading">Loading...</div>;
   }
-  
+
   if (error) {
     return (
       <div className="dashboard-error">
@@ -159,11 +142,11 @@ function VolunteerDashboard() {
           <ul className="list-disc pl-5 mt-2">
             <li>Check your Firebase security rules</li>
             <li>Make sure you're logged in properly</li>
-            <li>Verify the 'Volunteer' collection exists</li>
+            <li>Verify the 'volunteers' collection exists</li>
           </ul>
         </div>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="dashboard-retry-button mt-4"
         >
           Try Again
@@ -243,17 +226,14 @@ function VolunteerDashboard() {
                     {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
                   </div>
                 </div>
-                
                 <div className="appointment-details">
                   <h3 className="appointment-title">{appointment.title || 'Volunteer Session'}</h3>
-                  
                   {appointment.location && (
                     <div className="appointment-location">
                       <MapPin className="w-4 h-4" />
                       <span>{appointment.location}</span>
                     </div>
                   )}
-                  
                   {appointment.supervisor && (
                     <div className="appointment-supervisor">
                       <UserCircle className="w-4 h-4" />
@@ -261,7 +241,6 @@ function VolunteerDashboard() {
                     </div>
                   )}
                 </div>
-                
                 <div className="appointment-actions">
                   <button className="appointment-details-button">
                     Details
