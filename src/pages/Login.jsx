@@ -3,6 +3,8 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Globe } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Globe } from 'lucide-react'; // Optional: for icon-based toggle
 import LoadingScreen from '@/components/volunteer/LoadingScreen';
 import './styles/Login.css';
@@ -11,6 +13,7 @@ export default function LoginPage() {
   const { t, i18n } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showLangOptions, setShowLangOptions] = useState(false);
@@ -116,16 +119,26 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group password-group">
               <label className="form-label" htmlFor="password">{t("password")}</label>
-              <input
-                id="password"
-                type="password"
-                placeholder={t("password")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="form-input"
-              />
+              <div className="password-input-wrapper">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t("password")}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="form-input"
+                />
+                <button 
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <button 
