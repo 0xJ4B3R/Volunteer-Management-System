@@ -581,7 +581,7 @@ const ManagerVolunteers = () => {
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm z-10">
+      <header className="bg-white border-b border-slate-200 shadow-sm z-10 h-[69px]">
         <div className="px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <Button
@@ -1258,7 +1258,7 @@ const ManagerVolunteers = () => {
                   id="name"
                   placeholder="Enter full name"
                   value={newVolunteer.name}
-                  onChange={(e) => setNewVolunteer({...newVolunteer, name: e.target.value})}
+                  onChange={(e) => setNewVolunteer({ ...newVolunteer, name: e.target.value })}
                   className="h-10 bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
@@ -1270,7 +1270,7 @@ const ManagerVolunteers = () => {
                   type="email"
                   placeholder="Enter email"
                   value={newVolunteer.email}
-                  onChange={(e) => setNewVolunteer({...newVolunteer, email: e.target.value})}
+                  onChange={(e) => setNewVolunteer({ ...newVolunteer, email: e.target.value })}
                   className="h-10 bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
@@ -1282,7 +1282,7 @@ const ManagerVolunteers = () => {
                 id="phone"
                 placeholder="Enter phone number"
                 value={newVolunteer.phone}
-                onChange={(e) => setNewVolunteer({...newVolunteer, phone: e.target.value})}
+                onChange={(e) => setNewVolunteer({ ...newVolunteer, phone: e.target.value })}
                 className="h-10 bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
@@ -1328,30 +1328,30 @@ const ManagerVolunteers = () => {
                   "Friday Morning", "Friday Afternoon", "Friday Evening",
                   "Saturday Morning", "Saturday Afternoon", "Saturday Evening",
                   "Sunday Morning", "Sunday Afternoon", "Sunday Evening"].map(time => (
-                  <div key={time} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`availability-${time}`}
-                      checked={newVolunteer.availability.includes(time)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setNewVolunteer({
-                            ...newVolunteer,
-                            availability: [...newVolunteer.availability, time]
-                          });
-                        } else {
-                          setNewVolunteer({
-                            ...newVolunteer,
-                            availability: newVolunteer.availability.filter(t => t !== time)
-                          });
-                        }
-                      }}
-                      className="border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                    />
-                    <Label htmlFor={`availability-${time}`} className="text-sm text-slate-700">
-                      {time}
-                    </Label>
-                  </div>
-                ))}
+                    <div key={time} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`availability-${time}`}
+                        checked={newVolunteer.availability.includes(time)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setNewVolunteer({
+                              ...newVolunteer,
+                              availability: [...newVolunteer.availability, time]
+                            });
+                          } else {
+                            setNewVolunteer({
+                              ...newVolunteer,
+                              availability: newVolunteer.availability.filter(t => t !== time)
+                            });
+                          }
+                        }}
+                        className="border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor={`availability-${time}`} className="text-sm text-slate-700">
+                        {time}
+                      </Label>
+                    </div>
+                  ))}
               </div>
             </div>
 
@@ -1361,7 +1361,7 @@ const ManagerVolunteers = () => {
                 id="notes"
                 placeholder="Enter any additional notes about the volunteer"
                 value={newVolunteer.notes}
-                onChange={(e) => setNewVolunteer({...newVolunteer, notes: e.target.value})}
+                onChange={(e) => setNewVolunteer({ ...newVolunteer, notes: e.target.value })}
                 className="min-h-[100px] bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
@@ -1419,7 +1419,7 @@ const ManagerVolunteers = () => {
                     id="edit-name"
                     placeholder="Enter full name"
                     value={selectedVolunteer.name}
-                    onChange={(e) => setSelectedVolunteer({...selectedVolunteer, name: e.target.value})}
+                    onChange={(e) => setSelectedVolunteer({ ...selectedVolunteer, name: e.target.value })}
                     className="h-10 bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
@@ -1431,7 +1431,7 @@ const ManagerVolunteers = () => {
                     type="email"
                     placeholder="Enter email"
                     value={selectedVolunteer.email}
-                    onChange={(e) => setSelectedVolunteer({...selectedVolunteer, email: e.target.value})}
+                    onChange={(e) => setSelectedVolunteer({ ...selectedVolunteer, email: e.target.value })}
                     className="h-10 bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
@@ -1443,7 +1443,7 @@ const ManagerVolunteers = () => {
                   id="edit-phone"
                   placeholder="Enter phone number"
                   value={selectedVolunteer.phone}
-                  onChange={(e) => setSelectedVolunteer({...selectedVolunteer, phone: e.target.value})}
+                  onChange={(e) => setSelectedVolunteer({ ...selectedVolunteer, phone: e.target.value })}
                   className="h-10 bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
@@ -1452,7 +1452,7 @@ const ManagerVolunteers = () => {
                 <Label htmlFor="edit-status" className="text-sm font-medium text-slate-700">Status</Label>
                 <Select
                   value={selectedVolunteer.status}
-                  onValueChange={(value) => setSelectedVolunteer({...selectedVolunteer, status: value})}
+                  onValueChange={(value) => setSelectedVolunteer({ ...selectedVolunteer, status: value })}
                 >
                   <SelectTrigger id="edit-status" className="h-10 bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0">
                     <SelectValue placeholder="Select status" />
@@ -1506,30 +1506,30 @@ const ManagerVolunteers = () => {
                     "Friday Morning", "Friday Afternoon", "Friday Evening",
                     "Saturday Morning", "Saturday Afternoon", "Saturday Evening",
                     "Sunday Morning", "Sunday Afternoon", "Sunday Evening"].map(time => (
-                    <div key={time} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit-availability-${time}`}
-                        checked={selectedVolunteer.availability.includes(time)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedVolunteer({
-                              ...selectedVolunteer,
-                              availability: [...selectedVolunteer.availability, time]
-                            });
-                          } else {
-                            setSelectedVolunteer({
-                              ...selectedVolunteer,
-                              availability: selectedVolunteer.availability.filter(t => t !== time)
-                            });
-                          }
-                        }}
-                        className="border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <Label htmlFor={`edit-availability-${time}`} className="text-sm text-slate-700">
-                        {time}
-                      </Label>
-                    </div>
-                  ))}
+                      <div key={time} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-availability-${time}`}
+                          checked={selectedVolunteer.availability.includes(time)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedVolunteer({
+                                ...selectedVolunteer,
+                                availability: [...selectedVolunteer.availability, time]
+                              });
+                            } else {
+                              setSelectedVolunteer({
+                                ...selectedVolunteer,
+                                availability: selectedVolunteer.availability.filter(t => t !== time)
+                              });
+                            }
+                          }}
+                          className="border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        />
+                        <Label htmlFor={`edit-availability-${time}`} className="text-sm text-slate-700">
+                          {time}
+                        </Label>
+                      </div>
+                    ))}
                 </div>
               </div>
 
@@ -1539,7 +1539,7 @@ const ManagerVolunteers = () => {
                   id="edit-notes"
                   placeholder="Enter any additional notes about the volunteer"
                   value={selectedVolunteer.notes || ""}
-                  onChange={(e) => setSelectedVolunteer({...selectedVolunteer, notes: e.target.value})}
+                  onChange={(e) => setSelectedVolunteer({ ...selectedVolunteer, notes: e.target.value })}
                   className="min-h-[100px] bg-white border-slate-200 focus:border-primary focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
@@ -1810,4 +1810,4 @@ const ManagerVolunteers = () => {
   );
 };
 
-export default ManagerVolunteers;
+export default ManagerVolunteers; 

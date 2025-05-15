@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  CalendarDays, 
-  Users, 
-  Bell, 
-  Calendar, 
-  UserPlus, 
+import {
+  CalendarDays,
+  Users,
+  Bell,
+  Calendar,
+  UserPlus,
   FileText,
   Menu,
   AlertCircle,
@@ -89,7 +89,7 @@ interface DashboardStats {
 const fetchDashboardData = async (): Promise<DashboardStats> => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 1000));
-  
+
   return {
     todayStats: {
       totalSessions: 5,
@@ -196,7 +196,7 @@ const ManagerDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  
+
   // Fetch dashboard data
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
@@ -206,7 +206,7 @@ const ManagerDashboard = () => {
   // Check authentication
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
-    
+
     if (!user.username) {
       navigate("/login");
     } else if (user.role !== "manager") {
@@ -224,7 +224,7 @@ const ManagerDashboard = () => {
 
     window.addEventListener('resize', handleResize);
     handleResize(); // Initial check
-    
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -276,30 +276,30 @@ const ManagerDashboard = () => {
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm z-10">
+      <header className="bg-white border-b border-slate-200 shadow-sm z-10 h-[69px]">
         <div className="px-6 py-3 flex justify-between items-center">
           {/* Left section - Logo and menu */}
           <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="lg:hidden"
-          >
+              className="lg:hidden"
+            >
               <Menu className="h-5 w-5" />
-          </Button>
+            </Button>
             <div className="flex items-center space-x-2">
               <BarChart3 className="h-6 w-6 text-primary" />
               <h1 className="font-bold text-xl hidden sm:block">Volunteer Management System</h1>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {/* Notifications */}
             <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                 className="relative h-10 w-10"
               >
@@ -307,21 +307,21 @@ const ManagerDashboard = () => {
                 {dashboardData?.todayStats.sessions.length > 0 && (
                   <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
                 )}
-                  </Button>
-              
+              </Button>
+
               {/* Notifications Panel */}
-              <NotificationsPanel 
-                isOpen={isNotificationsOpen} 
-                onClose={() => setIsNotificationsOpen(false)} 
+              <NotificationsPanel
+                isOpen={isNotificationsOpen}
+                onClose={() => setIsNotificationsOpen(false)}
                 notifications={dashboardData?.todayStats.sessions.map(session => ({
                   id: session.id,
                   message: `Session at ${session.startTime} - ${session.endTime}`,
                   time: `${session.date} ${session.startTime} - ${session.endTime}`,
                   type: "info"
-                })) || []} 
+                })) || []}
               />
-          </div>
-          
+            </div>
+
             {/* User Avatar */}
             <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
               <span className="text-base font-medium text-primary">M</span>
@@ -329,17 +329,17 @@ const ManagerDashboard = () => {
           </div>
         </div>
       </header>
-      
+
       {/* Main Content with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Navigation */}
-        <ManagerSidebar 
-          isOpen={isSidebarOpen} 
-          onClose={() => setIsSidebarOpen(false)} 
-          isMobile={isMobile} 
+        <ManagerSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          isMobile={isMobile}
           onLogout={handleLogout}
         />
-        
+
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 transition-all duration-300">
           {/* Page Title */}
@@ -347,7 +347,7 @@ const ManagerDashboard = () => {
             <h1 className="text-2xl font-bold text-slate-900">Manager Dashboard</h1>
             <p className="text-slate-600 mt-1">Monitor and manage your community activities.</p>
           </div>
-          
+
           {/* Performance Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card>
@@ -444,7 +444,7 @@ const ManagerDashboard = () => {
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Pending Sessions and Today's Sessions */}
@@ -453,7 +453,7 @@ const ManagerDashboard = () => {
               <Card>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-              <div>
+                    <div>
                       <CardTitle>Pending Volunteers</CardTitle>
                       <CardDescription className="mt-1">Volunteers awaiting approval</CardDescription>
                     </div>
@@ -469,15 +469,15 @@ const ManagerDashboard = () => {
                     {dashboardData?.todayStats.sessions
                       .filter(session => session.pendingVolunteers.length > 0)
                       .map((session) => (
-                        <div 
+                        <div
                           key={session.id}
                           className="flex items-center justify-between p-4 bg-amber-50/50 rounded-lg border border-amber-200/50 hover:bg-amber-50 transition-colors"
                         >
                           <div className="flex items-center space-x-4">
                             <div className="h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
                               <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
+                            </div>
+                            <div>
                               <h4 className="font-medium text-amber-900">
                                 {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                               </h4>
@@ -486,8 +486,8 @@ const ManagerDashboard = () => {
                               </p>
                             </div>
                           </div>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             className="border-amber-200 text-amber-700 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800"
                           >
@@ -529,15 +529,15 @@ const ManagerDashboard = () => {
                         return today.toDateString() === sessionDate.toDateString();
                       })
                       .map((session) => (
-                        <div 
+                        <div
                           key={session.id}
                           className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
                         >
                           <div className="flex items-center space-x-4">
                             <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
                               <CalendarDays className="h-5 w-5 text-primary" />
-              </div>
-              <div>
+                            </div>
+                            <div>
                               <h4 className="font-medium">
                                 {session.startTime} - {session.endTime}
                               </h4>
@@ -553,7 +553,7 @@ const ManagerDashboard = () => {
                           </div>
                         </div>
                       ))}
-              </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -600,7 +600,7 @@ const ManagerDashboard = () => {
                     >
                       <FileText className="mr-2 h-4 w-4" />
                       Generate Report
-              </Button>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -648,10 +648,10 @@ const ManagerDashboard = () => {
           </div>
         </main>
       </div>
-      
+
       {/* Overlay for mobile when sidebar is open */}
       {isMobile && isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-10"
           onClick={() => setIsSidebarOpen(false)}
         ></div>
@@ -660,4 +660,4 @@ const ManagerDashboard = () => {
   );
 };
 
-export default ManagerDashboard;
+export default ManagerDashboard; 

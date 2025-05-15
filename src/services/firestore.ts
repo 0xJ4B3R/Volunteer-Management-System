@@ -75,6 +75,13 @@ export type SlotPeriod = 'morning' | 'afternoon' | 'evening' | null;
 export type SlotStatus = 'open' | 'full' | 'canceled';
 export type VolunteerRequestStatus = 'pending' | 'approved' | 'rejected';
 export type VolunteerRequestAssignedBy = 'ai' | 'manager';
+
+// New type for participant IDs
+export interface ParticipantId {
+  id: string;
+  type: 'volunteer' | 'external_group';
+}
+
 export interface VolunteerRequest {
   volunteerId: string;
   status: VolunteerRequestStatus;
@@ -85,6 +92,7 @@ export interface VolunteerRequest {
   matchScore?: number | null;
   assignedBy: VolunteerRequestAssignedBy;
 }
+
 export interface CalendarSlot {
   id: string;
   date: string; // YYYY-MM-DD
@@ -96,6 +104,7 @@ export interface CalendarSlot {
   residentIds: string[];
   maxCapacity: number;
   volunteerRequests: VolunteerRequest[];
+  approvedVolunteers: ParticipantId[]; // Updated to use ParticipantId
   status: SlotStatus;
   appointmentId?: string | null;
   isOpen: boolean;
@@ -109,7 +118,7 @@ export interface Appointment {
   id: string;
   calendarSlotId: string;
   residentIds: string[];
-  volunteerIds: string[];
+  volunteerIds: ParticipantId[]; // Updated to use ParticipantId
   status: AppointmentStatus;
   updatedAt: Timestamp;
   createdAt: Timestamp;
@@ -122,7 +131,7 @@ export type AttendanceConfirmedBy = 'volunteer' | 'manager';
 export interface Attendance {
   id: string;
   appointmentId: string;
-  volunteerId: string;
+  volunteerId: ParticipantId;
   status: AttendanceStatus;
   confirmedBy: AttendanceConfirmedBy;
   confirmedAt: Timestamp;

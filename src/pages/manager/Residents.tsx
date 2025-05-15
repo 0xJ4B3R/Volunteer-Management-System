@@ -543,7 +543,7 @@ const ManagerResidents = () => {
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm z-10">
+      <header className="bg-white border-b border-slate-200 shadow-sm z-10 h-[69px]">
         <div className="px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <Button
@@ -720,30 +720,30 @@ const ManagerResidents = () => {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 {/* Left Section - Filters */}
                 <div className="flex flex-wrap items-center gap-3 min-w-0">
-                <Select value={filterStatus} onValueChange={(value) => {
-                  setFilterStatus(value);
-                  setSelectedResidents([]);
-                }}>
+                  <Select value={filterStatus} onValueChange={(value) => {
+                    setFilterStatus(value);
+                    setSelectedResidents([]);
+                  }}>
                     <SelectTrigger className="w-[140px] h-9 bg-white border-slate-200 focus:ring-0 focus:ring-offset-0">
                       <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                <Button
-                  variant="outline"
-                  size="sm"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="h-9 border-slate-200 hover:bg-slate-50"
                     onClick={() => setIsMoreFiltersOpen(true)}
-                >
+                  >
                     <Filter className="h-4 w-4 mr-1" />
                     More Filters
-                </Button>
+                  </Button>
                 </div>
 
                 {/* Right Section - Actions */}
@@ -763,15 +763,15 @@ const ManagerResidents = () => {
                       )}
                       {viewMode === "list" ? "Grid View" : "List View"}
                     </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setIsCreateDialogOpen(true)}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setIsCreateDialogOpen(true)}
                       className="h-9 bg-primary hover:bg-primary/90"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Resident
-                </Button>
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Resident
+                    </Button>
                   </div>
 
                   {/* Bulk Actions */}
@@ -910,7 +910,7 @@ const ManagerResidents = () => {
                     <tbody className="relative">
                       {paginatedResidents.map((resident, index) => (
                         <tr
-                    key={resident.id}
+                          key={resident.id}
                           className={cn(
                             "border-b hover:bg-slate-50",
                             index % 2 === 0 ? "bg-white" : "bg-slate-50/50"
@@ -950,15 +950,15 @@ const ManagerResidents = () => {
                                   resident.status === "pending" && "bg-amber-50 text-amber-700 border-amber-200"
                                 )}
                               >
-                            {resident.status}
-                          </Badge>
-                        </div>
+                                {resident.status}
+                              </Badge>
+                            </div>
                           </td>
                           <td className="text-center py-2 px-4">
                             <div className="flex items-center justify-center">
                               <Calendar className="h-4 w-4 mr-1 text-slate-500" />
                               <span>{new Date(resident.joinDate).toLocaleDateString('en-GB')}</span>
-                          </div>
+                            </div>
                           </td>
                           <td className="text-center py-2 px-4">
                             <Button
@@ -978,8 +978,8 @@ const ManagerResidents = () => {
                       ))}
                     </tbody>
                   </table>
-                          </div>
-                          </div>
+                </div>
+              </div>
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
@@ -1004,15 +1004,15 @@ const ManagerResidents = () => {
                             onClick={(e) => e.stopPropagation()}
                             className="border-black data-[state=checked]:bg-primary data-[state=checked]:border-primary bg-white/90 backdrop-blur-sm"
                           />
-                          </div>
+                        </div>
                         <div className="flex items-center space-x-4">
                           <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white shadow-md bg-primary/10 flex items-center justify-center">
                             <User className="h-8 w-8 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-lg text-slate-900 group-hover:text-primary transition-colors duration-300 truncate max-w-[calc(100%-2rem)]">
-                          {resident.name}
-                        </h3>
+                              {resident.name}
+                            </h3>
                             <p className="text-sm text-slate-500 truncate">{resident.contactNumber}</p>
                             <div className="mt-1">
                               <Badge
@@ -1025,11 +1025,11 @@ const ManagerResidents = () => {
                                 )}
                               >
                                 {resident.status}
-                                </Badge>
+                              </Badge>
                             </div>
                           </div>
-                            </div>
-                          </div>
+                        </div>
+                      </div>
 
                       {/* Content */}
                       <div className="p-4 space-y-4">
@@ -1037,54 +1037,54 @@ const ManagerResidents = () => {
                           <div className="flex items-center text-sm text-slate-600">
                             <Phone className="h-4 w-4 mr-2 text-primary" />
                             <span className="truncate">{resident.emergencyContact}</span>
-                            </div>
+                          </div>
                           <div className="flex items-center text-sm text-slate-600">
                             <Calendar className="h-4 w-4 mr-2 text-primary" />
                             <span>{new Date(resident.joinDate).toLocaleDateString('en-GB')}</span>
                           </div>
-                            </div>
+                        </div>
                         <div className="space-y-1">
                           <div className="flex items-center text-sm text-slate-600">
                             <MapPin className="h-4 w-4 mr-2 text-primary" />
                             <span className="truncate">{resident.address}</span>
                           </div>
-                      </div>
+                        </div>
 
                         <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <Button
+                          <Button
                             variant="ghost"
-                          size="sm"
+                            size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                            setSelectedResident(resident);
-                            setIsEditDialogOpen(true);
-                          }}
+                              setSelectedResident(resident);
+                              setIsEditDialogOpen(true);
+                            }}
                             className="text-primary hover:text-primary/90 hover:bg-primary/5"
-                        >
+                          >
                             <Pencil className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
+                            Edit
+                          </Button>
+                          <Button
                             variant="ghost"
-                          size="sm"
+                            size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                            setSelectedResident(resident);
+                              setSelectedResident(resident);
                               setSelectedResidents([]);
-                            setIsDeleteDialogOpen(true);
-                          }}
+                              setIsDeleteDialogOpen(true);
+                            }}
                             className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        >
+                          >
                             <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-                          </div>
-                        )}
+            )}
 
             {/* Pagination Controls */}
             <div className="flex items-center justify-between mt-4">
@@ -1111,28 +1111,28 @@ const ManagerResidents = () => {
                   </SelectContent>
                 </Select>
               </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1 || totalPages === 0}
-                        >
-                          Previous
-                        </Button>
-                        <span className="text-sm text-slate-600">
-                          Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages || totalPages === 0}
-                        >
-                          Next
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1 || totalPages === 0}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-slate-600">
+                  Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Next
                 </Button>
               </div>
-                    </div>
+            </div>
           </div>
         </main>
       </div>
@@ -1155,7 +1155,7 @@ const ManagerResidents = () => {
                   id="name"
                   placeholder="Enter full name"
                   value={newResident.name}
-                  onChange={(e) => setNewResident({...newResident, name: e.target.value})}
+                  onChange={(e) => setNewResident({ ...newResident, name: e.target.value })}
                   className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                 />
               </div>
@@ -1171,7 +1171,7 @@ const ManagerResidents = () => {
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
                     if (!isNaN(value) && value >= 0) {
-                      setNewResident({...newResident, age: value});
+                      setNewResident({ ...newResident, age: value });
                     }
                   }}
                   onKeyDown={(e) => {
@@ -1189,7 +1189,7 @@ const ManagerResidents = () => {
                 <Label htmlFor="gender">Gender</Label>
                 <Select
                   value={newResident.gender}
-                  onValueChange={(value) => setNewResident({...newResident, gender: value})}
+                  onValueChange={(value) => setNewResident({ ...newResident, gender: value })}
                 >
                   <SelectTrigger id="gender">
                     <SelectValue placeholder="Select gender" />
@@ -1207,7 +1207,7 @@ const ManagerResidents = () => {
                 <Select
                   value={newResident.status}
                   onValueChange={(value: "active" | "inactive" | "pending") =>
-                    setNewResident({...newResident, status: value})
+                    setNewResident({ ...newResident, status: value })
                   }
                 >
                   <SelectTrigger id="status">
@@ -1228,7 +1228,7 @@ const ManagerResidents = () => {
                 id="address"
                 placeholder="Enter address"
                 value={newResident.address}
-                onChange={(e) => setNewResident({...newResident, address: e.target.value})}
+                onChange={(e) => setNewResident({ ...newResident, address: e.target.value })}
                 className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
               />
             </div>
@@ -1240,7 +1240,7 @@ const ManagerResidents = () => {
                   id="contactNumber"
                   placeholder="Enter contact number"
                   value={newResident.contactNumber}
-                  onChange={(e) => setNewResident({...newResident, contactNumber: e.target.value})}
+                  onChange={(e) => setNewResident({ ...newResident, contactNumber: e.target.value })}
                   className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                 />
               </div>
@@ -1251,7 +1251,7 @@ const ManagerResidents = () => {
                   id="emergencyContact"
                   placeholder="Enter emergency contact"
                   value={newResident.emergencyContact}
-                  onChange={(e) => setNewResident({...newResident, emergencyContact: e.target.value})}
+                  onChange={(e) => setNewResident({ ...newResident, emergencyContact: e.target.value })}
                   className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                 />
               </div>
@@ -1305,7 +1305,7 @@ const ManagerResidents = () => {
                     id="edit-name"
                     placeholder="Enter full name"
                     value={selectedResident.name}
-                    onChange={(e) => setSelectedResident({...selectedResident, name: e.target.value})}
+                    onChange={(e) => setSelectedResident({ ...selectedResident, name: e.target.value })}
                     className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                   />
                 </div>
@@ -1317,7 +1317,7 @@ const ManagerResidents = () => {
                     type="number"
                     placeholder="Enter age"
                     value={selectedResident.age}
-                    onChange={(e) => setSelectedResident({...selectedResident, age: parseInt(e.target.value)})}
+                    onChange={(e) => setSelectedResident({ ...selectedResident, age: parseInt(e.target.value) })}
                     className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                   />
                 </div>
@@ -1328,7 +1328,7 @@ const ManagerResidents = () => {
                   <Label htmlFor="edit-gender">Gender</Label>
                   <Select
                     value={selectedResident.gender}
-                    onValueChange={(value) => setSelectedResident({...selectedResident, gender: value})}
+                    onValueChange={(value) => setSelectedResident({ ...selectedResident, gender: value })}
                   >
                     <SelectTrigger id="edit-gender">
                       <SelectValue placeholder="Select gender" />
@@ -1346,7 +1346,7 @@ const ManagerResidents = () => {
                   <Select
                     value={selectedResident.status}
                     onValueChange={(value: "active" | "inactive" | "pending") =>
-                      setSelectedResident({...selectedResident, status: value})
+                      setSelectedResident({ ...selectedResident, status: value })
                     }
                   >
                     <SelectTrigger id="edit-status">
@@ -1367,7 +1367,7 @@ const ManagerResidents = () => {
                   id="edit-address"
                   placeholder="Enter address"
                   value={selectedResident.address}
-                  onChange={(e) => setSelectedResident({...selectedResident, address: e.target.value})}
+                  onChange={(e) => setSelectedResident({ ...selectedResident, address: e.target.value })}
                   className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                 />
               </div>
@@ -1379,7 +1379,7 @@ const ManagerResidents = () => {
                     id="edit-contactNumber"
                     placeholder="Enter contact number"
                     value={selectedResident.contactNumber}
-                    onChange={(e) => setSelectedResident({...selectedResident, contactNumber: e.target.value})}
+                    onChange={(e) => setSelectedResident({ ...selectedResident, contactNumber: e.target.value })}
                     className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                   />
                 </div>
@@ -1390,7 +1390,7 @@ const ManagerResidents = () => {
                     id="edit-emergencyContact"
                     placeholder="Enter emergency contact"
                     value={selectedResident.emergencyContact}
-                    onChange={(e) => setSelectedResident({...selectedResident, emergencyContact: e.target.value})}
+                    onChange={(e) => setSelectedResident({ ...selectedResident, emergencyContact: e.target.value })}
                     className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                   />
                 </div>
@@ -1441,7 +1441,7 @@ const ManagerResidents = () => {
               <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                 <div className="text-sm text-slate-600">
                   You are about to delete {selectedResidents.length} resident{selectedResidents.length > 1 ? 's' : ''}.
-                  </div>
+                </div>
                 <div className="mt-2 text-sm">
                   <div className="flex items-center mb-2">
                     <Users2 className="h-4 w-4 mr-2 text-slate-400" />
@@ -1617,4 +1617,4 @@ const ManagerResidents = () => {
   );
 };
 
-export default ManagerResidents;
+export default ManagerResidents; 

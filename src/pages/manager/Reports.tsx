@@ -721,7 +721,7 @@ const ManagerReports = () => {
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm z-10">
+      <header className="bg-white border-b border-slate-200 shadow-sm z-10 h-[69px]">
         <div className="px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <Button 

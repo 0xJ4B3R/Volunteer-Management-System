@@ -3,22 +3,22 @@ import { onSnapshot, QuerySnapshot, Timestamp, addDoc, updateDoc, deleteDoc, doc
 import {
   calendar_slotsRef, CalendarSlot, VolunteerRequest,
   appointmentsRef, Appointment,
-  external_groupsRef, ExternalGroup
+  external_groupsRef, ExternalGroup,
+  ParticipantId
 } from '@/services/firestore';
 
 /**
  * UI-friendly types (all Timestamps as ISO strings, all optionals present)
  */
-export interface CalendarSlotUI extends Omit<CalendarSlot, 'createdAt' | 'volunteerRequests'> {
+export interface CalendarSlotUI extends Omit<CalendarSlot, 'createdAt' | 'volunteerRequests' | 'approvedVolunteers'> {
   createdAt: string;
   volunteerRequests: VolunteerRequestUI[];
-  approvedVolunteers: string[];
+  approvedVolunteers: ParticipantId[];
 }
 export interface VolunteerRequestUI extends Omit<VolunteerRequest, 'requestedAt' | 'approvedAt' | 'rejectedAt'> {
   requestedAt: string;
-  approvedAt?: string | null;
-  rejectedAt?: string | null;
-  rejectedReason: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
 }
 export interface AppointmentUI extends Omit<Appointment, 'createdAt' | 'updatedAt'> {
   createdAt: string;
@@ -40,11 +40,14 @@ function convertTimestamp(ts: any): string {
 /** Entity conversion helpers */
 function ensureVolunteerRequestUI(vr: any): VolunteerRequestUI {
   return {
-    ...vr,
+    volunteerId: vr.volunteerId || '',
+    status: vr.status || 'pending',
     requestedAt: convertTimestamp(vr.requestedAt),
     approvedAt: vr.approvedAt ? convertTimestamp(vr.approvedAt) : null,
     rejectedAt: vr.rejectedAt ? convertTimestamp(vr.rejectedAt) : null,
     rejectedReason: vr.rejectedReason ?? null,
+    matchScore: vr.matchScore ?? null,
+    assignedBy: vr.assignedBy || 'manager'
   };
 }
 function ensureSlotShape(raw: any): CalendarSlotUI {
@@ -65,7 +68,7 @@ function ensureSlotShape(raw: any): CalendarSlotUI {
     isOpen: typeof raw.isOpen === 'boolean' ? raw.isOpen : true,
     notes: raw.notes ?? null,
     createdAt: convertTimestamp(raw.createdAt),
-    approvedVolunteers: volunteerRequests.filter(vr => vr.status === 'approved').map(vr => vr.volunteerId),
+    approvedVolunteers: raw.approvedVolunteers || [],
   };
 }
 function ensureAppointmentUI(raw: any): AppointmentUI {
@@ -80,6 +83,52 @@ function ensureExternalGroupUI(raw: any): ExternalGroupUI {
     ...raw,
     createdAt: convertTimestamp(raw.createdAt),
   };
+}
+
+/**
+ * Convert Firestore data to UI format
+ */
+function toUIFormat(data: CalendarSlot): CalendarSlotUI {
+  return {
+    ...data,
+    createdAt: data.createdAt.toDate().toISOString(),
+    volunteerRequests: data.volunteerRequests.map(v => ({
+      ...v,
+      requestedAt: v.requestedAt.toDate().toISOString(),
+      approvedAt: v.approvedAt?.toDate().toISOString() || null,
+      rejectedAt: v.rejectedAt?.toDate().toISOString() || null,
+      rejectedReason: v.rejectedReason || null,
+      matchScore: v.matchScore || null
+    }))
+  };
+}
+
+/**
+ * Convert UI data to Firestore format
+ */
+export function toFirestoreFormat(data: Partial<CalendarSlotUI>): Partial<CalendarSlot> {
+  const { createdAt, volunteerRequests, ...rest } = data;
+  const result: Partial<CalendarSlot> = { ...rest };
+
+  // Convert createdAt if present
+  if (createdAt) {
+    result.createdAt = Timestamp.fromDate(new Date(createdAt));
+  }
+
+  // Convert volunteerRequests if present
+  if (volunteerRequests) {
+    result.volunteerRequests = volunteerRequests.map(v => {
+      const { requestedAt, approvedAt, rejectedAt, ...restV } = v;
+      return {
+        ...restV,
+        requestedAt: Timestamp.fromDate(new Date(requestedAt)),
+        approvedAt: approvedAt ? Timestamp.fromDate(new Date(approvedAt)) : null,
+        rejectedAt: rejectedAt ? Timestamp.fromDate(new Date(rejectedAt)) : null
+      };
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -99,7 +148,10 @@ export function useCalendarSlots(): UseCalendarSlotsResult {
     const unsubscribe = onSnapshot(
       calendar_slotsRef,
       (snapshot: QuerySnapshot) => {
-        const data: CalendarSlotUI[] = snapshot.docs.map(doc => ensureSlotShape({ id: doc.id, ...doc.data() }));
+        const data: CalendarSlotUI[] = snapshot.docs.map(doc => {
+          const slotData = doc.data() as CalendarSlot;
+          return toUIFormat({ ...slotData, id: doc.id });
+        });
         setSlots(data);
         setLoading(false);
       },
@@ -159,9 +211,11 @@ export function useAddCalendarSlot() {
     setLoading(true);
     setError(null);
     try {
-      await addDoc(calendar_slotsRef, slot);
+      const docRef = await addDoc(calendar_slotsRef, slot);
+      return docRef.id;
     } catch (err) {
       setError(err as Error);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -175,12 +229,13 @@ export function useAddCalendarSlot() {
 export function useUpdateCalendarSlot() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const updateCalendarSlot = async (id: string, data: Partial<CalendarSlot>) => {
+  const updateCalendarSlot = async (id: string, data: Partial<CalendarSlotUI>) => {
     setLoading(true);
     setError(null);
     try {
       const ref = doc(calendar_slotsRef, id);
-      await updateDoc(ref, data);
+      const firestoreData = toFirestoreFormat(data);
+      await updateDoc(ref, firestoreData);
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -221,9 +276,11 @@ export function useAddAppointment() {
     setLoading(true);
     setError(null);
     try {
-      await addDoc(appointmentsRef, appointment);
+      const docRef = await addDoc(appointmentsRef, appointment);
+      return docRef.id;
     } catch (err) {
       setError(err as Error);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -283,9 +340,11 @@ export function useAddExternalGroup() {
     setLoading(true);
     setError(null);
     try {
-      await addDoc(external_groupsRef, group);
+      const docRef = await addDoc(external_groupsRef, group);
+      return docRef.id;
     } catch (err) {
       setError(err as Error);
+      return null;
     } finally {
       setLoading(false);
     }
