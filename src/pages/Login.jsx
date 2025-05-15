@@ -3,7 +3,6 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Globe } from 'lucide-react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Globe } from 'lucide-react'; // Optional: for icon-based toggle
 import LoadingScreen from '@/components/volunteer/LoadingScreen';
@@ -60,7 +59,7 @@ export default function LoginPage() {
           else if (role === 'manager') navigate('/manager');
           else {
             setError(t("error_invalid_role"));
-            setLoaing(false);
+            setLoading(false);
           } 
         }, 2000);
       } else {
