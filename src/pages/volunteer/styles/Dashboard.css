@@ -141,3 +141,171 @@
   font-size: 1.875rem;
   font-weight: bold;
 }
+
+/* Add these styles to your existing Dashboard.css file */
+
+/* Appointments Section */
+.dashboard-appointments {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.appointments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.appointments-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.view-all-button {
+  background: none;
+  border: none;
+  color: #4f46e5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.view-all-button:hover {
+  text-decoration: underline;
+}
+
+.no-appointments {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.no-appointments-text {
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.find-opportunities-button {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.find-opportunities-button:hover {
+  background-color: #4338ca;
+}
+
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.appointment-card {
+  display: flex;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  overflow: hidden;
+  border-left: 4px solid #4f46e5;
+}
+
+.appointment-date-container {
+  background-color: #eff6ff;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-width: 100px;
+}
+
+.appointment-date {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.appointment-time {
+  font-size: 0.75rem;
+  color: #3b82f6;
+  margin-top: 0.25rem;
+}
+
+.appointment-details {
+  flex: 1;
+  padding: 1rem;
+}
+
+.appointment-title {
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #111827;
+}
+
+.appointment-location,
+.appointment-supervisor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+.appointment-actions {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+}
+
+.appointment-details-button {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.appointment-details-button:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .appointment-card {
+    flex-direction: column;
+  }
+  
+  .appointment-date-container {
+    flex-direction: row;
+    justify-content: space-between;
+    min-width: unset;
+    width: 100%;
+    padding: 0.75rem;
+  }
+  
+  .appointment-actions {
+    padding: 0 1rem 1rem;
+    justify-content: flex-end;
+  }
+}

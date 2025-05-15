@@ -12,6 +12,7 @@ import NotFound from '@/pages/NotFound';
 import VolunteerDashboard from '@/pages/volunteer/Dashboard';
 import VolunteerCalendar from '@/pages/volunteer/Calendar';
 import VolunteerAppointments from '@/pages/volunteer/Appointments';
+import VolunteerAttendance from '@/pages/volunteer/Attendance';
 import VolunteerProfile from '@/pages/volunteer/Profile';
 
 // Manager Pages
@@ -97,10 +98,10 @@ const App = () => (
         path="/volunteer/appointments"
         element={<LayoutRoute role="volunteer" element={<VolunteerAppointments />} />}
       />
-      {/* <Route
+      <Route
         path="/volunteer/attendance"
         element={<LayoutRoute role="volunteer" element={<VolunteerAttendance />} />}
-      /> */}
+      />
       <Route
         path="/volunteer/profile"
         element={<LayoutRoute role="volunteer" element={<VolunteerProfile />} />}
