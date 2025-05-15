@@ -78,6 +78,40 @@
   flex-direction: column;
 }
 
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper .form-input {
+  width: 100%;
+  padding-right: 2.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.password-toggle:hover {
+  color: #2d3748;
+}
+
+.password-group .form-input {
+  padding-right: 2.5rem; /* space for the eye icon */
+}
+
+
 .form-label {
   margin-bottom: 0.25rem;
   font-size: 1rem;
