@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { User, Clock, CheckCircle } from 'lucide-react'; // Optional: for icons
+import { User, Clock, CheckCircle, Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import './styles/Profile.css';
 
 const Profile = () => {
+  const { t, i18n } = useTranslation();
+  const [showLangOptions, setShowLangOptions] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
+  }, [i18n.language]);
+
   const userObject = localStorage.getItem('user')
     ? JSON.parse(localStorage.getItem('user'))
     : null;
@@ -72,6 +80,23 @@ const Profile = () => {
 
   return (
     <div className="profile-wrapper">
+      {/* Language Toggle */}
+      <div className="language-toggle">
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe size={35} />
+        </button>
+        {showLangOptions && (
+          <div className="lang-options">
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              English
+            </button>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              עברית
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="profile-card">
         {/* Profile Header */}
         <div className="profile-header">

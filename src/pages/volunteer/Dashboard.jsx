@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { Link } from 'react-router-dom';
-import { Clock, CalendarClock, CheckCircle, Calendar, MapPin, UserCircle } from 'lucide-react';
+import { Clock, CalendarClock, CheckCircle, Calendar, MapPin, UserCircle, Globe } from 'lucide-react';
 import { collection, getDocs, query, where, orderBy, limit, setDoc, doc } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 import './styles/Dashboard.css';
 
 function VolunteerDashboard() {
@@ -10,8 +11,14 @@ function VolunteerDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showLangOptions, setShowLangOptions] = useState(false);
 
-  // Get user info from localStorage
+  const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
+  }, [i18n.language]);
+
   const userObject = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
   const userId = userObject?.uid || userObject?.id;
   const username = userObject?.username;
@@ -31,7 +38,6 @@ function VolunteerDashboard() {
           if (!snap2.empty) volunteerSnap = snap2.docs[0];
         }
         if (!volunteerSnap && userId) {
-          // Create a new volunteer document if not found
           const newVolunteer = {
             userId,
             username: username || `user_${userId.slice(0, 6)}`,
@@ -72,9 +78,7 @@ function VolunteerDashboard() {
         const snap = await getDocs(q);
         const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAppointments(data);
-      } catch (err) {
-        // Appointments are optional, so don't set error
-      }
+      } catch (err) {}
     };
     fetchAppointments();
   }, [volunteerData]);
@@ -158,6 +162,23 @@ function VolunteerDashboard() {
 
   return (
     <div className="dashboard-container">
+      {/* Language toggle in bottom-right corner */}
+      <div className="language-toggle">
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe size={35} />
+        </button>
+        {showLangOptions && (
+          <div className="lang-options">
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              English
+            </button>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              עברית
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Hero Banner */}
       <div className="dashboard-hero">
         <div>
