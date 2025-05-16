@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { addDays } from "date-fns";
-import { db } from "@/lib/firebase";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,15 +29,14 @@ import { toast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { format, startOfWeek, endOfWeek, startOfDay, endOfDay, isToday } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, startOfWeek, endOfWeek, startOfDay, endOfDay, isToday, isPast } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
 import { useResidents } from "@/hooks/useFirestoreResidents";
-import { useAddAttendance } from "@/hooks/useAttendance";
-import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import {
   useCalendarSlots,
   useAddCalendarSlot,
@@ -55,14 +53,16 @@ import {
   CalendarSlotUI,
 } from "@/hooks/useFirestoreCalendar";
 import {
-  Attendance,
   CalendarSlot,
   Appointment,
   ExternalGroup,
   ParticipantId,
   VolunteerRequestStatus
 } from "@/services/firestore";
+import { useAttendanceByAppointment, useAddAttendance, useUpdateAttendance } from "@/hooks/useAttendance";
+import { db } from "@/lib/firebase";
 import { doc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { Attendance } from "@/services/firestore";
 
 type CalendarView = "month" | "week" | "day";
 
@@ -3434,7 +3434,7 @@ const ManagerCalendar = () => {
                           <div className="flex gap-2">
                             {pendingVolunteerAction[`${selectedSlot.id}-${volunteer.volunteerId}`] ? (
                               <div className="flex items-center justify-center w-20">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary inline-block"></div>
                               </div>
                             ) : (
                               <>
@@ -3688,7 +3688,7 @@ const ManagerCalendar = () => {
               >
                 {isDeleting ? (
                   <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
                     Deleting...
                   </>
                 ) : (
@@ -3725,7 +3725,7 @@ const ManagerCalendar = () => {
             >
               {pendingRejectAction && pendingVolunteerAction[`${pendingRejectAction.sessionId}-${pendingRejectAction.volunteerId}`] ? (
                 <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
                   Rejecting...
                 </>
               ) : (

@@ -1,86 +1,56 @@
+import { useState } from "react";
 import { db } from "@/lib/firebase";
-import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { useVolunteers } from "@/hooks/useVolunteers";
-import { collection, getDocs } from 'firebase/firestore';
-import { CalendarSlotUI, VolunteerRequestUI } from "@/hooks/useFirestoreCalendar";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
+import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TestVolunteerRequests = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { volunteers, loading: volunteersLoading } = useVolunteers();
-  const [slots, setSlots] = useState<CalendarSlotUI[]>([]);
+  const { slots, loading: slotsLoading } = useCalendarSlots();
   const [selectedSlotId, setSelectedSlotId] = useState<string>("");
   const [selectedVolunteerId, setSelectedVolunteerId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch all calendar slots
-  useEffect(() => {
-    const fetchSlots = async () => {
-      try {
-        const slotsRef = collection(db, "calendar_slots");
-        const snapshot = await getDocs(slotsRef);
-        const slotsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as CalendarSlotUI[];
-        setSlots(slotsData);
-      } catch (error) {
-        console.error("Error fetching slots:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch calendar slots",
-          variant: "destructive"
-        });
-      }
-    };
-
-    fetchSlots();
-  }, [toast]);
-
   const handleAddRequest = async () => {
-    if (!selectedSlotId || !selectedVolunteerId) return;
+    if (!selectedSlotId || !selectedVolunteerId) {
+      toast({
+        title: "Error",
+        description: "Please select both a slot and a volunteer",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const selectedSlot = slots.find(s => s.id === selectedSlotId);
+      const slotRef = doc(db, "calendar_slots", selectedSlotId);
       const selectedVolunteer = volunteers.find(v => v.id === selectedVolunteerId);
 
-      if (!selectedSlot || !selectedVolunteer) {
-        throw new Error("Selected slot or volunteer not found");
+      if (!selectedVolunteer) {
+        throw new Error("Selected volunteer not found");
       }
 
-      // Create new request
-      const newRequest: VolunteerRequestUI = {
-        volunteerId: selectedVolunteer.id,
-        status: "pending" as const,
-        requestedAt: new Date().toISOString(),
-        approvedAt: null,
-        rejectedAt: null,
-        rejectedReason: null,
-        matchScore: null,
-        assignedBy: "manager" as const
-      };
-
-      // Update local state
-      setSlots(prevSlots => 
-        prevSlots.map(slot => 
-          slot.id === selectedSlotId 
-            ? {
-                ...slot,
-                volunteerRequests: [
-                  ...(slot.volunteerRequests || []),
-                  newRequest
-                ]
-              }
-            : slot
-        )
-      );
+      // Add the volunteer request to the slot
+      await updateDoc(slotRef, {
+        volunteerRequests: arrayUnion({
+          volunteerId: selectedVolunteer.id,
+          status: "pending" as const,
+          requestedAt: Timestamp.now(),
+          approvedAt: null,
+          rejectedAt: null,
+          rejectedReason: null,
+          matchScore: null,
+          assignedBy: "manager" as const
+        })
+      });
 
       toast({
         title: "Success",
@@ -102,55 +72,6 @@ const TestVolunteerRequests = () => {
     }
   };
 
-  const handleApproveRequest = (slotId: string, volunteerId: string) => {
-    setSlots(prevSlots => {
-      return prevSlots.map(slot => {
-        if (slot.id === slotId) {
-          const now = new Date().toISOString();
-          return {
-            ...slot,
-            volunteerRequests: slot.volunteerRequests.map(request => {
-              if (request.volunteerId === volunteerId) {
-                return {
-                  ...request,
-                  status: 'approved',
-                  approvedAt: now
-                };
-              }
-              return request;
-            })
-          };
-        }
-        return slot;
-      });
-    });
-  };
-
-  const handleRejectRequest = (slotId: string, volunteerId: string) => {
-    setSlots(prevSlots => {
-      return prevSlots.map(slot => {
-        if (slot.id === slotId) {
-          const now = new Date().toISOString();
-          return {
-            ...slot,
-            volunteerRequests: slot.volunteerRequests.map(request => {
-              if (request.volunteerId === volunteerId) {
-                return {
-                  ...request,
-                  status: 'rejected',
-                  rejectedAt: now,
-                  rejectedReason: 'Rejected by manager'
-                };
-              }
-              return request;
-            })
-          };
-        }
-        return slot;
-      });
-    });
-  };
-
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
@@ -167,7 +88,7 @@ const TestVolunteerRequests = () => {
             <Select
               value={selectedSlotId}
               onValueChange={setSelectedSlotId}
-              disabled={isLoading}
+              disabled={isLoading || slotsLoading}
             >
               <SelectTrigger id="slot">
                 <SelectValue placeholder="Select a slot" />
@@ -202,7 +123,7 @@ const TestVolunteerRequests = () => {
             </Select>
           </div>
 
-          <Button 
+          <Button
             onClick={handleAddRequest}
             disabled={isLoading || !selectedSlotId || !selectedVolunteerId}
           >
@@ -220,8 +141,8 @@ const TestVolunteerRequests = () => {
                 ?.volunteerRequests?.map(request => {
                   const volunteer = volunteers.find(v => v.id === request.volunteerId);
                   return (
-                    <div 
-                      key={request.volunteerId} 
+                    <div
+                      key={request.volunteerId}
                       className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
                     >
                       <div>

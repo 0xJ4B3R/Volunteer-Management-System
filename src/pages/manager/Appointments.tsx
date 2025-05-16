@@ -1189,7 +1189,7 @@ const ManagerAppointments = () => {
             >
               {isSavingDetails ? (
                 <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
                   Saving...
                 </>
               ) : (
@@ -1221,7 +1221,7 @@ const ManagerAppointments = () => {
               {attendanceLoading ? (
                 <div className="flex items-center justify-center h-[200px]">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-4 border-primary border-t-transparent inline-block" />
                     <p className="text-sm text-slate-500">Loading attendance data...</p>
                   </div>
                 </div>
@@ -1372,7 +1372,7 @@ const ManagerAppointments = () => {
             >
               {isSaving ? (
                 <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
                   Saving...
                 </>
               ) : (
@@ -1416,11 +1416,11 @@ const ManagerAppointments = () => {
               >
                 {isDeleting ? (
                   <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block" />
                     Deleting...
                   </>
                 ) : (
-                  'Delete'
+                  'Delete Appointment'
                 )}
               </Button>
             </div>
