@@ -34,6 +34,7 @@ import Settings from "@/pages/manager/Settings";
 import TestVolunteers from './pages/test/TestVolunteers';
 import TestResidents from './pages/test/TestResidents';
 import CalendarFirestoreTest from './pages/test/CalendarFirestoreTest';
+import TestVolunteerRequests from './pages/manager/TestVolunteerRequests';
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ const App = () => (
               <Route path="/test/volunteers" element={<TestVolunteers />} />
               <Route path="/test/residents" element={<TestResidents />} />
               <Route path="/test/calendar-firestore-test" element={<CalendarFirestoreTest />} />
+              <Route path="/test/volunteer-requests" element={<TestVolunteerRequests />} />
               
               {/* Catch-all 404 */}
               <Route path="*" element={<NotFound />} />

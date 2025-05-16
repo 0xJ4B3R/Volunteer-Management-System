@@ -52,6 +52,7 @@ export function useVolunteers(): UseVolunteersResult {
         const data: VolunteerUI[] = snapshot.docs.map(doc => 
           ensureVolunteerShape({ id: doc.id, ...doc.data() })
         );
+        console.log('Loaded volunteers:', data);
         setVolunteers(data);
         setLoading(false);
       },

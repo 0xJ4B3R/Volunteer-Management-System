@@ -1,8 +1,7 @@
-import { 
-  doc, 
+import {
+  doc,
   Timestamp,
   collection,
-  DocumentReference,
   CollectionReference,
   QueryDocumentSnapshot
 } from 'firebase/firestore';

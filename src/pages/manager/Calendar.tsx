@@ -8,7 +8,9 @@ import {
   Users,
   Clock,
   Columns,
+  BookText,
   Download,
+  ArrowLeft,
   AlertCircle,
   ChevronLeft,
   ListOrdered,
@@ -18,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { addDays } from "date-fns";
+import { db } from "@/lib/firebase";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,14 +30,15 @@ import { toast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { format, startOfWeek, endOfWeek, startOfDay, endOfDay, isToday } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, startOfWeek, endOfWeek, startOfDay, endOfDay, isToday, isPast } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
 import { useResidents } from "@/hooks/useFirestoreResidents";
+import { useAddAttendance } from "@/hooks/useAttendance";
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import {
   useCalendarSlots,
   useAddCalendarSlot,
@@ -51,13 +55,13 @@ import {
   CalendarSlotUI,
 } from "@/hooks/useFirestoreCalendar";
 import {
+  Attendance,
   CalendarSlot,
   Appointment,
   ExternalGroup,
-  ParticipantId
+  ParticipantId,
+  VolunteerRequestStatus
 } from "@/services/firestore";
-import { useAttendanceByAppointment, useAddAttendance, useUpdateAttendance } from "@/hooks/useAttendance";
-import { db } from "@/lib/firebase";
 import { doc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 type CalendarView = "month" | "week" | "day";
@@ -122,15 +126,6 @@ const isSessionInPast = (date: string, startTime: string): boolean => {
   return sessionStart < now;
 };
 
-// Helper function to get the correct max capacity for display
-const getDisplayMaxCapacity = (session: CalendarSlotUI) => {
-  // If session is in the past and not an external group, show number of approved volunteers
-  if (isSlotInPast(session) && !(session.approvedVolunteers[0]?.type === 'external_group')) {
-    return session.approvedVolunteers.length;
-  }
-  return session.maxCapacity;
-};
-
 // Helper function to get the correct count
 const getVolunteerCount = (session: CalendarSlotUI) => {
   if (session.approvedVolunteers.length === 0) return 0;
@@ -155,8 +150,18 @@ const getAttendanceByAppointment = async (appointmentId: string) => {
   return snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
-  }));
+  })) as Attendance[];
 };
+
+// Add this near the top of the file with other type definitions
+type VolunteerRequestAction =
+  | { type: 'approve' }
+  | { type: 'reject' };
+
+// Add this near the top of the file with other type definitions
+function isApproveAction(action: 'approve' | 'reject'): action is 'approve' {
+  return action === 'approve';
+}
 
 const ManagerCalendar = () => {
   const navigate = useNavigate();
@@ -282,6 +287,11 @@ const ManagerCalendar = () => {
     status?: "open" | "full" | "canceled";
     notes?: string;
   }>({});
+
+  // Add state for rejection reason dialog
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [pendingRejectAction, setPendingRejectAction] = useState<{ sessionId: string; volunteerId: string } | null>(null);
 
   // Log header height when view changes
   useEffect(() => {
@@ -812,13 +822,99 @@ const ManagerCalendar = () => {
     }
   };
 
+  // Add this before the return statement
+  const handleRejectConfirm = async () => {
+    if (!pendingRejectAction) return;
+
+    const { sessionId, volunteerId } = pendingRejectAction;
+    const actionKey = `${sessionId}-${volunteerId}`;
+
+    setPendingVolunteerAction(prev => ({ ...prev, [actionKey]: true }));
+    setFadingVolunteers(prev => ({ ...prev, [actionKey]: true }));
+
+    try {
+      const session = slots.find(s => s.id === sessionId);
+      if (!session) return;
+
+      const updatedVolunteerRequests = session.volunteerRequests.map(v =>
+        v.volunteerId === volunteerId && v.status === 'pending'
+          ? {
+            ...v,
+            status: 'rejected' as VolunteerRequestStatus,
+            rejectedAt: Timestamp.fromDate(new Date()).toDate().toISOString(),
+            rejectedReason: rejectReason
+          }
+          : v
+      );
+
+      // Update the slot
+      const updateData: Partial<CalendarSlotUI> = {
+        volunteerRequests: updatedVolunteerRequests
+      };
+      await updateCalendarSlot(sessionId, updateData);
+
+      // Update selected session if it's the one being modified
+      if (selectedSlot?.id === sessionId) {
+        setSelectedSlot(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            volunteerRequests: updatedVolunteerRequests
+          };
+        });
+      }
+
+      // Update pending requests view if active
+      if (isPendingViewActive) {
+        setPendingRequests(prev =>
+          prev.filter(session =>
+            session.id !== sessionId ||
+            session.volunteerRequests.some(v => v.status === 'pending')
+          )
+        );
+      }
+
+      toast({
+        title: "Volunteer rejected",
+        description: "The volunteer request has been rejected."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process volunteer request. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setPendingVolunteerAction(prev => {
+        const copy = { ...prev };
+        delete copy[actionKey];
+        return copy;
+      });
+      setFadingVolunteers(prev => {
+        const copy = { ...prev };
+        delete copy[actionKey];
+        return copy;
+      });
+      setIsRejectDialogOpen(false);
+      setRejectReason("");
+      setPendingRejectAction(null);
+    }
+  };
+
   // Handle volunteer request actions
   const handleVolunteerRequest = async (
     sessionId: string,
     volunteerId: string,
     action: 'approve' | 'reject'
   ) => {
-    // Prevent multiple clicks
+    // If rejecting, open the dialog first
+    if (!isApproveAction(action)) {
+      setPendingRejectAction({ sessionId, volunteerId });
+      setIsRejectDialogOpen(true);
+      return;
+    }
+
+    // Handle approve action
     const actionKey = `${sessionId}-${volunteerId}`;
     if (pendingVolunteerAction[actionKey]) return;
 
@@ -847,7 +943,18 @@ const ManagerCalendar = () => {
       const session = slots.find(s => s.id === sessionId);
       if (!session) return;
 
-      const updatedVolunteerRequests = session.volunteerRequests.filter(v => v.volunteerId !== volunteerId);
+      // Update the status of the volunteer request instead of removing it
+      const updatedVolunteerRequests = session.volunteerRequests.map(v =>
+        v.volunteerId === volunteerId
+          ? {
+            ...v,
+            status: isApproveAction(action) ? 'approved' as VolunteerRequestStatus : 'rejected' as VolunteerRequestStatus,
+            approvedAt: isApproveAction(action) ? Timestamp.fromDate(new Date()).toDate().toISOString() : v.approvedAt,
+            rejectedAt: !isApproveAction(action) ? Timestamp.fromDate(new Date()).toDate().toISOString() : v.rejectedAt,
+            rejectedReason: !isApproveAction(action) ? 'Rejected by manager' : v.rejectedReason
+          }
+          : v
+      );
       let updatedApprovedVolunteers = [...session.approvedVolunteers];
       let updatedStatus = session.status;
 
@@ -928,7 +1035,7 @@ const ManagerCalendar = () => {
         setPendingRequests(prev =>
           prev.filter(session =>
             session.id !== sessionId ||
-            session.volunteerRequests.some(v => v.volunteerId !== volunteerId)
+            session.volunteerRequests.some(v => v.status === 'pending')
           )
         );
       }
@@ -971,7 +1078,7 @@ const ManagerCalendar = () => {
     if (isPendingViewActive) {
       return (
         <div className="p-6">
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border border-slate-300 rounded-xl overflow-hidden">
             <div className="bg-slate-100 p-3 text-center">
               <h3 className="text-lg font-medium">
                 Pending Volunteer Requests
@@ -981,7 +1088,7 @@ const ManagerCalendar = () => {
               </p>
             </div>
 
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-slate-300 border-t border-slate-300">
               {pendingRequests.length === 0 ? (
                 <div className="p-8 text-center">
                   <div className="text-slate-500 mb-4">No pending volunteer requests at this time.</div>
@@ -1002,7 +1109,7 @@ const ManagerCalendar = () => {
                   .map(session => (
                     <div
                       key={session.id}
-                      className="p-4 hover:bg-slate-50 cursor-pointer transition-colors"
+                      className="p-4 hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-colors"
                       onClick={() => {
                         setSelectedSlot(session);
                         setIsPendingRequestsDialogOpen(true);
@@ -1020,7 +1127,7 @@ const ManagerCalendar = () => {
                             </div>
                             <div className="flex items-center text-slate-600">
                               <Users className="h-4 w-4 mr-1" />
-                              <span>{getDisplayMaxCapacity(session)}/{session.maxCapacity} filled</span>
+                              <span>{getVolunteerCount(session)}/{session.maxCapacity} filled</span>
                             </div>
                           </div>
                         </div>
@@ -1028,7 +1135,7 @@ const ManagerCalendar = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:text-amber-800"
+                          className="bg-amber-400 border-amber-600 text-amber-800 hover:bg-amber-500/75 hover:border-amber-600 hover:text-amber-800"
                           onClick={e => {
                             e.stopPropagation();
                             setSelectedSlot(session);
@@ -1238,7 +1345,7 @@ const ManagerCalendar = () => {
                                   {session.volunteerRequests.some(v => v.status === "pending") && !isSlotInPast(session) && (
                                     <Badge
                                       variant="outline"
-                                      className="h-6 px-2 text-amber-600 bg-amber-50 border-amber-200 mt-1"
+                                      className="h-6 px-2 mt-1 bg-amber-400 border-amber-600 text-amber-800 hover:bg-amber-500/90 hover:border-amber-600 hover:text-amber-800"
                                       onClick={e => {
                                         e.stopPropagation();
                                         setSelectedSlot(session);
@@ -1246,7 +1353,7 @@ const ManagerCalendar = () => {
                                       }}
                                     >
                                       <AlertCircle className="h-3 w-3 mr-1 inline" />
-                                      {session.volunteerRequests.filter(v => v.status === "pending").length}
+                                      <span>{session.volunteerRequests.filter(v => v.status === "pending").length} pending</span>
                                     </Badge>
                                   )}
                                 </div>
@@ -1338,7 +1445,7 @@ const ManagerCalendar = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:text-amber-800"
+                                    className="bg-amber-400 border-amber-600 text-amber-800 hover:bg-amber-500/75 hover:border-amber-600 hover:text-amber-800"
                                     onClick={e => {
                                       e.stopPropagation();
                                       setSelectedSlot(session);
@@ -1648,7 +1755,7 @@ const ManagerCalendar = () => {
                     <>
                       {/* Status Filter */}
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[140px] h-9 bg-white border-slate-200 focus:ring-0 focus:ring-offset-0">
+                        <SelectTrigger className="w-[140px] h-9 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0">
                           <SelectValue placeholder="Status filter" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1662,7 +1769,7 @@ const ManagerCalendar = () => {
                       {/* Export */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 transition-colors">
+                          <Button variant="outline" size="sm" className="bg-white hover:bg-slate-50 border-slate-300 hover:border-slate-300 text-slate-700 hover:text-slate-900 transition-colors">
                             <Download className="h-4 w-4 mr-2 text-primary" />
                             Export
                           </Button>
@@ -1698,8 +1805,8 @@ const ManagerCalendar = () => {
                       className={cn(
                         "transition-all duration-200 border",
                         isPendingViewActive
-                          ? "hover:bg-slate-100"
-                          : "bg-amber-500 hover:bg-amber-500/90 text-white hover:text-white border-amber-500"
+                          ? "hover:bg-slate-100 border-slate-300"
+                          : "bg-amber-500 border-amber-500 hover:bg-amber-500/90 text-white hover:text-white"
                       )}
                       onClick={() => {
                         setIsPendingViewActive(!isPendingViewActive);
@@ -1708,13 +1815,20 @@ const ManagerCalendar = () => {
                         }
                       }}
                     >
-                      <AlertCircle className={cn(
-                        "h-4 w-4 mr-2",
-                        isPendingViewActive ? "text-slate-600" : "text-white"
-                      )} />
+                      {isPendingViewActive ? (
+                        <ArrowLeft className={cn(
+                          "h-6 w-6 mr-1",
+                          "text-black"
+                        )} />
+                      ) : (
+                        <BookText className={cn(
+                          "h-6 w-6 mr-2",
+                          "text-white"
+                        )} />
+                      )}
                       {isPendingViewActive ? "Back to Calendar" : "Pending"}
                       {!isPendingViewActive && (
-                        <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-white text-amber-700">
+                        <Badge className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-white text-amber-600 hover:bg-white">
                           {pendingRequests.reduce((total, session) =>
                             total + session.volunteerRequests.filter(v => v.status === "pending").length, 0
                           )}
@@ -2232,7 +2346,7 @@ const ManagerCalendar = () => {
                     </div>
                   </div>
                   <div className="p-4">
-                    <Tabs defaultValue="volunteers" className="w-full">
+                    <Tabs defaultValue="residents" className="w-full">
                       <TabsList className="grid w-full grid-cols-2 mb-4 bg-slate-200/85">
                         <TabsTrigger value="volunteers">Volunteers</TabsTrigger>
                         <TabsTrigger value="residents">Residents</TabsTrigger>
@@ -2933,7 +3047,7 @@ const ManagerCalendar = () => {
                       </div>
                     </div>
                     <div className="p-4">
-                      <Tabs defaultValue="volunteers" className="w-full">
+                      <Tabs defaultValue="residents" className="w-full">
                         <TabsList className="grid w-full grid-cols-2 mb-4 bg-slate-200/85">
                           <TabsTrigger value="volunteers">Volunteers</TabsTrigger>
                           <TabsTrigger value="residents">Residents</TabsTrigger>
@@ -2999,6 +3113,21 @@ const ManagerCalendar = () => {
                                             // If this is the last volunteer and there are available volunteers, switch tabs first
                                             if (remainingVolunteers.length === 0 && availableVolunteers.length > 0) {
                                               setEditVolunteerTab('available');
+                                            }
+
+                                            // Get the appointment for this session
+                                            const appointment = appointments.find(a => a.calendarSlotId === selectedSlot.id);
+                                            if (appointment) {
+                                              // Get attendance records for this appointment
+                                              getAttendanceByAppointment(appointment.id).then(attendanceRecords => {
+                                                // Find and delete the attendance record for this volunteer
+                                                const volunteerAttendance = attendanceRecords.find(
+                                                  record => record.volunteerId.id === v.id && record.volunteerId.type === v.type
+                                                );
+                                                if (volunteerAttendance) {
+                                                  deleteDoc(doc(db, 'attendance', volunteerAttendance.id));
+                                                }
+                                              });
                                             }
 
                                             // Then update the approved volunteers
@@ -3136,7 +3265,7 @@ const ManagerCalendar = () => {
 
                                             // If this is the last resident and there are available residents, switch tabs first
                                             if (remainingResidents.length === 0 && availableResidents.length > 0) {
-                                              setEditResidentTab('available');
+                                              setResidentTab('available');
                                             }
 
                                             // Then update the resident IDs
@@ -3278,12 +3407,12 @@ const ManagerCalendar = () => {
           <div className="space-y-4 overflow-y-auto flex-1 px-4 pr-5 pt-4 pb-4">
             {selectedSlot && !isSlotInPast(selectedSlot) && (
               <div className="space-y-4">
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-300">
                   <div className="font-medium mb-2">Session Details</div>
                   <div className="text-sm text-slate-600 space-y-1">
-                    <div>Date: {format(new Date(selectedSlot.date), 'MMMM d, yyyy')}</div>
+                    <div>Date: {formatIsraelTime(selectedSlot.date, 'EEEE, MMMM d, yyyy')}</div>
                     <div>Time: {selectedSlot.startTime} - {selectedSlot.endTime}</div>
-                    <div>Current Volunteers: {getDisplayMaxCapacity(selectedSlot)}/{selectedSlot.maxCapacity}</div>
+                    <div>Current Volunteers: {getVolunteerCount(selectedSlot)}/{selectedSlot.maxCapacity}</div>
                   </div>
                 </div>
 
@@ -3291,44 +3420,46 @@ const ManagerCalendar = () => {
                   {selectedSlot.volunteerRequests
                     .filter(volunteer => volunteer.status === "pending")
                     .sort((a, b) => a.volunteerId.localeCompare(b.volunteerId))
-                    .map(volunteer => (
-                      <div
-                        key={volunteer.volunteerId}
-                        className="flex items-center justify-between p-3 border rounded-lg border-slate-200 bg-white hover:bg-slate-50"
-                      >
-                        <div>
-                          <div className="font-medium">{volunteer.volunteerId}</div>
-                          <div className="text-sm text-slate-500">{volunteer.volunteerId}</div>
-                        </div>
+                    .map(volunteer => {
+                      const volunteerInfo = volunteers.find(v => v.id === volunteer.volunteerId);
+                      return (
+                        <div
+                          key={volunteer.volunteerId}
+                          className="p-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-colors"
+                        >
+                          <div>
+                            <div className="font-medium">{volunteerInfo?.fullName || volunteer.volunteerId}</div>
+                          </div>
 
-                        <div className="flex gap-2">
-                          {pendingVolunteerAction[`${selectedSlot.id}-${volunteer.volunteerId}`] ? (
-                            <div className="flex items-center justify-center w-20">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                            </div>
-                          ) : (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'reject')}
-                              >
-                                Reject
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'approve')}
-                              >
-                                Approve
-                              </Button>
-                            </>
-                          )}
+                          <div className="flex gap-2">
+                            {pendingVolunteerAction[`${selectedSlot.id}-${volunteer.volunteerId}`] ? (
+                              <div className="flex items-center justify-center w-20">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                              </div>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-red-200/80 border-red-500 text-red-700 hover:bg-red-300/75 hover:border-red-500 hover:text-red-700"
+                                  onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'reject')}
+                                >
+                                  Reject
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-emerald-200/80 border-green-500 text-green-700 hover:bg-emerald-300/75 hover:border-emerald-500 hover:text-green-700"
+                                  onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'approve')}
+                                >
+                                  Approve
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -3424,7 +3555,7 @@ const ManagerCalendar = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:text-amber-800"
+                            className="bg-amber-400 border-amber-600 text-amber-800 hover:bg-amber-500/75 hover:border-amber-600 hover:text-amber-800"
                             onClick={e => {
                               e.stopPropagation();
                               setSelectedSlot(session);
@@ -3565,6 +3696,42 @@ const ManagerCalendar = () => {
                 )}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Reject Reason Dialog */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Reject Volunteer Request</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this volunteer request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Enter rejection reason..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleRejectConfirm}
+              disabled={!rejectReason.trim() || pendingVolunteerAction[`${pendingRejectAction?.sessionId}-${pendingRejectAction?.volunteerId}`]}
+              className="w-full"
+            >
+              {pendingRejectAction && pendingVolunteerAction[`${pendingRejectAction.sessionId}-${pendingRejectAction.volunteerId}`] ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Rejecting...
+                </>
+              ) : (
+                'Confirm Rejection'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
