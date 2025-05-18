@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
-import { Header } from './Header';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,11 +18,6 @@ export function Layout({ children }: LayoutProps) {
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header 
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={toggleSidebar}
-        />
-        
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-4">
           {children}
         </main>
