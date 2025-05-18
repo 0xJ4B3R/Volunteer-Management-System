@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe } from 'lucide-react'; // Reuse from login
+import { Globe } from 'lucide-react';
 import './styles/ForgotPassword.css';
 
 export default function ForgotPassword() {
@@ -18,13 +18,13 @@ export default function ForgotPassword() {
 
   return (
     <div className="forgot-password-page">
-      {/* Language toggle button at bottom right */}
-      <div className="language-toggle">
+      {/* Language toggle button, position depends on language */}
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
         <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
           <Globe size={35} />
         </button>
         {showLangOptions && (
-          <div className="lang-options">
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
             <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
               English
             </button>

@@ -108,9 +108,8 @@
 }
 
 .password-group .form-input {
-  padding-right: 2.5rem; /* space for the eye icon */
+  padding-right: 2.5rem;
 }
-
 
 .form-label {
   margin-bottom: 0.25rem;
@@ -171,14 +170,19 @@
   color: #276749;
 }
 
+/* ✅ Fixed and clean language toggle placement */
 .language-toggle {
-  position: absolute;
-  bottom: 1.25rem;
-  right: 1.25rem;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  position: fixed;
+  bottom: 20px;
+  z-index: 100;
+}
+
+.language-toggle.right {
+  right: 20px;
+}
+
+.language-toggle.left {
+  left: 20px;
 }
 
 .lang-button {
@@ -197,18 +201,17 @@
 
 .lang-options {
   position: absolute;
-  bottom: 3.5rem; /* or bottom: 3.5rem depending on placement */
+  bottom: 3.5rem;
   right: 0;
   background-color: #fffaf0;
   border: 1px solid #d8cfc0;
   border-radius: 0.5rem;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  width: 140px; /* <-- increase as needed */
+  width: 140px;
 }
-
 
 .lang-options button {
   padding: 0.5rem 1rem;
@@ -223,4 +226,30 @@
 
 .lang-options button:hover {
   background-color: #f6ead1;
+}
+
+.lang-options {
+  position: absolute;
+  bottom: 3.5rem;
+  background-color: #fffaf0;
+  border: 1px solid #d8cfc0;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 140px;
+  z-index: 200;
+}
+
+/* Default (English) - aligns to right */
+.lang-options.ltr-popup {
+  right: 0;
+  left: auto;
+}
+
+/* RTL (Hebrew) - aligns to left of button */
+.lang-options.rtl-popup {
+  left: 0;
+  right: auto;
 }
