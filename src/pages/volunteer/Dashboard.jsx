@@ -162,17 +162,17 @@ function VolunteerDashboard() {
 
   return (
     <div className="dashboard-container">
-      <div className="language-toggle">
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
         <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
           <Globe size={35} />
         </button>
         {showLangOptions && (
-          <div className="lang-options">
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
             <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
-              {t('english')}
+              {t('English')}
             </button>
             <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
-              {t('hebrew')}
+              {t('Hebrew')}
             </button>
           </div>
         )}
