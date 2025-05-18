@@ -41,7 +41,7 @@ function VolunteerDashboard() {
           const newVolunteer = {
             userId,
             username: username || `user_${userId.slice(0, 6)}`,
-            fullName: userObject?.displayName || 'New Volunteer',
+            fullName: userObject?.displayName || t('volunteer'),
             avatar: null,
             birthDate: null,
             skills: [],
@@ -54,16 +54,16 @@ function VolunteerDashboard() {
         } else if (volunteerSnap) {
           setVolunteerData({ ...volunteerSnap.data(), id: volunteerSnap.id });
         } else {
-          setError('Could not find or create your volunteer profile.');
+          setError(t('error_loading_profile'));
         }
       } catch (err) {
-        setError('Error loading your profile: ' + err.message);
+        setError(`${t('error_loading_profile')} ${err.message}`);
       }
       setLoading(false);
     };
 
     fetchVolunteerData();
-  }, [userId, username, userObject]);
+  }, [userId, username, userObject, t]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -86,7 +86,7 @@ function VolunteerDashboard() {
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(i18n.language === 'he' ? 'he-IL' : 'en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric'
@@ -111,21 +111,21 @@ function VolunteerDashboard() {
 
   const stats = volunteerData ? [
     {
-      label: "Hours Volunteered",
+      label: t('hours_volunteered'),
       value: volunteerData.totalHoursVolunteered || 0,
       icon: Clock,
       color: "bg-blue-50",
       border: "border-blue-200"
     },
     {
-      label: "Upcoming Appointments",
+      label: t('upcoming_appointments'),
       value: appointments.length || 0,
       icon: CalendarClock,
       color: "bg-green-50",
       border: "border-green-200"
     },
     {
-      label: "Appointments Attended",
+      label: t('appointments_attended'),
       value: volunteerData.appointmentsAttended || 0,
       icon: CheckCircle,
       color: "bg-purple-50",
@@ -134,27 +134,27 @@ function VolunteerDashboard() {
   ] : [];
 
   if (loading) {
-    return <div className="dashboard-loading">Loading...</div>;
+    return <div className="dashboard-loading">{t('loading')}</div>;
   }
 
   if (error) {
     return (
       <div className="dashboard-error">
-        <h2>Error</h2>
+        <h2>{t('error')}</h2>
         <p>{error}</p>
         <div className="text-sm mt-4 p-4 bg-gray-100 rounded">
-          <p><strong>Troubleshooting:</strong></p>
+          <p><strong>{t('troubleshooting')}:</strong></p>
           <ul className="list-disc pl-5 mt-2">
-            <li>Check your Firebase security rules</li>
-            <li>Make sure you're logged in properly</li>
-            <li>Verify the 'volunteers' collection exists</li>
+            <li>{t('check_rules')}</li>
+            <li>{t('check_login')}</li>
+            <li>{t('check_collection')}</li>
           </ul>
         </div>
         <button
           onClick={() => window.location.reload()}
           className="dashboard-retry-button mt-4"
         >
-          Try Again
+          {t('try_again')}
         </button>
       </div>
     );
@@ -162,7 +162,6 @@ function VolunteerDashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* Language toggle in bottom-right corner */}
       <div className="language-toggle">
         <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
           <Globe size={35} />
@@ -170,24 +169,21 @@ function VolunteerDashboard() {
         {showLangOptions && (
           <div className="lang-options">
             <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
-              English
+              {t('english')}
             </button>
             <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
-              עברית
+              {t('hebrew')}
             </button>
           </div>
         )}
       </div>
 
-      {/* Hero Banner */}
       <div className="dashboard-hero">
         <div>
           <h1 className="dashboard-welcome-text">
-            Welcome, {volunteerData?.fullName || 'Volunteer'}!
+            {t('welcome')}, {volunteerData?.fullName || t('volunteer')}!
           </h1>
-          <p className="dashboard-thankyou-text">
-            Thank you for making a difference in your community.
-          </p>
+          <p className="dashboard-thankyou-text">{t('thank_you')}</p>
         </div>
         {volunteerData?.avatar && (
           <img
@@ -198,7 +194,6 @@ function VolunteerDashboard() {
         )}
       </div>
 
-      {/* Stats Cards */}
       <div className="dashboard-stats">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -217,13 +212,12 @@ function VolunteerDashboard() {
         })}
       </div>
 
-      {/* Upcoming Appointments Section */}
       <div className="dashboard-appointments">
         <div className="appointments-header">
-          <h2 className="appointments-title">Upcoming Appointments</h2>
+          <h2 className="appointments-title">{t('upcoming_appointments')}</h2>
           {appointments.length > 0 && (
             <button className="view-all-button">
-              View All
+              {t('view_all')}
             </button>
           )}
         </div>
@@ -231,10 +225,10 @@ function VolunteerDashboard() {
         {appointments.length === 0 ? (
           <div className="no-appointments">
             <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="no-appointments-text">You don't have any upcoming appointments.</p>
+            <p className="no-appointments-text">{t('no_appointments')}</p>
             <Link to="./calendar">
               <button className="browse-calendar-button">
-                Browse Calendar
+                {t('browse_calendar')}
               </button>
             </Link>
           </div>
@@ -251,7 +245,7 @@ function VolunteerDashboard() {
                   </div>
                 </div>
                 <div className="appointment-details">
-                  <h3 className="appointment-title">{appointment.title || 'Volunteer Session'}</h3>
+                  <h3 className="appointment-title">{appointment.title || t('volunteer_session')}</h3>
                   {appointment.location && (
                     <div className="appointment-location">
                       <MapPin className="w-4 h-4" />
@@ -261,13 +255,13 @@ function VolunteerDashboard() {
                   {appointment.supervisor && (
                     <div className="appointment-supervisor">
                       <UserCircle className="w-4 h-4" />
-                      <span>Supervisor: {appointment.supervisor}</span>
+                      <span>{t('supervisor')}: {appointment.supervisor}</span>
                     </div>
                   )}
                 </div>
                 <div className="appointment-actions">
                   <button className="appointment-details-button">
-                    Details
+                    {t('details')}
                   </button>
                 </div>
               </div>
@@ -276,13 +270,14 @@ function VolunteerDashboard() {
         )}
       </div>
 
-      {/* Skills Section */}
       {volunteerData?.skills && volunteerData.skills.length > 0 && (
         <div className="dashboard-skills">
-          <h3 className="skills-heading">My Skills:</h3>
+          <h3 className="skills-heading">{t('my_skills')}</h3>
           <ul className="skills-list">
             {volunteerData.skills.map((skill, index) => (
-              <li key={index} className="skill-item">{skill}</li>
+              <li key={index} className="skill-item">
+                {t(`skills.${skill}`, skill)}
+              </li>
             ))}
           </ul>
         </div>
