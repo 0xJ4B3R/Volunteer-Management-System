@@ -6,19 +6,28 @@
   import LoginHE from './locales/he/Login.json';
   import ForgotPasswordEN from './locales/en/ForgotPassword.json';
   import ForgotPasswordHE from './locales/he/ForgotPassword.json';
+  import VolunteerDashboardEN from './locales/en/VolunteerDashboard.json';
+  import VolunteerDashboardHE from './locales/he/VolunteerDashboard.json';
+  import sidebarEN from './locales/en/Sidebar.json';
+  import sidebarHE from './locales/he/Sidebar.json';
+
 
 
   const resources = {
     en: {
       translation: {
-        ... LoginEN,
-        ...ForgotPasswordEN
+        ...LoginEN,
+        ...ForgotPasswordEN,
+        ...VolunteerDashboardEN,
+        ...sidebarEN
       }
     },
     he: {
       translation: {
         ...LoginHE,
-        ...ForgotPasswordHE
+        ...ForgotPasswordHE,
+        ...VolunteerDashboardHE,
+        ...sidebarHE
       }
     }
   };
