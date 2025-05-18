@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+pdfMake.vfs = pdfFonts.vfs;
 import { 
   Search, 
   Filter, 
@@ -12,6 +15,7 @@ import {
   PieChart as PieChartIcon,
   LineChart as LineChartIcon,
   FileText,
+  Trash,
   Bell,
   Menu,
   X,
@@ -32,6 +36,7 @@ import {
   Heart as HeartIcon,
   Target as TargetIcon,
   Award as AwardIcon
+  
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,89 +54,101 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import NotificationsPanel from "@/components/manager/NotificationsPanel";
 import { cn } from "@/lib/utils";
+import { Timestamp } from "firebase/firestore";
+import { S } from "node_modules/framer-motion/dist/types.d-B50aGbjN";
+import { Notification } from '../../components/manager/NotificationsPanel';
+import {Volunteer} from '../../services/firestore';
 
+const timeStampNow = Timestamp.fromDate(new Date());
+
+
+// Enums and Types
+type ReportType = "attendance" | "volunteer" | "elder" | "appointments";
+type ReportStatus = "completed" | "pending" | "failed";
+
+// Date range for filters
+interface DateRange {
+  from?: string; // ISO or date string
+  to?: string;
+}
+
+// Filters interface
+interface Filters {
+  dateRange?: DateRange;                 // Filter by date range
+  status?: ("all" | ReportStatus)[];              // Filter by report status
+}
+
+// Main Report interface
 interface Report {
   id: string;
-  title: string;
-  description: string;
-  type: "attendance" | "volunteer" | "elder" | "engagement" | "performance";
-  status: "completed" | "pending" | "failed";
-  date: string;
+  type: ReportType;
+  filters: Filters;
   data: any;
+  generatedBy: string;
+  generatedAt: Timestamp;
+  description: string | null;
+  exported: boolean; //whteher it have been downloaded, printed or not
+  status: ReportStatus;
+  exportedAt: string;
 }
 
-interface Notification {
-  id: number;
-  message: string;
-  time: string;
-  type?: "success" | "warning" | "info" | "default";
-  link?: string;
-}
+const allreports: Report[] = [];
+
 
 // Mock data for reports
 const mockReports: Report[] = [
   {
-    id: "1",
-    title: "Monthly Volunteer Attendance Report",
-    description: "",
+    id: "rpt001",
     type: "attendance",
+    filters: {
+      dateRange: { from: "2025-01-01", to: "2025-01-10" },
+      status: ["completed"],
+    },
+    data: { attendees: 50 },
+    generatedBy: "user123",
+    generatedAt: timeStampNow,
+    description: "Attendance report for January kickoff meeting",
+    exported: true,
     status: "completed",
-    date: "2024-02-01",
-    data: {
-      totalVolunteers: 25,
-      activeVolunteers: 20,
-      totalHours: 450,
-      averageHoursPerVolunteer: 18,
-      attendanceRate: 85,
-      topVolunteers: [
-        { name: "John Doe", hours: 45 },
-        { name: "Jane Smith", hours: 40 },
-        { name: "Mike Johnson", hours: 38 }
-      ]
-    }
+    exportedAt: "2025-01-11T10:00:00Z"
   },
   {
-    id: "2",
-    title: "Quarterly Elder Engagement Report",
-    description: "",
-    type: "engagement",
-    status: "completed",
-    date: "2024-01-15",
-    data: {
-      totalElders: 30,
-      activeElders: 28,
-      totalSessions: 120,
-      averageSessionsPerElder: 4,
-      engagementRate: 92,
-      topActivities: [
-        { name: "Music Therapy", participation: 85 },
-        { name: "Art Classes", participation: 75 },
-        { name: "Group Exercise", participation: 70 }
-      ]
-    }
+    id: "rpt002",
+    type: "volunteer",
+    filters: {
+      dateRange: { from: "2025-02-01" },
+      status: ["pending", "completed"],
+    },
+    data: { volunteers: 12 },
+    generatedBy: "admin456",
+    generatedAt: timeStampNow,
+    description: "Volunteer participation in cleanup drive",
+    exported: false,
+    status: "pending",
+    exportedAt: ""
   },
   {
-    id: "3",
-    title: "Annual Performance Report",
-    description: "",
-    type: "performance",
-    status: "completed",
-    date: "2023-12-31",
-    data: {
-      totalHours: 5000,
-      totalSessions: 1000,
-      satisfactionRate: 95,
-      retentionRate: 88,
-      growthRate: 15,
-      keyMetrics: [
-        { name: "Volunteer Retention", value: 88 },
-        { name: "Elder Satisfaction", value: 95 },
-        { name: "Program Growth", value: 15 }
-      ]
-    }
+    id: "rpt003",
+    type: "appointments",
+    filters: {
+      status: ["failed"],
+    },
+    data: { failedCount: 5 },
+    generatedBy: "supervisor789",
+    generatedAt: timeStampNow,
+    description: "Failed appointment report",
+    exported: false,
+    status: "failed",
+    exportedAt: ""
   }
 ];
 
+//push the mock reports to the all reports array
+for (const report of mockReports) {
+  allreports.push(report);
+}
+
+  const mockVolunteers: Volunteer[] = []
 // Mock data for notifications
 const mockNotifications: Notification[] = [
   {
@@ -142,15 +159,15 @@ const mockNotifications: Notification[] = [
   },
   {
     id: 2,
-    message: "Quarterly engagement report ready",
+    message: "Quarterly elder report ready",
     time: "10 minutes ago",
-    type: "info"
+    type: "success"
   },
   {
     id: 3,
-    message: "Annual performance report needs review",
+    message: "Annual appointments report needs review",
     time: "30 minutes ago",
-    type: "warning"
+    type: "success"
   }
 ];
 
@@ -173,22 +190,33 @@ const ManagerReports = () => {
     dateRange: "all"
   });
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  const [reports, setReports] = useState(mockReports);
+  const [reports, setReports] = useState<Report[]>(allreports);
+  //const [title, setTitle] = useState("");
+const [description, setDescription] = useState("");
+const [startDate, setStartDate] = useState("");
+const [endDate, setEndDate] = useState("");
+const [reportType, setReportType] = useState("");
 
+const resetForm = () => {
+  setDescription("");
+  setStartDate("");
+  setEndDate("");
+  setReportType("");
+};
   // Filter reports based on active tab and search query
   const filteredReports = reports.filter(report => {
-    // Filter by tab
+    // Filter reports by tab (report type tab)
     if (activeTab !== "all" && report.type !== activeTab) {
       return false;
     }
     
-    // Filter by search query
+    // Filter by search query (search reports field)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
+      const generatedTitle = report.type + "Report";
       return (
-        report.title.toLowerCase().includes(query) ||
-        report.description.toLowerCase().includes(query) ||
-        report.type.toLowerCase().includes(query)
+        generatedTitle.toLowerCase().includes(query) ||
+        report.description.toLowerCase().includes(query)
       );
     }
     
@@ -199,7 +227,7 @@ const ManagerReports = () => {
     
     // Filter by date range
     if (filters.dateRange !== "all") {
-      const reportDate = new Date(report.date);
+      const reportDate = report.generatedAt.toDate();
       const today = new Date();
       let startDate = new Date();
       
@@ -224,59 +252,110 @@ const ManagerReports = () => {
   });
 
   const handleGenerateReport = () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const newReport: Report = {
-        id: (reports.length + 1).toString(),
-        title: "New Report",
-        description: "",
-        type: "attendance",
-        status: "pending",
-        date: new Date().toISOString().split('T')[0],
-        data: {}
-      };
-      setReports([...reports, newReport]);
-      setIsLoading(false);
-      setIsGenerateDialogOpen(false);
-      setNotifications([
-        {
-          id: Date.now(),
-          message: "New report generation started",
-          time: "Just now",
-          type: "info"
-        },
-        ...notifications
-      ]);
-    }, 1000);
-  };
+  setIsLoading(true);
 
-  const handleDownloadReport = (report: Report) => {
-    setIsLoading(true);
-    // Simulate download
-    setTimeout(() => {
-      setIsLoading(false);
-      setNotifications([
-        {
-          id: Date.now(),
-          message: `${report.title} downloaded successfully`,
-          time: "Just now",
-          type: "success"
+  setTimeout(() => {
+    const newReport: Report = {
+      id: "report " + (reports.length + 1).toString(),
+      description: description,
+      type: reportType as ReportType,
+      status: "completed",
+      generatedAt: timeStampNow,
+      filters: {
+        dateRange: {
+          from: startDate || undefined,
+          to: endDate || new Date().toISOString().split("T")[0],
         },
-        ...notifications
-      ]);
-    }, 1000);
-  };
+      },
+      data: {},
+      generatedBy: "user123",
+      exported: false,
+      exportedAt: "",
+    };
+
+    setReports([...reports, newReport]);
+    resetForm();
+    setIsLoading(false);
+    setIsGenerateDialogOpen(false);
+
+    handleShowReport(newReport);
+
+  }, 1000);
+};
+
+const handleShowReport = (newReport: Report) => {
+  // PDFMake content definition
+  const from = newReport.filters.dateRange?.from || "Any Time";
+  const to = newReport.filters.dateRange?.to;
+    const baseContent = [
+  { text: capitalizeFirstLetter(reportType) + " Report", style: "header" },
+  { text: `Description: ${newReport.description}` },
+  { text: `Generated By: ${newReport.generatedBy}` },
+  { text: `Generated At: ${newReport.generatedAt.toDate().toLocaleString()}` },
+  {
+    text: `Date Range: ${
+      newReport.filters.dateRange
+        ? `From ${from} To ${to}`
+        : "None"
+    }`,
+  },
+];
+
+let typeSpecificContent: any[] = [];
+
+switch (newReport.type) {
+  case "attendance":
+    typeSpecificContent = [
+      { text: `Attendees: ${newReport.data.attendees?.length || 0}` },
+    ];
+    break;
+
+  case "volunteer":
+    typeSpecificContent = [
+      { text: `Volunteers: ${newReport.data.volunteers?.length || 0}` },
+    ];
+    break;
+
+  case "elder":
+    typeSpecificContent = [
+      { text: `Elders Counted: ${newReport.data.elders?.length || 0}` },
+    ];
+    break;
+
+  case "appointments":
+    typeSpecificContent = [
+      { text: `Appointments: ${newReport.data.appointments?.length || 0}` },
+    ];
+    break;
+
+  default:
+    typeSpecificContent = [{ text: "No specific data available for this report type." }];
+}
+
+const docDefinition = {
+  content: [...baseContent, ...typeSpecificContent],
+  styles: {
+    header: {
+      fontSize: 18,
+      bold: true,
+      marginBottom: 10,
+    },
+  },
+};
+
+pdfMake.createPdf(docDefinition).open();
+}
 
   const handlePrintReport = (report: Report) => {
     setIsLoading(true);
+    const report_title = report.type + "Report";
     // Simulate printing
     setTimeout(() => {
       setIsLoading(false);
       setNotifications([
         {
           id: Date.now(),
-          message: `${report.title} sent to printer`,
+          message: `${report_title} sent to printer`,
           time: "Just now",
           type: "success"
         },
@@ -297,6 +376,45 @@ const ManagerReports = () => {
         return "bg-slate-100 text-slate-700 border-slate-200";
     }
   };
+
+/*const handleGenerateReport = () => {
+  setIsLoading(true);
+
+  const newReport: Report = {
+    id: crypto.randomUUID(),
+    type: reportType,
+    filters: {
+      title,
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+    },
+    data: {}, // placeholder for future data
+    generatedBy: "CurrentUser", // replace with actual user info
+    generatedAt: new Date().toISOString(),
+    description: description || null,
+    exported: false,
+    status: "pending",
+    exportedAt: ""
+  };
+
+  setReports((prev) => [...prev, newReport]);
+  console.log("New report created:", newReport);
+
+  setIsGenerateDialogOpen(false);
+  setIsLoading(false);
+
+  // Optional: reset fields
+  setTitle("");
+  setDescription("");
+  setStartDate("");
+  setEndDate("");
+};*/
+
+
+function capitalizeFirstLetter(str: string): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -351,18 +469,6 @@ const ManagerReports = () => {
             <HeartIcon className="h-5 w-5 text-purple-600" />
           </div>
         );
-      case "engagement":
-        return (
-          <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-            <ActivityIcon className="h-5 w-5 text-amber-600" />
-          </div>
-        );
-      case "performance":
-        return (
-          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-            <TargetIcon className="h-5 w-5 text-red-600" />
-          </div>
-        );
       default:
         return (
           <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
@@ -371,6 +477,8 @@ const ManagerReports = () => {
         );
     }
   };
+  const showDateRange = reportType === "attendance" || reportType === "appointments";
+  const typeIsSelected = reportType === "attendance" || reportType === "volunteer" || reportType === "elder" || reportType === "appointments";
 
   const getReportSummaryStats = () => {
     const totalReports = reports.length;
@@ -906,11 +1014,8 @@ const ManagerReports = () => {
               <TabsTrigger value="elder" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                 Elder
               </TabsTrigger>
-              <TabsTrigger value="engagement" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Engagement
-              </TabsTrigger>
-              <TabsTrigger value="performance" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Performance
+              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+                Appointments
               </TabsTrigger>
             </TabsList>
 
@@ -989,7 +1094,7 @@ const ManagerReports = () => {
                           {getTypeIconWithBg(report.type)}
                           <div>
                             <div className="flex items-center gap-2">
-                              <h3 className="text-lg font-semibold text-slate-900">{report.title}</h3>
+                              <h3 className="text-lg font-semibold text-slate-900">{capitalizeFirstLetter(report.type) + " Report"}</h3>
                               <Badge variant="outline" className={getStatusColor(report.status)}>
                                 <span className="flex items-center gap-1">
                                   {getStatusIcon(report.status)}
@@ -1000,15 +1105,25 @@ const ManagerReports = () => {
                             <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
                               <span className="flex items-center gap-1">
                                 <CalendarIcon className="h-4 w-4" />
-                                {report.date}
+                                {report.generatedAt.toDate().toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
                               </span>
-                              <span>•</span>
-                              <span className="capitalize">{report.type} Report</span>
+                              {report.description !== "" && (
+                                <>
+                                  <span>•</span>
+                                  <span className="capitalize">{report.description}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <TooltipProvider>
+                          {/*<TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -1024,9 +1139,9 @@ const ManagerReports = () => {
                                 <p>Download Report</p>
                               </TooltipContent>
                             </Tooltip>
-                          </TooltipProvider>
+                          </TooltipProvider>*/}
                           
-                          <TooltipProvider>
+                          {/*<TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -1042,7 +1157,7 @@ const ManagerReports = () => {
                                 <p>Print Report</p>
                               </TooltipContent>
                             </Tooltip>
-                          </TooltipProvider>
+                          </TooltipProvider>*/}
                           
                           <TooltipProvider>
                             <Tooltip>
@@ -1051,7 +1166,7 @@ const ManagerReports = () => {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => {
-                                    setSelectedReport(report);
+                                    handleShowReport(report);
                                     setIsViewDialogOpen(true);
                                   }}
                                 >
@@ -1065,6 +1180,27 @@ const ManagerReports = () => {
                           </TooltipProvider>
                           
                           <TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => {
+          setReports((prevReports) =>
+            prevReports.filter((r) => r.id !== report.id)
+          );
+        }}
+      >
+        <Trash className="h-4 w-4 text-red-500" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>
+      <p>Remove Report</p>
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+
+                          {/*<TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -1083,7 +1219,7 @@ const ManagerReports = () => {
                                 <p>{expandedReport === report.id ? "Collapse" : "Expand"}</p>
                               </TooltipContent>
                             </Tooltip>
-                          </TooltipProvider>
+                          </TooltipProvider>*/}
                         </div>
                       </div>
 
@@ -1239,67 +1375,8 @@ const ManagerReports = () => {
                                 </div>
                               </>
                             )}
-                            {report.type === "engagement" && (
-                              <>
-                                <div className="space-y-2">
-                                  <h4 className="font-medium text-slate-900">Engagement Metrics</h4>
-                                  <div className="space-y-1 text-sm">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-slate-600">Total Interactions</span>
-                                      <span className="font-medium">{report.data.totalInteractions}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-slate-600">Average Duration</span>
-                                      <span className="font-medium">{report.data.averageDuration} minutes</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-slate-600">Engagement Score</span>
-                                      <div className="flex items-center">
-                                        <span className="font-medium mr-2">{report.data.engagementScore}/10</span>
-                                        <div className="h-2 w-16 bg-slate-100 rounded-full overflow-hidden">
-                                          <div 
-                                            className="h-full bg-amber-500 rounded-full" 
-                                            style={{ width: `${(report.data.engagementScore / 10) * 100}%` }}
-                                          ></div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-slate-600">Feedback Response Rate</span>
-                                      <div className="flex items-center">
-                                        <span className="font-medium mr-2">{report.data.feedbackResponseRate}%</span>
-                                        <div className="h-2 w-16 bg-slate-100 rounded-full overflow-hidden">
-                                          <div 
-                                            className="h-full bg-amber-500 rounded-full" 
-                                            style={{ width: `${report.data.feedbackResponseRate}%` }}
-                                          ></div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <h4 className="font-medium text-slate-900">Feedback Summary</h4>
-                                  <div className="space-y-1">
-                                    {report.data.feedbackSummary.map((feedback: any) => (
-                                      <div key={feedback.category} className="flex items-center justify-between text-sm">
-                                        <span className="text-slate-600">{feedback.category}</span>
-                                        <div className="flex items-center">
-                                          <span className="font-medium mr-2">{feedback.score}/10</span>
-                                          <div className="h-2 w-16 bg-slate-100 rounded-full overflow-hidden">
-                                            <div 
-                                              className="h-full bg-amber-500 rounded-full" 
-                                              style={{ width: `${(feedback.score / 10) * 100}%` }}
-                                            ></div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                            {report.type === "performance" && (
+                            
+                            {report.type === "appointments" && (
                               <>
                                 <div className="space-y-2">
                                   <h4 className="font-medium text-slate-900">Performance Metrics</h4>
@@ -1386,10 +1463,7 @@ const ManagerReports = () => {
                               {report.type === "elder" && 
                                 `This elder report shows ${report.data.totalElders} total elders, with ${report.data.activeElders} currently active. ` +
                                 `The average sessions per elder is ${report.data.averageSessionsPerElder}, with a satisfaction rate of ${report.data.satisfactionRate}%.`}
-                              {report.type === "engagement" && 
-                                `This engagement report shows ${report.data.totalInteractions} total interactions with an average duration of ${report.data.averageDuration} minutes. ` +
-                                `The engagement score is ${report.data.engagementScore}/10, with a feedback response rate of ${report.data.feedbackResponseRate}%.`}
-                              {report.type === "performance" && 
+                              {report.type === "appointments" && 
                                 `This performance report shows an overall performance score of ${report.data.overallPerformance}/10, with efficiency at ${report.data.efficiencyScore}/10 and quality at ${report.data.qualityScore}/10. ` +
                                 `Key areas for improvement include: ${report.data.improvementAreas.join(", ")}.`}
                             </p>
@@ -1407,82 +1481,97 @@ const ManagerReports = () => {
 
       {/* Generate Report Dialog */}
       <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Generate New Report</DialogTitle>
-            <DialogDescription>
-              Select the type of report you want to generate and configure the parameters.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="report-title">Report Title</Label>
-              <Input id="report-title" placeholder="Enter report title" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="report-type">Report Type</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select report type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="attendance">Attendance Report</SelectItem>
-                  <SelectItem value="volunteer">Volunteer Report</SelectItem>
-                  <SelectItem value="elder">Elder Report</SelectItem>
-                  <SelectItem value="engagement">Engagement Report</SelectItem>
-                  <SelectItem value="performance">Performance Report</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Date Range</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start-date">Start Date</Label>
-                  <Input id="start-date" type="date" />
-                </div>
-                <div>
-                  <Label htmlFor="end-date">End Date</Label>
-                  <Input id="end-date" type="date" />
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Report Options</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="include-charts" />
-                  <Label htmlFor="include-charts">Include Charts and Graphs</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="include-details" />
-                  <Label htmlFor="include-details">Include Detailed Statistics</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="include-recommendations" />
-                  <Label htmlFor="include-recommendations">Include Recommendations</Label>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleGenerateReport} disabled={isLoading}>
-              {isLoading ? "Generating..." : "Generate Report"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+  <DialogContent className="sm:max-w-[600px]">
+    <DialogHeader>
+      <DialogTitle>Generate New Report</DialogTitle>
+      <DialogDescription>
+        Select the type of report and configure its parameters.
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="grid gap-4 py-4">
+      {/*<div className="space-y-2">
+        <Label htmlFor="report-title">Title</Label>
+        <Input
+          id="report-title"
+          placeholder="Enter report title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </div>*/}
+
+      <div className="space-y-2">
+        <Label htmlFor="report-description">Description</Label>
+        <Input
+          id="report-description"
+          placeholder="Enter report description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="report-type">
+          Type <span className="text-red-500">*</span>
+        </Label>
+        <Select value={reportType} onValueChange={setReportType}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select report type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="attendance">attendance</SelectItem>
+            <SelectItem value="volunteer">volunteer</SelectItem>
+            <SelectItem value="elder">elder</SelectItem>
+            <SelectItem value="appointments">appointments</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+            {showDateRange && (
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="start-date">From</Label>
+          <Input
+            id="start-date"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="end-date">To</Label>
+          <Input
+            id="end-date"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+      )}
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button
+  onClick={handleGenerateReport}
+  disabled={isLoading || !typeIsSelected}
+>
+  {isLoading ? "Generating..." : "Generate Report"}
+</Button>
+
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
       {/* View Report Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+      {/*<Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
-            <DialogTitle>{selectedReport?.title}</DialogTitle>
+            <DialogTitle>{selectedReport?.type + " Report"}</DialogTitle>
             <DialogDescription>
-              Generated on {selectedReport?.date}
+              Generated on {selectedReport?.generatedAt.toLocaleString()}
             </DialogDescription>
           </DialogHeader>
           {selectedReport && (
@@ -1493,7 +1582,7 @@ const ManagerReports = () => {
                   <div className="space-y-1 text-sm">
                     <p className="text-slate-600">Type: <span className="capitalize">{selectedReport.type}</span></p>
                     <p className="text-slate-600">Status: <span className="capitalize">{selectedReport.status}</span></p>
-                    <p className="text-slate-600">Date: {selectedReport.date}</p>
+                    <p className="text-slate-600">Date: {formatTimestamp(selectedReport.generatedAt)}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -1535,7 +1624,7 @@ const ManagerReports = () => {
             </div>
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog>*/}
     </div>
   );
 };
