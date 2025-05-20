@@ -85,7 +85,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import VolunteerSidebar from "@/components/volunteer/Sidebar";
 import NotificationsPanel from "@/components/common/NotificationsPanel";
 import { cn } from "@/lib/utils";
 
@@ -710,14 +709,6 @@ const VolunteerAttendance = () => {
 
       {/* Main Content with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navigation */}
-        <VolunteerSidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          isMobile={isMobile}
-          onLogout={handleLogout}
-        />
-
         {/* Main Content */}
         <main
           className="flex-1 overflow-y-auto p-4 lg:p-6 transition-all duration-300"

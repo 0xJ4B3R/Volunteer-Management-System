@@ -2,7 +2,7 @@
 .volunteer-calendar-container {
   display: flex;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: #f2f4f6;
 }
 
 .main-content-container {
@@ -45,9 +45,10 @@
 
 .view-mode-tabs {
   display: flex;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #305031;
   border-radius: 0.375rem;
-  background-color: #fff;
+  background-color: #416a42;
+  color: #fff;
   overflow: hidden;
 }
 
@@ -64,11 +65,11 @@
 }
 
 .tab-trigger:hover {
-  background-color: #f3f4f6;
+  background-color: #5c885d;
 }
 
 .tab-trigger.active {
-  background-color: #f3f4f6;
+  background-color: #5c885d;
   font-weight: 500;
 }
 
@@ -100,8 +101,9 @@
 .week-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #fff;
+  border-bottom: 1px solid #305031;
+  background-color: #416a42;
+  color: #fff;
   border-top-left-radius: 0.375rem;
   border-top-right-radius: 0.375rem;
 }
@@ -111,7 +113,7 @@
   flex-direction: column;
   align-items: center;
   padding: 0.75rem;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid #305031;
   text-align: center;
 }
 
@@ -121,7 +123,7 @@
 
 .weekday-name {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #fff;
   margin-bottom: 0.25rem;
 }
 
@@ -137,18 +139,18 @@
 }
 
 .current-day {
-  background-color: #f9fafb;
+  background-color: #5c885d;
 }
 
 .current-day-number {
-  background-color: #3b82f6;
-  color: white;
+  background-color: #e3fae3;
+  color: rgb(0, 0, 0);
 }
 
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background-color: #fff;
+  background-color: #e3fae3;
   border-bottom-left-radius: 0.375rem;
   border-bottom-right-radius: 0.375rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -156,7 +158,7 @@
 }
 
 .week-day-column {
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid #305031;
   padding: 0.5rem;
   display: flex;
   flex-direction: column;
@@ -168,16 +170,68 @@
   border-right: none;
 }
 
+/* This is the stacking margins */
+.stacked-slot-group { 
+  min-height: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .time-slot {
   padding: 0.5rem;
   border-radius: 0.375rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: box-shadow 0.18s, transform 0.18s;
+  border: 0px;
+  border-radius: 0.375rem;
+  box-shadow: 0 2px 6px rgba(60,60,60,0.04);
+  overflow: hidden;
+}
+
+/* Background colors for session types */
+.bg-\[\#3b82f6\] {
+  background-color: #3b82f6 !important;
+}
+
+.bg-\[\#ec4899\] {
+  background-color: #ec4899 !important;
+}
+
+.bg-\[\#f59e0b\] {
+  background-color: #f59e0b !important;
+}
+
+.bg-\[\#10b981\] {
+  background-color: #10b981 !important;
+}
+
+.bg-\[\#8b5cf6\] {
+  background-color: #8b5cf6 !important;
+}
+
+.bg-\[\#ef4444\] {
+  background-color: #ef4444 !important;
+}
+
+.bg-\[\#6366f1\] {
+  background-color: #6366f1 !important;
+}
+
+.bg-\[\#14b8a6\] {
+  background-color: #14b8a6 !important;
+}
+
+.bg-\[\#6b7280\] {
+  background-color: #6b7280 !important;
+}
+
+.text-white {
+  color: white !important;
 }
 
 .time-slot:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100 !important;
 }
 
 .time-slot-header {
@@ -198,7 +252,6 @@
 
 .time-range {
   font-size: 0.75rem;
-  color: #4b5563;
   margin-bottom: 0.25rem;
 }
 
@@ -207,7 +260,6 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: #6b7280;
 }
 
 .unavailable-slot {
@@ -222,14 +274,15 @@
 
 /* ========== Month View ========== */
 .month-view {
-  background-color: #fff;
+  background-color: #416a42;
+  color: #fff;
   border-radius: 0.375rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .month-header {
   padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #305031;
 }
 
 .month-title {
@@ -248,25 +301,26 @@
   padding: 0.5rem;
   text-align: center;
   font-size: 0.875rem;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
+  color: #ffffff;
+  border-bottom: 1px solid #305031;
   font-weight: 500;
 }
 
 .month-cell {
   min-height: 100px;
-  border-right: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #305031;
+  border-bottom: 1px solid #305031;
   padding: 0.5rem;
   position: relative;
+  background-color: #e3fae3;
 }
 
 .month-cell.empty {
-  background-color: #f9fafb;
+  background-color: #d8efd8;
 }
 
 .month-cell.today {
-  background-color: #f0f9ff;
+  background-color: #5c885d;
 }
 
 .month-day-number {
@@ -278,11 +332,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #333;
 }
 
 .today .month-day-number {
-  background-color: #3b82f6;
-  color: white;
+  background-color: #e3fae3;
+  color: rgb(0, 0, 0);
   border-radius: 9999px;
 }
 
@@ -295,6 +350,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+  border-left: 4px solid;
+}
+
+.month-slot:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 .month-slot.unavailable {
@@ -310,176 +372,23 @@
   font-size: 0.7rem;
 }
 
-/* ========== List View ========== */
-.list-view-content {
-  background-color: #fff;
-  border-radius: 0.375rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  padding: 1rem;
-}
-
-.session-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.session-card {
-  border-radius: 0.375rem;
-  padding: 1rem;
-  transition: transform 0.2s;
-  cursor: pointer;
-}
-
-.session-card:hover {
-  transform: translateY(-2px);
-}
-
-.session-card.unavailable {
-  opacity: 0.6;
-}
-
-.session-card-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.session-card-title-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.session-card-title {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.session-date {
-  font-size: 0.875rem;
-}
-
-.session-card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.session-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.separator {
-  color: #d1d5db;
-}
-
-.volunteers-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.availability-meta {
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.available-icon {
-  color: #10b981;
-}
-
-.unavailable-icon {
-  color: #6b7280;
-}
-
-/* ========== Dialog/Modal Styles ========== */
-.session-details-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  padding: 0.5rem 0;
-}
-
-.session-badges {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.session-info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.info-label {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-bottom: 0.375rem;
-  display: block;
-}
-
-.info-value {
-  display: flex;
-  align-items: center;
-  font-size: 0.875rem;
-}
-
-/* ========== Empty State ========== */
+/* Empty state styling */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1rem;
+  height: 100%;
+  padding: 1rem;
   text-align: center;
-}
-
-.empty-state-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.empty-state-message {
   color: #6b7280;
-  max-width: 24rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 0.375rem;
 }
 
-/* ========== Colors for Session Types ========== */
-.bg-green-100 {
-  background-color: #d1fae5;
-}
-
-.text-green-800 {
-  color: #065f46;
-}
-
-.bg-blue-100 {
-  background-color: #dbeafe;
-}
-
-.text-blue-800 {
-  color: #1e40af;
-}
-
-.bg-red-100 {
-  background-color: #fee2e2;
-}
-
-.text-red-800 {
-  color: #991b1b;
-}
-
-.bg-gray-100 {
-  background-color: #f3f4f6;
-}
-
-.text-gray-800 {
-  color: #1f2937;
+.empty-description {
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 
 /* ========== Responsive Styles ========== */
@@ -496,9 +405,10 @@
   .month-cell {
     min-height: 80px;
   }
-
-  .session-info-grid {
-    grid-template-columns: 1fr;
+  
+  .DialogContent {
+    width: 95%;
+    padding: 1.25rem;
   }
 }
 
@@ -526,23 +436,16 @@
   .month-cell {
     min-height: 60px;
   }
-}
+  
+  .DialogContent {
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+    height: 100vh;
+    max-height: 100vh;
+  }
 
-.stacked-slot-group {
-  min-height: 2.5rem;
-  margin-bottom: 0.5rem;
-  /* position: relative; is set inline for stacking */
-}
-.time-slot {
-  transition: box-shadow 0.18s, transform 0.18s;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  border-radius: 0.375rem;
-  box-shadow: 0 2px 6px rgba(60,60,60,0.04);
-  cursor: pointer;
-  overflow: hidden;
-}
-.time-slot:hover {
-  box-shadow: 0 8px 24px rgba(59,130,246,0.10);
-  z-index: 100 !important;
+  .DialogTitle {
+    font-size: 1rem;
+  }
 }

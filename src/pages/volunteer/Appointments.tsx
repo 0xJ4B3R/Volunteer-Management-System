@@ -51,7 +51,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import VolunteerSidebar from "@/components/volunteer/Sidebar";
 import NotificationsPanel from "@/components/common/NotificationsPanel";
 
 // Mock appointment data
@@ -397,14 +396,6 @@ const VolunteerAppointments = () => {
 
       {/* Main Content with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navigation */}
-        <VolunteerSidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          isMobile={isMobile}
-          onLogout={handleLogout}
-        />
-
         {/* Main Content */}
         <main
           className="flex-1 overflow-y-auto p-4 lg:p-6 transition-all duration-300"
