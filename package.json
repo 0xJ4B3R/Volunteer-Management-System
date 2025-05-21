@@ -55,7 +55,7 @@
     "date-fns-tz": "^3.2.0",
     "embla-carousel-react": "^8.3.0",
     "file-saver": "^2.0.5",
-    "firebase": "^11.6.1",
+    "firebase": "^11.8.0",
     "focus-visible": "^5.2.1",
     "framer-motion": "^12.7.2",
     "i18next": "^25.1.3",

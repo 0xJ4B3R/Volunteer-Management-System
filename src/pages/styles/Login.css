@@ -252,3 +252,25 @@
   left: 0;
   right: auto;
 }
+
+/* Log in card animation*/
+@keyframes bounceUp {
+  0% {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-20px);
+  }
+  80% {
+    transform: translateY(10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.login-container {
+  animation: bounceUp 1s ease-out forwards;
+}
