@@ -1,0 +1,41 @@
+{
+  "profile": {
+    "title": "Your Profile",
+    "subtitle": "Manage your personal information and account settings",
+    "tabs": {
+      "info": "Personal Info",
+      "security": "Security"
+    },
+    "memberSince": "Member since",
+    "totalHours": "Total Hours",
+    "username": "Username",
+    "status": "Volunteer Status",
+    "phone": "Phone",
+    "completedSessions": "Completed Sessions",
+    "skills": "Skills",
+    "addSkill": "Add Skill",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "confirmChange": "Confirm Password Change",
+    "prompt": {
+      "newSkill": "Enter a new skill"
+    },
+    "toast": {
+      "addedTitle": "Skill Added",
+      "addedDesc": "{{skill}} has been added.",
+      "removedTitle": "Skill Removed",
+      "removedDesc": "{{skill}} has been removed.",
+      "errorTitle": "Error",
+      "errorDesc": "Please check your inputs.",
+      "successTitle": "Success",
+      "successDesc": "Password updated."
+    },
+    "level": {
+      "superstar": "Superstar",
+      "active": "Active",
+      "beginner": "Beginner"
+    }
+  }
+}

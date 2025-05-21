@@ -1,0 +1,41 @@
+{
+  "profile": {
+    "title": "הפרופיל שלך",
+    "subtitle": "נהל את המידע האישי וההגדרות שלך",
+    "tabs": {
+      "info": "מידע אישי",
+      "security": "אבטחה"
+    },
+    "memberSince": "חבר מאז",
+    "totalHours": "סה\"כ שעות",
+    "username": "שם משתמש",
+    "status": "סטטוס מתנדב",
+    "phone": "טלפון",
+    "completedSessions": "מפגשים שהושלמו",
+    "skills": "מיומנויות",
+    "addSkill": "הוסף מיומנות",
+    "changePassword": "שנה סיסמה",
+    "currentPassword": "סיסמה נוכחית",
+    "newPassword": "סיסמה חדשה",
+    "confirmPassword": "אישור סיסמה",
+    "confirmChange": "אשר שינוי סיסמה",
+    "prompt": {
+      "newSkill": "הכנס מיומנות חדשה"
+    },
+    "toast": {
+      "addedTitle": "מיומנות נוספה",
+      "addedDesc": "{{skill}} נוספה.",
+      "removedTitle": "מיומנות הוסרה",
+      "removedDesc": "{{skill}} הוסרה.",
+      "errorTitle": "שגיאה",
+      "errorDesc": "בדוק את הקלטים שלך.",
+      "successTitle": "הצלחה",
+      "successDesc": "הסיסמה עודכנה."
+    },
+    "level": {
+      "superstar": "כוכב על",
+      "active": "פעיל",
+      "beginner": "מתחיל"
+    }
+  }
+}
