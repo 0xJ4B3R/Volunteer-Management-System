@@ -44,7 +44,7 @@ export default function LoginPage() {
       const role = userData.role;
       
       if (userData.isActive) {
-        if (userData.password === password && userData.isActive) {
+        if (userData.passwordHash === password && userData.isActive) {
         setLoading(true);
         
         localStorage.setItem("role", role);

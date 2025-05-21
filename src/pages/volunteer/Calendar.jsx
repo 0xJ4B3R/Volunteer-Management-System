@@ -47,6 +47,52 @@ const isEventAvailable = (eventDate) => {
   return eventDay >= today;
 };
 
+// Utility: Convert time string to minutes for sorting
+const timeToMinutes = (timeStr) => {
+  if (!timeStr) return 0;
+  
+  // Handle various time formats
+  let hours = 0;
+  let minutes = 0;
+  
+  // Handle formats like "9:00 AM", "9:00", "9AM", "9:00am"
+  timeStr = timeStr.toLowerCase().trim();
+  
+  // Extract AM/PM
+  let isPM = timeStr.includes('pm');
+  timeStr = timeStr.replace(/[ap]m/g, '').trim();
+  
+  // Parse hours and minutes
+  if (timeStr.includes(':')) {
+    [hours, minutes] = timeStr.split(':').map(part => parseInt(part, 10));
+  } else {
+    hours = parseInt(timeStr, 10);
+    minutes = 0;
+  }
+  
+  // Adjust for PM
+  if (isPM && hours < 12) {
+    hours += 12;
+  }
+  
+  // Adjust for 12 AM
+  if (!isPM && hours === 12) {
+    hours = 0;
+  }
+  
+  return hours * 60 + minutes;
+};
+
+// Function to sort slots by time
+const sortSlotsByTime = (slots) => {
+  // Sort slots by start time
+  return [...slots].sort((a, b) => {
+    const aMinutes = timeToMinutes(a.startTime);
+    const bMinutes = timeToMinutes(b.startTime);
+    return aMinutes - bMinutes;
+  });
+};
+
 const db = getFirestore(app);
 
 const VolunteerCalendar = () => {
@@ -194,8 +240,11 @@ const VolunteerCalendar = () => {
         return;
       }
       
-      // Check if slot is at capacity
-      if (volunteers.length >= (slotData.maxVolunteers || 1)) {
+      // Get approved volunteers count (exclude pending ones)
+      const approvedVolunteersCount = volunteers.filter(v => v.status !== "pending").length;
+      
+      // Check if slot is at capacity (only count approved volunteers)
+      if (approvedVolunteersCount >= (slotData.maxVolunteers || 1)) {
         alert("This session is already at maximum capacity");
         setSignupLoading(false);
         return;
@@ -216,12 +265,9 @@ const VolunteerCalendar = () => {
         })
       });
       
-      // If the slot is now full, update isOpen to false
-      if ((volunteers.length + 1) >= (slotData.maxVolunteers || 1)) {
-        await updateDoc(slotRef, {
-          isOpen: false
-        });
-      }
+      // Only close the slot if the approved volunteers count + this new volunteer equals/exceeds max capacity
+      // Since this is a pending volunteer, don't close the slot yet
+      // The slot will only be closed when an admin approves enough volunteers to reach maximum capacity
       
       // Refresh the calendar data
       const querySnapshot = await getDocs(collection(db, "calendar_slots"));
@@ -262,6 +308,11 @@ const VolunteerCalendar = () => {
       
     } catch (error) {
       console.error("Error signing up for session:", error);
+      console.error("Error details:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       alert(`Error signing up: ${error.message}`);
     } finally {
       setSignupLoading(false);
@@ -377,14 +428,27 @@ const VolunteerCalendar = () => {
     }
   };
 
+  // Updated groupSlotsByTime function to sort by time
   function groupSlotsByTime(slotsForDay) {
+    // Sort slots by time first
+    const sortedSlots = sortSlotsByTime(slotsForDay);
+    
+    // Group by time while maintaining order
     const groups = {};
-    slotsForDay.forEach(slot => {
+    sortedSlots.forEach(slot => {
       const key = slot.startTime;
       if (!groups[key]) groups[key] = [];
       groups[key].push(slot);
     });
-    return Object.values(groups); // array of arrays
+    
+    // Return an array of arrays, preserving the time-sorted order
+    return Object.entries(groups)
+      .sort(([timeA], [timeB]) => {
+        const aMinutes = timeToMinutes(timeA);
+        const bMinutes = timeToMinutes(timeB);
+        return aMinutes - bMinutes;
+      })
+      .map(([_, slots]) => slots);
   }
 
   console.log("Rendering calendar with", calendarSlots.length, "slots");
@@ -513,7 +577,12 @@ const VolunteerCalendar = () => {
                           </div>
                         ) : (
                           grouped.map((slotGroup, groupIdx) => (
-                            <div key={groupIdx} className="stacked-slot-group" style={{ position: "relative", height: `${1.8 + 0.5 * (slotGroup.length - 1)}rem` }}>
+                            <div key={groupIdx} className="stacked-slot-group" 
+                                 style={{ 
+                                   position: "relative", 
+                                   minHeight: `${Math.max(3.5, 2 + 0.8 * (slotGroup.length - 1))}rem`,
+                                   marginBottom: "1rem"
+                                 }}>
                               {slotGroup.map((slot, stackIdx) => (
                                 <Dialog key={slot.id}>
                                   <DialogTrigger asChild>
@@ -521,10 +590,10 @@ const VolunteerCalendar = () => {
                                       className={`time-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable-slot" : ""}`}
                                       style={{
                                         position: "absolute",
-                                        top: `${stackIdx * 8}px`,
-                                        left: `${stackIdx * 8}px`,
+                                        top: `${stackIdx * 10}px`, // Increased offset for better stacking
+                                        left: `${stackIdx * 10}px`,
                                         zIndex: 10 + stackIdx,
-                                        width: `calc(100% - ${stackIdx * 8}px)`,
+                                        width: `calc(100% - ${stackIdx * 10}px)`,
                                         boxShadow: stackIdx === slotGroup.length - 1 ? "0 4px 12px rgba(60,60,60,0.08)" : "0 2px 6px rgba(60,60,60,0.04)",
                                         borderLeft: "4px solid",
                                         borderLeftColor: slot.type === "reading" ? "#2563eb" : 
@@ -537,6 +606,17 @@ const VolunteerCalendar = () => {
                                                         slot.type === "social" ? "#0d9488" : "#4b5563"
                                       }}
                                     >
+                                      {/* Add status indicator for slots you've requested */}
+                                      {slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
+                                        <div className="my-request-badge">My Request</div>
+                                      )}
+                                      
+                                      {/* Or show pending badge if it has any pending requests */}
+                                      {!slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && 
+                                       slot.volunteers?.some(v => v.status === "pending") && (
+                                        <div className="pending-badge">Pending</div>
+                                      )}
+                                      
                                       <div className="time-slot-header">
                                         <span className="start-time">{slot.startTime}</span>
                                         <span className="session-type-badge">{slot.type}</span>
@@ -628,9 +708,12 @@ const VolunteerCalendar = () => {
                   {/* Days */}
                   {getMonthGrid(currentDate).map((date, idx) => {
                     const isToday = date && date.toDateString() === new Date().toDateString();
-                    const slots = date
+                    const slotsUnsorted = date
                       ? getFilteredSlots().filter(slot => slot.date && slot.date.toDateString() === date.toDateString())
                       : [];
+                      
+                    // Sort the slots by time
+                    const slots = sortSlotsByTime(slotsUnsorted);
                       
                     return (
                       <div
@@ -638,7 +721,7 @@ const VolunteerCalendar = () => {
                         className={`month-cell${isToday ? " today" : ""}${date ? "" : " empty"}`}
                       >
                         {date && <div className="month-day-number">{date.getDate()}</div>}
-                        {slots.map(slot => (
+                        {slots.map((slot, slotIdx) => (
                           <Dialog key={slot.id}>
                             <DialogTrigger asChild>
                               <div
@@ -652,12 +735,26 @@ const VolunteerCalendar = () => {
                                                   slot.type === "crafts" ? "#7c3aed" :
                                                   slot.type === "exercise" ? "#dc2626" :
                                                   slot.type === "therapy" ? "#4f46e5" :
-                                                  slot.type === "social" ? "#0d9488" : "#4b5563"
+                                                  slot.type === "social" ? "#0d9488" : "#4b5563",
+                                  // Order slots by time using their index in the sorted array
+                                  order: slotIdx
                                 }}
                                 title={`${slot.type} ${slot.startTime} - ${slot.endTime}`}
                               >
                                 <span className="month-slot-type">{slot.type}</span>
                                 <span className="month-slot-time">{slot.startTime}</span>
+                                
+                                {/* Small indicator dot if you've requested this slot */}
+                                {slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
+                                  <span style={{ 
+                                    display: "inline-block", 
+                                    width: "6px", 
+                                    height: "6px", 
+                                    borderRadius: "50%", 
+                                    backgroundColor: "#2563eb", 
+                                    marginLeft: "4px" 
+                                  }}></span>
+                                )}
                               </div>
                             </DialogTrigger>
                             <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">

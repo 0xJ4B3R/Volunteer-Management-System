@@ -150,7 +150,7 @@
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background-color: #e3fae3;
+  background-color: #ffffff;
   border-bottom-left-radius: 0.375rem;
   border-bottom-right-radius: 0.375rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -158,11 +158,11 @@
 }
 
 .week-day-column {
-  border-right: 1px solid #305031;
-  padding: 0.5rem;
+  border-right: 1px solid rgba(48, 80, 49, 0.2);
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 3rem;
   min-height: 100%;
 }
 
@@ -172,19 +172,21 @@
 
 /* This is the stacking margins */
 .stacked-slot-group { 
-  min-height: 2.5rem;
-  margin-bottom: 0.5rem;
+  min-height: 3.5rem;
+  margin-bottom: 1rem;
 }
 
 .time-slot {
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 0.375rem;
   cursor: pointer;
-  transition: box-shadow 0.18s, transform 0.18s;
+  transition: box-shadow 0.2s, transform 0.2s;
   border: 0px;
   border-radius: 0.375rem;
   box-shadow: 0 2px 6px rgba(60,60,60,0.04);
   overflow: hidden;
+  min-height: 3.5rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Background colors for session types */
@@ -238,28 +240,37 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .start-time {
-  font-weight: 500;
-  font-size: 0.875rem;
+  font-weight: 600;
+  font-size: 1rem;
 }
 
 .session-type-badge {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.2rem 0.4rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 0.25rem;
 }
 
 .time-range {
-  font-size: 0.75rem;
-  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.85;
 }
 
 .volunteers-count {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  display: inline-flex;
 }
 
 .unavailable-slot {
@@ -270,6 +281,32 @@
 .unavailable-slot:hover {
   transform: none;
   box-shadow: none;
+}
+
+/* Status indicators for pending slots */
+.pending-badge {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  background-color: #f97316; /* Orange */
+  color: white;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+/* Status indicator for your signed up slots */
+.my-request-badge {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  background-color: #2563eb; /* Blue */
+  color: white;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
 }
 
 /* ========== Month View ========== */
@@ -313,6 +350,8 @@
   padding: 0.5rem;
   position: relative;
   background-color: #e3fae3;
+  display: flex;
+  flex-direction: column;
 }
 
 .month-cell.empty {
@@ -342,34 +381,34 @@
 }
 
 .month-slot {
-  padding: 0.25rem 0.375rem;
+  padding: 0.4rem 0.5rem;
   border-radius: 0.25rem;
-  margin-bottom: 0.25rem;
-  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
-  border-left: 4px solid;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .month-slot:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.month-slot.unavailable {
-  opacity: 0.6;
 }
 
 .month-slot-type {
-  font-weight: 500;
+  font-weight: 600;
   margin-right: 0.25rem;
 }
 
 .month-slot-time {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.month-slot.unavailable {
+  opacity: 0.6;
 }
 
 /* Empty state styling */
@@ -389,6 +428,17 @@
 .empty-description {
   font-size: 0.875rem;
   color: #6b7280;
+}
+
+/* Loading indicator */
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 1.25rem;
+  color: #416a42;
+  font-weight: 500;
 }
 
 /* ========== Responsive Styles ========== */
