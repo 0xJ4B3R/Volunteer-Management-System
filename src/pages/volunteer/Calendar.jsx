@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { Globe } from "lucide-react";
 import "./styles/Calendar.css";
 import app from "@/lib/firebase";
 
@@ -50,6 +52,13 @@ const db = getFirestore(app);
 const VolunteerCalendar = () => {
   console.log("Component rendering...");
   const navigate = useNavigate();
+
+  const { t, i18n } = useTranslation();
+  const [showLangOptions, setShowLangOptions] = useState(false);
+  
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
+  }, [i18n.language]);
 
   // Always show current week
   const [currentDate] = useState(() => {
@@ -147,7 +156,7 @@ const VolunteerCalendar = () => {
     
     if (!currentUser || !currentUser.username) {
       alert("Please log in to sign up for sessions");
-      navigate("/login");
+      navigate("/");
       return;
     }
 
@@ -352,11 +361,19 @@ const VolunteerCalendar = () => {
 
   // Format date for display
   const formatDateDisplay = () => {
+    const getShortDate = (date) => {
+      const day = date.getDate();
+      const month = t(`months_short.${date.getMonth()}`);
+      return `${day} ${month}`;
+    };
+
     if (viewMode === "week") {
       const weekDates = getWeekDates();
-      return `${weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      return `${getShortDate(weekDates[0])} - ${getShortDate(weekDates[6])}`;
     } else {
-      return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const month = t(`months.${currentDate.getMonth()}`);
+      const year = currentDate.getFullYear();
+      return `${month} ${year}`;
     }
   };
 
@@ -373,7 +390,7 @@ const VolunteerCalendar = () => {
   console.log("Rendering calendar with", calendarSlots.length, "slots");
 
   if (isLoading) {
-    return <div className="loading-indicator">Loading calendar data...</div>;
+    return <div className="loading-indicator">{t("Loading calendar data...")}</div>;
   }
 
   return (
@@ -390,25 +407,29 @@ const VolunteerCalendar = () => {
             <div className="calendar-controls">
               <div className="view-mode-tabs">
                 <button
-                  className={`tab-trigger${viewMode === "week" ? " active" : ""}`}
+                  className={`tab-trigger flex items-center ${
+                    i18n.language === "he" ? "flex-row-reverse" : "flex-row"
+                  } gap-1 ${viewMode === "week" ? "active" : ""}`}
                   onClick={() => setViewMode("week")}
                 >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  Week
+                  <Calendar className="h-4 w-4" />
+                  <span>{t("Week")}</span>
                 </button>
                 <button
-                  className={`tab-trigger${viewMode === "month" ? " active" : ""}`}
+                  className={`tab-trigger flex items-center ${
+                    i18n.language === "he" ? "flex-row-reverse" : "flex-row"
+                  } gap-1 ${viewMode === "month" ? "active" : ""}`}
                   onClick={() => setViewMode("month")}
                 >
-                  <CalendarDays className="h-4 w-4 mr-1" />
-                  Month
+                  <CalendarDays className="h-4 w-4" />
+                  <span>{t("Month")}</span>
                 </button>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="filter-button">
                     <Filter className="h-4 w-4 mr-1" />
-                    Filter
+                    {t("Filter")}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -419,17 +440,22 @@ const VolunteerCalendar = () => {
                         checked={showOnlyAvailable}
                         onCheckedChange={setShowOnlyAvailable}
                       />
-                      <Label htmlFor="available-only">Available slots only</Label>
+                      <Label htmlFor="available-only">{t("Available slots only")}</Label>
                     </div>
                     <Select
                       value={selectedSessionType}
                       onValueChange={setSelectedSessionType}
                     >
-                      <SelectTrigger className="session-type-select">
-                        <SelectValue placeholder="Select session type" />
+                      <SelectTrigger
+                        className={`session-type-select flex items-center justify-between ${
+                          i18n.language === "he" ? "flex-row-reverse text-right" : "flex-row text-left"
+                        }`}
+                        dir="auto"
+                      >
+                        <SelectValue placeholder={t("Select session type")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Session Types</SelectItem>
+                        <SelectItem value="all">{t("All Session Types")}</SelectItem>
                         {getSessionTypes().map((type) => (
                           <SelectItem key={type} value={type.toLowerCase()}>
                             {type}
@@ -457,7 +483,7 @@ const VolunteerCalendar = () => {
                       )}
                     >
                       <div className="weekday-name">
-                        {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                        {t(`days.${date.getDay()}`)}
                       </div>
                       <div className={cn(
                         "day-number",
@@ -483,7 +509,7 @@ const VolunteerCalendar = () => {
                       <div key={index} className="week-day-column">
                         {grouped.length === 0 ? (
                           <div className="empty-state" style={{ boxShadow: "none", padding: "1rem" }}>
-                            <div className="empty-description">No sessions</div>
+                            <div className="empty-description">{t("No sessions")}</div>
                           </div>
                         ) : (
                           grouped.map((slotGroup, groupIdx) => (
@@ -528,17 +554,28 @@ const VolunteerCalendar = () => {
                                   </DialogTrigger>
                                   <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
                                     <DialogHeader>
-                                      <DialogTitle className="text-lg font-bold mb-4">
-                                        Sign Up for <span className="capitalize">{slot.type}</span> Session
+                                      <DialogTitle
+                                        className="text-lg font-bold mb-4"
+                                        dir="auto"
+                                        style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
+                                      >
+                                        {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
                                       </DialogTitle>
                                       <div className="flex items-center text-gray-500 text-sm mb-4">
-                                        <span className="mr-2 font-medium">Date:</span>
-                                        <span>{slot.date.toDateString()}</span>
+                                        <span className="mr-2 font-medium">{t("Date:")}</span>
+                                        <span>
+                                          {slot.date.toLocaleDateString(i18n.language, {
+                                            weekday: 'short',
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric'
+                                          })}
+                                        </span>
                                       </div>
                                     </DialogHeader>
                                     <div className="mb-6">
                                       <div className="flex items-center gap-2">
-                                        <span className="font-medium text-gray-700">Time:</span>
+                                        <span className="font-medium text-gray-700">{t("Time:")}</span>
                                         <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
                                           {slot.startTime} - {slot.endTime}
                                         </span>
@@ -556,12 +593,12 @@ const VolunteerCalendar = () => {
                                         onClick={() => handleSignUp(slot)}
                                       >
                                         {signupLoading 
-                                          ? "Submitting Request..."
+                                          ? t("Submitting Request...")
                                           : (!slot.available || !isEventAvailable(slot.date))
-                                            ? "Not Available"
+                                            ? t("Not Available")
                                             : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
-                                              ? "Request Pending"
-                                              : "Request to Join"}
+                                              ? t("Request Pending")
+                                              : t("Request to Join")}
                                       </button>
                                     </div>
                                   </DialogContent>
@@ -580,7 +617,7 @@ const VolunteerCalendar = () => {
               <div className="month-view">
                 <div className="month-header">
                   <span className="month-title">
-                    {currentDate.toLocaleString("default", { month: "long", year: "numeric" })}
+                    {t(`months.${currentDate.getMonth()}`)} {currentDate.getFullYear()}
                   </span>
                 </div>
                 <div className="month-grid">
@@ -625,17 +662,21 @@ const VolunteerCalendar = () => {
                             </DialogTrigger>
                             <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
                               <DialogHeader>
-                                <DialogTitle className="text-lg font-bold mb-2">
-                                  Sign Up for <span className="capitalize">{slot.type}</span> Session
+                                <DialogTitle
+                                  className="text-lg font-bold mb-2"
+                                  dir="auto"
+                                  style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
+                                >
+                                  {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
                                 </DialogTitle>
                                 <div className="flex items-center text-gray-500 text-sm mb-4">
-                                  <span className="mr-2 font-medium">Date:</span>
+                                  <span className="mr-2 font-medium">{t("Date:")}</span>
                                   <span>{slot.date.toDateString()}</span>
                                 </div>
                               </DialogHeader>                                                    
                               <div className="space-y-3 mb-6">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-gray-700">Time:</span>
+                                  <span className="font-medium text-gray-700">{t("Time:")}</span>
                                   <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
                                     {slot.startTime} - {slot.endTime}
                                   </span>
@@ -653,12 +694,12 @@ const VolunteerCalendar = () => {
                                   onClick={() => handleSignUp(slot)}
                                 >
                                   {signupLoading 
-                                    ? "Submitting Request..."
+                                    ? t("Submitting Request...")
                                     : (!slot.available || !isEventAvailable(slot.date))
-                                      ? "Not Available"
+                                      ? t("Not Available")
                                       : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
-                                        ? "Request Pending"
-                                        : "Request to Join"}
+                                        ? t("Request Pending")
+                                        : t("Request to Join")}
                                 </button>                         
                               </div>
                             </DialogContent>
@@ -672,6 +713,21 @@ const VolunteerCalendar = () => {
             )}
           </div>
         </main>
+      </div>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe size={35} />
+        </button>
+        {showLangOptions && (
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              English
+            </button>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              עברית
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

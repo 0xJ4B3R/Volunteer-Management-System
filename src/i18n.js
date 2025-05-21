@@ -10,6 +10,8 @@
   import VolunteerDashboardHE from './locales/he/VolunteerDashboard.json';
   import sidebarEN from './locales/en/Sidebar.json';
   import sidebarHE from './locales/he/Sidebar.json';
+  import CalendarEN from './locales/en/Calendar.json';
+  import CalendarHE from './locales/he/Calendar.json';
 
 
 
@@ -19,7 +21,8 @@
         ...LoginEN,
         ...ForgotPasswordEN,
         ...VolunteerDashboardEN,
-        ...sidebarEN
+        ...sidebarEN,
+        ...CalendarEN
       }
     },
     he: {
@@ -27,7 +30,8 @@
         ...LoginHE,
         ...ForgotPasswordHE,
         ...VolunteerDashboardHE,
-        ...sidebarHE
+        ...sidebarHE,
+        ...CalendarHE
       }
     }
   };
