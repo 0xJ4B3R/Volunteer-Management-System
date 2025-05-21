@@ -2,7 +2,7 @@ import { Calendar, CalendarDays, Filter, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -48,6 +48,7 @@ const isEventAvailable = (eventDate) => {
 const db = getFirestore(app);
 
 const VolunteerCalendar = () => {
+  console.log("Component rendering...");
   const navigate = useNavigate();
 
   // Always show current week
@@ -64,16 +65,42 @@ const VolunteerCalendar = () => {
   const [selectedSessionType, setSelectedSessionType] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Check authentication
+  useEffect(() => {
+    console.log("Auth check running...");
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.username) {
+        console.log("No user found, redirecting to login");
+        navigate("/login");
+      } else if (user.role !== "volunteer") {
+        console.log("User is not a volunteer, redirecting to manager");
+        navigate("/manager");
+      } else {
+        console.log("User authenticated:", user.username);
+        setCurrentUser(user);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+    }
+  }, [navigate]);
 
   // Fetch slots from Firestore
   useEffect(() => {
+    console.log("Fetching slots...");
     setIsLoading(true);
+    
     const fetchSlots = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "calendar_slots"));
+        console.log("Got querySnapshot, docs count:", querySnapshot.docs.length);
+        
         const slots = querySnapshot.docs.map(doc => {
           const data = doc.data();
-          console.log("Fetched slot:", data); // Debug log
+          console.log("Processing slot:", doc.id);
           
           // Ensure date is a Date object
           let dateObj = null;
@@ -97,31 +124,140 @@ const VolunteerCalendar = () => {
             isOpen: data.isOpen || false,
             date: dateObj,
             volunteers: data.volunteers || [],
-            maxVolunteers: data.maxVolunteers || 1
+            volunteerRequests: data.volunteerRequests || [],
+            maxVolunteers: data.maxCapacity || 1
           };
         });
-        console.log("Processed slots:", slots);
+        
+        console.log("Processed slots:", slots.length);
         setCalendarSlots(slots);
       } catch (err) {
         console.error("Error fetching slots:", err);
-        // Optionally set an error state here
       } finally {
         setIsLoading(false);
       }
     };
+    
     fetchSlots();
   }, []);
 
-
-  // Check authentication
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
-    if (!user.username) {
+  // Function to handle user signup for a session
+  const handleSignUp = async (slot) => {
+    console.log("Sign up clicked for slot:", slot.id);
+    
+    if (!currentUser || !currentUser.username) {
+      alert("Please log in to sign up for sessions");
       navigate("/login");
-    } else if (user.role !== "volunteer") {
-      navigate("/manager");
+      return;
     }
-  }, [navigate]);
+
+    if (!slot.available || !isEventAvailable(slot.date)) {
+      alert("This slot is not available for signup");
+      return;
+    }
+
+    setSignupLoading(true);
+
+    try {
+      // Reference to the slot document
+      const slotRef = doc(db, "calendar_slots", slot.id);
+      
+      // Get current slot data to check if user is already signed up
+      const slotDoc = await getDoc(slotRef);
+      if (!slotDoc.exists()) {
+        throw new Error("Session not found");
+      }
+      
+      const slotData = slotDoc.data();
+      const volunteers = slotData.volunteers || [];
+      const volunteerRequests = slotData.volunteerRequests || [];
+      
+      // Check if user is already signed up or has a pending request
+      if (volunteers.some(v => v.id === currentUser.uid || v.username === currentUser.username)) {
+        alert("You are already signed up for this session");
+        setSignupLoading(false);
+        return;
+      }
+      
+      if (volunteerRequests && volunteerRequests.includes(currentUser.uid)) {
+        alert("You already have a pending request for this session");
+        setSignupLoading(false);
+        return;
+      }
+      
+      // Check if slot is at capacity
+      if (volunteers.length >= (slotData.maxVolunteers || 1)) {
+        alert("This session is already at maximum capacity");
+        setSignupLoading(false);
+        return;
+      }
+      
+      // Add user to volunteerRequests array (using their UID/document ID)
+      await updateDoc(slotRef, {
+        volunteerRequests: arrayUnion(currentUser.uid || currentUser.id || currentUser.username)
+      });
+      
+      // Also add to regular volunteers array with more info for display purposes
+      await updateDoc(slotRef, {
+        volunteers: arrayUnion({
+          id: currentUser.uid || currentUser.id || "",
+          username: currentUser.username,
+          status: "pending", // Add a status field to track approval state
+          signupTime: Timestamp.now()
+        })
+      });
+      
+      // If the slot is now full, update isOpen to false
+      if ((volunteers.length + 1) >= (slotData.maxVolunteers || 1)) {
+        await updateDoc(slotRef, {
+          isOpen: false
+        });
+      }
+      
+      // Refresh the calendar data
+      const querySnapshot = await getDocs(collection(db, "calendar_slots"));
+      const updatedSlots = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Ensure date is a Date object
+        let dateObj = null;
+        if (data.date) {
+          if (data.date.toDate) {
+            dateObj = data.date.toDate();
+          } else {
+            dateObj = new Date(data.date);
+          }
+        }
+        
+        return {
+          id: doc.id,
+          appointmentId: data.appointmentId || null,
+          customLabel: data.customLabel || '',
+          type: data.customLabel || "session",
+          isCustom: data.isCustom || false,
+          startTime: data.startTime || '9:00 AM',
+          endTime: data.endTime || '10:00 AM',
+          available: data.isOpen || false,
+          isOpen: data.isOpen || false,
+          date: dateObj,
+          volunteers: data.volunteers || [],
+          volunteerRequests: data.volunteerRequests || [],
+          maxVolunteers: data.maxVolunteers || 1
+        };
+      });
+      
+      setCalendarSlots(updatedSlots);
+      
+      // Success notification
+      alert(`Your request to join ${slot.type} session on ${slot.date.toDateString()} at ${slot.startTime} has been submitted. Waiting for approval.`);
+      
+    } catch (error) {
+      console.error("Error signing up for session:", error);
+      alert(`Error signing up: ${error.message}`);
+    } finally {
+      setSignupLoading(false);
+    }
+  };
 
   // Handle window resize for responsive layout
   useEffect(() => {
@@ -234,6 +370,12 @@ const VolunteerCalendar = () => {
     return Object.values(groups); // array of arrays
   }
 
+  console.log("Rendering calendar with", calendarSlots.length, "slots");
+
+  if (isLoading) {
+    return <div className="loading-indicator">Loading calendar data...</div>;
+  }
+
   return (
     <div className="volunteer-calendar-container">
       <div className="main-content-container">
@@ -334,7 +476,7 @@ const VolunteerCalendar = () => {
                       return slot.date && slot.date.toDateString() === date.toDateString();
                     });
                     
-                    console.log(`Slots for ${date.toDateString()}:`, slotsForDay);
+                    console.log(`Slots for ${date.toDateString()}:`, slotsForDay.length);
                     const grouped = groupSlotsByTime(slotsForDay);
                   
                     return (
@@ -405,21 +547,21 @@ const VolunteerCalendar = () => {
                                     <div className="flex justify-end">
                                       <button
                                         type="button"
-                                        disabled={!slot.available || !isEventAvailable(slot.date)}
+                                        disabled={!slot.available || !isEventAvailable(slot.date) || signupLoading}
                                         style={
-                                          (!slot.available || !isEventAvailable(slot.date))
+                                          (!slot.available || !isEventAvailable(slot.date) || signupLoading)
                                             ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                                             : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
                                         }
-                                        onClick={() => {
-                                          if (slot.available && isEventAvailable(slot.date)) {
-                                            alert(`Signed up for ${slot.type} on ${slot.date.toDateString()} at ${slot.startTime}`);
-                                          }
-                                        }}
+                                        onClick={() => handleSignUp(slot)}
                                       >
-                                        {(!slot.available || !isEventAvailable(slot.date))
-                                          ? "Not Available"
-                                          : "Sign Up"}
+                                        {signupLoading 
+                                          ? "Submitting Request..."
+                                          : (!slot.available || !isEventAvailable(slot.date))
+                                            ? "Not Available"
+                                            : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
+                                              ? "Request Pending"
+                                              : "Request to Join"}
                                       </button>
                                     </div>
                                   </DialogContent>
@@ -502,21 +644,21 @@ const VolunteerCalendar = () => {
                               <div className="flex justify-end">
                                 <button
                                   type="button"
-                                  disabled={!slot.available || !isEventAvailable(slot.date)}
+                                  disabled={!slot.available || !isEventAvailable(slot.date) || signupLoading}
                                   style={
-                                    (!slot.available || !isEventAvailable(slot.date))
+                                    (!slot.available || !isEventAvailable(slot.date) || signupLoading)
                                       ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                                       : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
                                   }
-                                  onClick={() => {
-                                    if (slot.available && isEventAvailable(slot.date)) {
-                                      alert(`Signed up for ${slot.type} on ${slot.date.toDateString()} at ${slot.startTime}`);
-                                    }
-                                  }}
+                                  onClick={() => handleSignUp(slot)}
                                 >
-                                  {(!slot.available || !isEventAvailable(slot.date))
-                                    ? "Not Available"
-                                    : "Sign Up"}
+                                  {signupLoading 
+                                    ? "Submitting Request..."
+                                    : (!slot.available || !isEventAvailable(slot.date))
+                                      ? "Not Available"
+                                      : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
+                                        ? "Request Pending"
+                                        : "Request to Join"}
                                 </button>                         
                               </div>
                             </DialogContent>
