@@ -57,13 +57,18 @@ import { cn } from "@/lib/utils";
 import { Timestamp } from "firebase/firestore";
 import { S } from "node_modules/framer-motion/dist/types.d-B50aGbjN";
 import { Notification } from '../../components/manager/NotificationsPanel';
-import {Volunteer} from '../../services/firestore';
+import {Volunteer, Resident, Attendance,
+   Appointment, MatchingPreference,
+    ReasonForVolunteering, AttendanceStatus,
+     AttendanceConfirmedBy, AppointmentStatus,
+      MatchedHistoryEntry, AvailableSlots,
+     } from '../../services/firestore';
 
 const timeStampNow = Timestamp.fromDate(new Date());
 
 
 // Enums and Types
-type ReportType = "attendance" | "volunteer" | "elder" | "appointments";
+type ReportType = "attendance" | "volunteer" | "resident" | "appointments";
 type ReportStatus = "completed" | "pending" | "failed";
 
 // Date range for filters
@@ -71,6 +76,176 @@ interface DateRange {
   from?: string; // ISO or date string
   to?: string;
 }
+
+const mockResidents: Resident[] = [
+  {
+    id: "res-002",
+    fullName: "Mary Resident",
+    birthDate: "1960-04-10",
+    gender: "female",
+    dateOfAliyah: null,
+    countryOfAliyah: null,
+    phoneNumber: null,
+    education: null,
+    hobbies: ["Knitting"],
+    languages: ["English"],
+    cooperationLevel: 6,
+    matchedHistory: [],
+    availableSlots: {
+      tuesday: ["morning"],
+      thursday: ["afternoon"],
+    },
+    isActive: true,
+    createdAt: Timestamp.fromDate(new Date("2024-11-20T12:00:00Z")),
+    notes: null
+  },
+  {
+    id: "res-001",
+    fullName: "John Resident",
+    birthDate: "1950-12-15",
+    gender: "male",
+    dateOfAliyah: "2000-06-20",
+    countryOfAliyah: "Country A",
+    phoneNumber: "+111222333",
+    education: "High School",
+    hobbies: ["Gardening", "Chess"],
+    languages: ["English", "Hebrew"],
+    cooperationLevel: 8,
+    matchedHistory: [
+      {
+        volunteerId: "vol-001",
+        appointmentId: "appt-001",
+        date: "2025-05-18",
+        feedback: "Very positive interaction"
+      }
+    ],
+    availableSlots: {
+      monday: ["morning", "afternoon"],
+      wednesday: ["afternoon"],
+      friday: ["morning"]
+    },
+    isActive: true,
+    createdAt: Timestamp.fromDate(new Date("2024-12-01T07:00:00Z")),
+    notes: "Prefers activities in the morning"
+  }
+];
+
+const mockVolunteers: Volunteer[] = [
+  {
+    id: "vol-001",
+    userId: "user-002",
+    fullName: "Mike Volunteer",
+    birthDate: "1990-05-20",
+    gender: "male",
+    phoneNumber: "+1234567890",
+    languages: ["English", "Spanish"],
+    skills: ["First Aid", "Cooking"],
+    hobbies: ["Hiking", "Reading"],
+    groupAffiliation: "Local Volunteer Group",
+    matchingPreference: "oneOnOne",
+    reasonForVolunteering: "communityService",
+    isActive: true,
+    createdAt: Timestamp.fromDate(new Date("2025-02-15T09:30:00Z")),
+    notes: "Prefers afternoon appointments"
+  },
+  {
+    id: "vol-002",
+    userId: "user-003",
+    fullName: "Sara Helper",
+    birthDate: "1985-08-10",
+    gender: "female",
+    phoneNumber: "+1987654321",
+    languages: ["English", "French"],
+    skills: ["Teaching"],
+    hobbies: ["Painting"],
+    groupAffiliation: null,
+    matchingPreference: "groupActivity",
+    reasonForVolunteering: "personalInterest",
+    isActive: true,
+    createdAt: Timestamp.fromDate(new Date("2025-03-01T14:00:00Z")),
+    notes: null
+  }
+];
+
+const mockAppointments: Appointment[] = [
+  {
+    id: "appt-001",
+    calendarSlotId: "slot-1001",
+    residentIds: ["res-001"],
+    volunteerIds: ["vol-001", "vol-002"],
+    status: "upcoming",
+    updatedAt: Timestamp.fromDate(new Date("2025-05-18T10:30:00Z")),
+    createdAt: Timestamp.fromDate(new Date("2025-05-10T09:00:00Z")),
+    notes: "Resident prefers to meet outside in the garden"
+  },
+  {
+    id: "appt-002",
+    calendarSlotId: "slot-1002",
+    residentIds: ["res-003"],
+    volunteerIds: ["vol-003"],
+    status: "canceled",
+    updatedAt: Timestamp.fromDate(new Date("2025-05-15T12:00:00Z")),
+    createdAt: Timestamp.fromDate(new Date("2025-05-12T08:00:00Z")),
+    notes: null
+  },
+  {
+    id: "appt-003",
+    calendarSlotId: "slot-1003",
+    residentIds: ["res-002", "res-003"],
+    volunteerIds: ["vol-002"],
+    status: "completed",
+    updatedAt: Timestamp.fromDate(new Date("2025-05-20T14:15:00Z")),
+    createdAt: Timestamp.fromDate(new Date("2025-05-19T16:30:00Z"))
+  },
+  {
+    id: "appt-004",
+    calendarSlotId: "slot-1004",
+    residentIds: ["res-004"],
+    volunteerIds: ["vol-004"],
+    status: "inProgress",
+    updatedAt: Timestamp.fromDate(new Date("2025-05-21T09:00:00Z")),
+    createdAt: Timestamp.fromDate(new Date("2025-05-20T15:00:00Z")),
+    notes: "Volunteers started early due to resident's health condition"
+  }
+];
+
+const mockAttendances: Attendance[] = [
+  {
+    id: "att-001",
+    appointmentId: "appt-001",
+    volunteerId: "vol-001",
+    status: "present",
+    confirmedBy: "volunteer",
+    confirmedAt: Timestamp.fromDate(new Date("2025-05-18T11:00:00Z")),
+    notes: "Volunteer arrived 5 minutes early"
+  },
+  {
+    id: "att-002",
+    appointmentId: "appt-001",
+    volunteerId: "vol-002",
+    status: "late",
+    confirmedBy: "manager",
+    confirmedAt: Timestamp.fromDate(new Date("2025-05-18T11:10:00Z")),
+    notes: "Traffic delay"
+  },
+  {
+    id: "att-003",
+    appointmentId: "appt-002",
+    volunteerId: "vol-003",
+    status: "absent",
+    confirmedBy: "manager",
+    confirmedAt: Timestamp.fromDate(new Date("2025-05-15T12:15:00Z")),
+    notes: null
+  },
+  {
+    id: "att-004",
+    appointmentId: "appt-003",
+    volunteerId: "vol-002",
+    status: "present",
+    confirmedBy: "volunteer",
+    confirmedAt: Timestamp.fromDate(new Date("2025-05-20T14:30:00Z"))
+  }
+];
 
 // Filters interface
 interface Filters {
@@ -93,7 +268,10 @@ interface Report {
 }
 
 const allreports: Report[] = [];
-
+const allvolunteers: Volunteer[] = [];
+const allappointments: Appointment[] = [];
+const allattendances: Attendance[] = [];
+const allresidents: Resident[] = [];
 
 // Mock data for reports
 const mockReports: Report[] = [
@@ -147,8 +325,18 @@ const mockReports: Report[] = [
 for (const report of mockReports) {
   allreports.push(report);
 }
-
-  const mockVolunteers: Volunteer[] = []
+for (const volunteer of mockVolunteers) {
+  allvolunteers.push(volunteer);
+}
+for (const appointment of mockAppointments) {
+  allappointments.push(appointment);
+}
+for (const attendance of mockAttendances) {
+  allattendances.push(attendance);
+}
+for (const resident of mockResidents) {
+  allresidents.push(resident);
+}
 // Mock data for notifications
 const mockNotifications: Notification[] = [
   {
@@ -159,7 +347,7 @@ const mockNotifications: Notification[] = [
   },
   {
     id: 2,
-    message: "Quarterly elder report ready",
+    message: "Quarterly resident report ready",
     time: "10 minutes ago",
     type: "success"
   },
@@ -171,6 +359,10 @@ const mockNotifications: Notification[] = [
   }
 ];
 
+function stripTime(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 const ManagerReports = () => {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -178,6 +370,7 @@ const ManagerReports = () => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [reportIsDownloading, setReportIsDownloading] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -191,6 +384,10 @@ const ManagerReports = () => {
   });
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [reports, setReports] = useState<Report[]>(allreports);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>(allvolunteers);
+  const [appointments, setAppointments] = useState<Appointment[]>(allappointments);
+  const [attendance, setAttendance] = useState<Attendance[]>(allattendances);
+  const [residents, setResidents] = useState<Resident[]>(allresidents);
   //const [title, setTitle] = useState("");
 const [description, setDescription] = useState("");
 const [startDate, setStartDate] = useState("");
@@ -278,17 +475,17 @@ const resetForm = () => {
     setIsLoading(false);
     setIsGenerateDialogOpen(false);
 
-    handleShowReport(newReport);
+    handleReportActions(newReport, "view");
 
   }, 1000);
 };
 
-const handleShowReport = (newReport: Report) => {
+const handleReportActions = (newReport: Report, action: "view" | "download") => {
   // PDFMake content definition
   const from = newReport.filters.dateRange?.from || "Any Time";
   const to = newReport.filters.dateRange?.to;
     const baseContent = [
-  { text: capitalizeFirstLetter(reportType) + " Report", style: "header" },
+{ text: capitalizeFirstLetter(newReport.type) + " Report", style: "header", alignment: "center" },
   { text: `Description: ${newReport.description}` },
   { text: `Generated By: ${newReport.generatedBy}` },
   { text: `Generated At: ${newReport.generatedAt.toDate().toLocaleString()}` },
@@ -303,34 +500,202 @@ const handleShowReport = (newReport: Report) => {
 
 let typeSpecificContent: any[] = [];
 
+// Helper to parse date or return undefined
+const parseDate = (d?: string) => d ? new Date(d) : undefined;
+
+const fromDate = parseDate(newReport.filters?.dateRange?.from);
+const toDate = parseDate(newReport.filters?.dateRange?.to) || new Date(); // default to today if no 'to'
+
 switch (newReport.type) {
   case "attendance":
+    // Filter attendances by confirmedAt date range
+    const filteredAttendances = (allattendances || []).filter(a => {
+      const confDate = stripTime(a.confirmedAt.toDate());
+  const fromDateOnly = fromDate ? stripTime(fromDate) : null;
+  const toDateOnly = toDate ? stripTime(toDate) : null;
+  return (!fromDateOnly || confDate >= fromDateOnly) && (!toDateOnly || confDate <= toDateOnly);
+
+    });
+
     typeSpecificContent = [
-      { text: `Attendees: ${newReport.data.attendees?.length || 0}` },
+      { text: `Attendees Counted: ${filteredAttendances.length}` },
+      ...filteredAttendances.flatMap((a, i) => [
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+          margin: [0, 10, 0, 10]
+        },
+        {
+          stack: [
+            { text: `Attendance #${i + 1}`, style: 'subheader', margin: [0, 5, 0, 5] },
+            {
+              text: `
+Appointment: ${a.appointmentId}
+Volunteer: ${a.volunteerId}
+Status: ${a.status}
+Confirmed By: ${a.confirmedBy}
+Confirmed At: ${a.confirmedAt.toDate().toLocaleString()}
+Notes: ${a.notes || "None"}`
+            }
+          ],
+          margin: [0, 0, 0, 15]
+        },
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+          margin: [0, 10, 0, 10]
+        }
+      ])
     ];
     break;
 
   case "volunteer":
+    // unchanged
     typeSpecificContent = [
-      { text: `Volunteers: ${newReport.data.volunteers?.length || 0}` },
+      { text: `Volunteers Counted: ${allvolunteers?.length || 0}` },
+      ...(allvolunteers || []).flatMap((v, i) => [
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+          margin: [0, 10, 0, 10]
+        },
+        {
+          stack: [
+            { text: `Volunteer #${i + 1}`, style: 'subheader', margin: [0, 5, 0, 5] },
+            {
+              text: `
+Name: ${v.fullName}
+Status: ${v.birthDate}
+Confirmed By: ${v.gender}
+Phone Number: ${v.phoneNumber}
+Languages: ${v.languages.join(", ")}
+Skills: ${v.skills.join(", ")}
+Hobbies: ${v.hobbies.join(", ")}
+Group Affiliation: ${v.groupAffiliation || "None"}
+Matching Preference: ${v.matchingPreference}
+Reason for Volunteering: ${v.reasonForVolunteering}
+Active Volunteer: ${v.isActive}
+Created At: ${v.createdAt.toDate().toLocaleString()}
+Notes: ${v.notes || "None"}`
+            }
+          ],
+          margin: [0, 0, 0, 15]
+        },
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+          margin: [0, 10, 0, 10]
+        }
+      ])
     ];
     break;
 
-  case "elder":
+  case "resident":
+    // unchanged
     typeSpecificContent = [
-      { text: `Elders Counted: ${newReport.data.elders?.length || 0}` },
+      { text: `Residents Counted: ${allresidents?.length || 0}`, margin: [0, 0, 0, 10] },
+      ...(allresidents || []).flatMap((r, i) => {
+        const matchedHistoryTable = r.matchedHistory?.length
+          ? {
+              style: 'tableExample',
+              table: {
+                headerRows: 1,
+                widths: ['*', '*', '*', '*'],
+                body: [
+                  ['Date', 'Volunteer ID', 'Appointment ID', 'Feedback'],
+                  ...r.matchedHistory.map(entry => [
+                    entry.date,
+                    entry.volunteerId,
+                    entry.appointmentId,
+                    entry.feedback || 'N/A'
+                  ])
+                ]
+              },
+              layout: 'lightHorizontalLines',
+              margin: [0, 10, 0, 10]
+            }
+          : { text: 'Matched History: None' };
+
+        return [
+          {
+            canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+            margin: [0, 10, 0, 10]
+          },
+          {
+            stack: [
+              { text: `Resident #${i + 1}`, style: 'subheader', margin: [0, 5, 0, 5] },
+              {
+                text: `
+Name: ${r.fullName}
+Birth Date: ${r.birthDate}
+Gender: ${r.gender}
+Date of Aliyah: ${r.dateOfAliyah || "None"}
+Country of Aliyah: ${r.countryOfAliyah || "None"}
+Phone Number: ${r.phoneNumber || "None"}
+Education: ${r.education || "None"}
+Hobbies: ${r.hobbies?.join(", ") || "None"}
+Languages: ${r.languages.join(", ")}
+Cooperation Level: ${r.cooperationLevel}
+Available Slots: ${Object.entries(r.availableSlots).map(([day, slots]) => `${day}: ${slots.join(", ")}`).join("; ")}
+Active Resident: ${r.isActive}
+Notes: ${r.notes || "None"}
+Created At: ${r.createdAt.toDate().toLocaleString()}
+${r.matchedHistory?.length ? "\nMatched History:" : ""}`
+              },
+              matchedHistoryTable
+            ],
+            margin: [0, 0, 0, 15]
+          },
+          {
+            canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+            margin: [0, 10, 0, 10]
+          }
+        ];
+      })
     ];
     break;
 
   case "appointments":
+    // Filter appointments by updatedAt date range
+    const filteredAppointments = (allappointments || []).filter(a => {
+       const updated = stripTime(a.updatedAt.toDate());
+  const fromDateOnly = fromDate ? stripTime(fromDate) : null;
+  const toDateOnly = toDate ? stripTime(toDate) : null;
+  return (!fromDateOnly || updated >= fromDateOnly) && (!toDateOnly || updated <= toDateOnly);
+});
+
     typeSpecificContent = [
-      { text: `Appointments: ${newReport.data.appointments?.length || 0}` },
+      { text: `Appointments Counted: ${filteredAppointments.length}`, margin: [0, 0, 0, 10] },
+      ...filteredAppointments.flatMap((a, index) => [
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+          margin: [0, 10, 0, 10]
+        },
+        {
+          stack: [
+            { text: `Appointment #${index + 1}`, style: 'subheader', margin: [0, 5, 0, 5] },
+            {
+              text: `
+Resident IDs: ${a.residentIds.join(", ")}
+Volunteer IDs: ${a.volunteerIds.join(", ")}
+Status: ${a.status}
+Updated At: ${a.updatedAt.toDate().toLocaleString()}
+Created At: ${a.createdAt.toDate().toLocaleString()}
+Notes: ${a.notes || "None"}`
+            }
+          ],
+          margin: [0, 0, 0, 15]
+        },
+        {
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 520, y2: 0, lineWidth: 1 }],
+          margin: [0, 10, 0, 10]
+        }
+      ])
     ];
     break;
 
   default:
     typeSpecificContent = [{ text: "No specific data available for this report type." }];
 }
+
+
+
 
 const docDefinition = {
   content: [...baseContent, ...typeSpecificContent],
@@ -342,11 +707,17 @@ const docDefinition = {
     },
   },
 };
-
-pdfMake.createPdf(docDefinition).open();
+if (action === "view") {
+  pdfMake.createPdf(docDefinition).open();
+  setIsViewDialogOpen(false);
+} 
+else if (action === "download") {
+    const fileName = `${capitalizeFirstLetter(reportType)}-report.pdf`;
+    pdfMake.createPdf(docDefinition).download(fileName);
+    setReportIsDownloading(false);
+  }
 }
-
-  const handlePrintReport = (report: Report) => {
+  {/*const handlePrintReport = (report: Report) => {
     setIsLoading(true);
     const report_title = report.type + "Report";
     // Simulate printing
@@ -362,7 +733,7 @@ pdfMake.createPdf(docDefinition).open();
         ...notifications
       ]);
     }, 1000);
-  };
+  };*/}
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -463,7 +834,7 @@ function capitalizeFirstLetter(str: string): string {
             <Users className="h-5 w-5 text-green-600" />
           </div>
         );
-      case "elder":
+      case "resident":
         return (
           <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
             <HeartIcon className="h-5 w-5 text-purple-600" />
@@ -478,7 +849,7 @@ function capitalizeFirstLetter(str: string): string {
     }
   };
   const showDateRange = reportType === "attendance" || reportType === "appointments";
-  const typeIsSelected = reportType === "attendance" || reportType === "volunteer" || reportType === "elder" || reportType === "appointments";
+  const typeIsSelected = reportType === "attendance" || reportType === "volunteer" || reportType === "resident" || reportType === "appointments";
 
   const getReportSummaryStats = () => {
     const totalReports = reports.length;
@@ -609,11 +980,11 @@ function capitalizeFirstLetter(str: string): string {
             </div>
           </div>
         );
-      case "elder":
+      case "resident":
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div className="bg-white rounded-lg shadow-sm p-4">
-              <h4 className="font-medium text-slate-900 mb-3">Elder Satisfaction</h4>
+              <h4 className="font-medium text-slate-900 mb-3">Resident Satisfaction</h4>
               <div className="flex items-center justify-center h-48">
                 <div className="relative w-32 h-32">
                   <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -638,12 +1009,12 @@ function capitalizeFirstLetter(str: string): string {
               </div>
               <div className="grid grid-cols-2 gap-2 mt-4 text-center">
                 <div className="bg-purple-50 rounded-md p-2">
-                  <div className="text-lg font-bold text-purple-600">{data.activeElders}</div>
-                  <div className="text-xs text-slate-600">Active Elders</div>
+                  <div className="text-lg font-bold text-purple-600">{data.activeResidents}</div>
+                  <div className="text-xs text-slate-600">Active Residents</div>
                 </div>
                 <div className="bg-slate-50 rounded-md p-2">
-                  <div className="text-lg font-bold text-slate-600">{data.totalElders}</div>
-                  <div className="text-xs text-slate-600">Total Elders</div>
+                  <div className="text-lg font-bold text-slate-600">{data.totalResidents}</div>
+                  <div className="text-xs text-slate-600">Total Residents</div>
                 </div>
               </div>
             </div>
@@ -1011,8 +1382,8 @@ function capitalizeFirstLetter(str: string): string {
               <TabsTrigger value="volunteer" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                 Volunteer
               </TabsTrigger>
-              <TabsTrigger value="elder" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Elder
+              <TabsTrigger value="resident" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+                Resident
               </TabsTrigger>
               <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-white">
                 Appointments
@@ -1166,8 +1537,8 @@ function capitalizeFirstLetter(str: string): string {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => {
-                                    handleShowReport(report);
                                     setIsViewDialogOpen(true);
+                                    handleReportActions(report, "view");
                                   }}
                                 >
                                   <FileText className="h-4 w-4" />
@@ -1175,6 +1546,26 @@ function capitalizeFirstLetter(str: string): string {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>View Details</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setReportIsDownloading(true);
+                                    handleReportActions(report, "download");
+                                  }}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -1323,22 +1714,22 @@ function capitalizeFirstLetter(str: string): string {
                                 </div>
                               </>
                             )}
-                            {report.type === "elder" && (
+                            {report.type === "resident" && (
                               <>
                                 <div className="space-y-2">
-                                  <h4 className="font-medium text-slate-900">Elder Engagement</h4>
+                                  <h4 className="font-medium text-slate-900">Resident Engagement</h4>
                                   <div className="space-y-1 text-sm">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-slate-600">Total Elders</span>
-                                      <span className="font-medium">{report.data.totalElders}</span>
+                                      <span className="text-slate-600">Total Residents</span>
+                                      <span className="font-medium">{report.data.totalResidents}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span className="text-slate-600">Active Elders</span>
-                                      <span className="font-medium">{report.data.activeElders}</span>
+                                      <span className="text-slate-600">Active Residents</span>
+                                      <span className="font-medium">{report.data.activeResidents}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span className="text-slate-600">Average Sessions per Elder</span>
-                                      <span className="font-medium">{report.data.averageSessionsPerElder}</span>
+                                      <span className="text-slate-600">Average Sessions per Resident</span>
+                                      <span className="font-medium">{report.data.averageSessionsPerResident}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                       <span className="text-slate-600">Satisfaction Rate</span>
@@ -1460,9 +1851,9 @@ function capitalizeFirstLetter(str: string): string {
                               {report.type === "volunteer" && 
                                 `This volunteer report shows ${report.data.totalSessions} total sessions, with ${report.data.completedSessions} completed and ${report.data.cancelledSessions} cancelled. ` +
                                 `The completion rate is ${report.data.completionRate}%.`}
-                              {report.type === "elder" && 
-                                `This elder report shows ${report.data.totalElders} total elders, with ${report.data.activeElders} currently active. ` +
-                                `The average sessions per elder is ${report.data.averageSessionsPerElder}, with a satisfaction rate of ${report.data.satisfactionRate}%.`}
+                              {report.type === "resident" && 
+                                `This resident report shows ${report.data.totalResidents} total residents, with ${report.data.activeResidents} currently active. ` +
+                                `The average sessions per resident is ${report.data.averageSessionsPerResident}, with a satisfaction rate of ${report.data.satisfactionRate}%.`}
                               {report.type === "appointments" && 
                                 `This performance report shows an overall performance score of ${report.data.overallPerformance}/10, with efficiency at ${report.data.efficiencyScore}/10 and quality at ${report.data.qualityScore}/10. ` +
                                 `Key areas for improvement include: ${report.data.improvementAreas.join(", ")}.`}
@@ -1521,7 +1912,7 @@ function capitalizeFirstLetter(str: string): string {
           <SelectContent>
             <SelectItem value="attendance">attendance</SelectItem>
             <SelectItem value="volunteer">volunteer</SelectItem>
-            <SelectItem value="elder">elder</SelectItem>
+            <SelectItem value="resident">resident</SelectItem>
             <SelectItem value="appointments">appointments</SelectItem>
           </SelectContent>
         </Select>
