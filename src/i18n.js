@@ -1,16 +1,20 @@
   import i18n from 'i18next';
   import { initReactI18next } from 'react-i18next';
   import LanguageDetector from 'i18next-browser-languagedetector';
-
+  //EN TRANSLATIONS:
   import LoginEN from './locales/en/Login.json';
-  import LoginHE from './locales/he/Login.json';
   import ForgotPasswordEN from './locales/en/ForgotPassword.json';
-  import ForgotPasswordHE from './locales/he/ForgotPassword.json';
   import VolunteerDashboardEN from './locales/en/VolunteerDashboard.json';
-  import VolunteerDashboardHE from './locales/he/VolunteerDashboard.json';
   import sidebarEN from './locales/en/Sidebar.json';
+  import CalendarEN from './locales/en/Calendar.json';
+  import ProfileEN from './locales/en/Profile.json';
+  //HE TRANSLATIONS:
+  import LoginHE from './locales/he/Login.json';
+  import ForgotPasswordHE from './locales/he/ForgotPassword.json';
+  import VolunteerDashboardHE from './locales/he/VolunteerDashboard.json';
   import sidebarHE from './locales/he/Sidebar.json';
-
+  import CalendarHE from './locales/he/Calendar.json';
+  import ProfileHE from './locales/he/Profile.json';
 
 
   const resources = {
@@ -19,7 +23,9 @@
         ...LoginEN,
         ...ForgotPasswordEN,
         ...VolunteerDashboardEN,
-        ...sidebarEN
+        ...sidebarEN,
+        ...CalendarEN,
+        ...ProfileEN
       }
     },
     he: {
@@ -27,7 +33,9 @@
         ...LoginHE,
         ...ForgotPasswordHE,
         ...VolunteerDashboardHE,
-        ...sidebarHE
+        ...sidebarHE,
+        ...CalendarHE,
+        ...ProfileHE
       }
     }
   };

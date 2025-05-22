@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { Globe } from "lucide-react";
 import "./styles/Calendar.css";
 import app from "@/lib/firebase";
 
@@ -108,6 +110,15 @@ const db = getFirestore(app);
 
 const VolunteerCalendar = () => {
   const navigate = useNavigate();
+
+  const { t, i18n } = useTranslation();
+  const [showLangOptions, setShowLangOptions] = useState(false);
+  
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
+  }, [i18n.language]);
+
+  // Always show current week
   const [currentDate] = useState(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -190,7 +201,7 @@ const VolunteerCalendar = () => {
   const handleSignUp = async (slot) => {
     if (!currentUser || !currentUser.username) {
       alert("Please log in to sign up for sessions");
-      navigate("/login");
+      navigate("/");
       return;
     }
 
@@ -365,11 +376,19 @@ const VolunteerCalendar = () => {
 
   // Format date for display
   const formatDateDisplay = () => {
+    const getShortDate = (date) => {
+      const day = date.getDate();
+      const month = t(`months_short.${date.getMonth()}`);
+      return `${day} ${month}`;
+    };
+
     if (viewMode === "week") {
       const weekDates = getWeekDates();
-      return `${weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      return `${getShortDate(weekDates[0])} - ${getShortDate(weekDates[6])}`;
     } else {
-      return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const month = t(`months.${currentDate.getMonth()}`);
+      const year = currentDate.getFullYear();
+      return `${month} ${year}`;
     }
   };
 
@@ -476,7 +495,7 @@ const VolunteerCalendar = () => {
   };
 
   if (isLoading) {
-    return <div className="loading-indicator">Loading calendar data...</div>;
+    return <div className="loading-indicator">{t("Loading calendar data...")}</div>;
   }
 
   return (
@@ -493,25 +512,29 @@ const VolunteerCalendar = () => {
             <div className="calendar-controls">
               <div className="view-mode-tabs">
                 <button
-                  className={`tab-trigger${viewMode === "week" ? " active" : ""}`}
+                  className={`tab-trigger flex items-center ${
+                    i18n.language === "he" ? "flex-row-reverse" : "flex-row"
+                  } gap-1 ${viewMode === "week" ? "active" : ""}`}
                   onClick={() => setViewMode("week")}
                 >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  Week
+                  <Calendar className="h-4 w-4" />
+                  <span>{t("Week")}</span>
                 </button>
                 <button
-                  className={`tab-trigger${viewMode === "month" ? " active" : ""}`}
+                  className={`tab-trigger flex items-center ${
+                    i18n.language === "he" ? "flex-row-reverse" : "flex-row"
+                  } gap-1 ${viewMode === "month" ? "active" : ""}`}
                   onClick={() => setViewMode("month")}
                 >
-                  <CalendarDays className="h-4 w-4 mr-1" />
-                  Month
+                  <CalendarDays className="h-4 w-4" />
+                  <span>{t("Month")}</span>
                 </button>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="filter-button">
                     <Filter className="h-4 w-4 mr-1" />
-                    Filter
+                    {t("Filter")}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -522,17 +545,22 @@ const VolunteerCalendar = () => {
                         checked={showOnlyAvailable}
                         onCheckedChange={setShowOnlyAvailable}
                       />
-                      <Label htmlFor="available-only">Available slots only</Label>
+                      <Label htmlFor="available-only">{t("Available slots only")}</Label>
                     </div>
                     <Select
                       value={selectedSessionType}
                       onValueChange={setSelectedSessionType}
                     >
-                      <SelectTrigger className="session-type-select">
-                        <SelectValue placeholder="Select session type" />
+                      <SelectTrigger
+                        className={`session-type-select flex items-center justify-between ${
+                          i18n.language === "he" ? "flex-row-reverse text-right" : "flex-row text-left"
+                        }`}
+                        dir="auto"
+                      >
+                        <SelectValue placeholder={t("Select session type")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Session Types</SelectItem>
+                        <SelectItem value="all">{t("All Session Types")}</SelectItem>
                         {getSessionTypes().map((type) => (
                           <SelectItem key={type} value={type.toLowerCase()}>
                             {type}
@@ -561,7 +589,7 @@ const VolunteerCalendar = () => {
                       )}
                     >
                       <div className="weekday-name">
-                        {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                        {t(`days.${date.getDay()}`)}
                       </div>
                       <div className={cn(
                         "day-number",
@@ -585,22 +613,117 @@ const VolunteerCalendar = () => {
                       <div key={index} className="week-day-column">
                         {grouped.length === 0 ? (
                           <div className="empty-state" style={{ boxShadow: "none", padding: "1rem" }}>
-                            <div className="empty-description">No sessions</div>
+                            <div className="empty-description">{t("No sessions")}</div>
                           </div>
                         ) : (
                           grouped.map((slotGroup, groupIdx) => (
-                            <div 
-                              key={groupIdx} 
-                              className="stacked-slot-group" 
-                              style={{ 
-                                position: "relative", 
-                                minHeight: `${Math.max(3.5, 3 + 0.75 * (slotGroup.length - 1))}rem`,
-                                marginBottom: "1rem"
-                              }}
-                            >
-                              {slotGroup.map((slot, stackIdx) => 
-                                renderSessionSlot(slot, stackIdx, slotGroup.length)
-                              )}
+                            <div key={groupIdx} className="stacked-slot-group" 
+                                 style={{ 
+                                   position: "relative", 
+                                   minHeight: `${Math.max(3.5, 2 + 0.8 * (slotGroup.length - 1))}rem`,
+                                   marginBottom: "1rem"
+                                 }}>
+                              {slotGroup.map((slot, stackIdx) => (
+                                <Dialog key={slot.id}>
+                                  <DialogTrigger asChild>
+                                    <div
+                                      className={`time-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable-slot" : ""}`}
+                                      style={{
+                                        position: "absolute",
+                                        top: `${stackIdx * 10}px`, // Increased offset for better stacking
+                                        left: `${stackIdx * 10}px`,
+                                        zIndex: 10 + stackIdx,
+                                        width: `calc(100% - ${stackIdx * 10}px)`,
+                                        boxShadow: stackIdx === slotGroup.length - 1 ? "0 4px 12px rgba(60,60,60,0.08)" : "0 2px 6px rgba(60,60,60,0.04)",
+                                        borderLeft: "4px solid",
+                                        borderLeftColor: slot.type === "reading" ? "#2563eb" : 
+                                                        slot.type === "games" ? "#db2777" : 
+                                                        slot.type === "music" ? "#d97706" : 
+                                                        slot.type === "art" ? "#059669" :
+                                                        slot.type === "crafts" ? "#7c3aed" :
+                                                        slot.type === "exercise" ? "#dc2626" :
+                                                        slot.type === "therapy" ? "#4f46e5" :
+                                                        slot.type === "social" ? "#0d9488" : "#4b5563"
+                                      }}
+                                    >
+                                      {/* Add status indicator for slots you've requested */}
+                                      {slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
+                                        <div className="my-request-badge">My Request</div>
+                                      )}
+                                      
+                                      {/* Or show pending badge if it has any pending requests */}
+                                      {!slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && 
+                                       slot.volunteers?.some(v => v.status === "pending") && (
+                                        <div className="pending-badge">Pending</div>
+                                      )}
+                                      
+                                      <div className="time-slot-header">
+                                        <span className="start-time">{slot.startTime}</span>
+                                        <span className="session-type-badge">{slot.type}</span>
+                                      </div>
+                                      <div className="time-range">
+                                        {slot.startTime} - {slot.endTime}
+                                      </div>
+                                      <div className="volunteers-count">
+                                        <Users className="h-3 w-3" />
+                                        <span>
+                                          {(slot.volunteers?.length || 0)}/{slot.maxVolunteers || 1}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
+                                    <DialogHeader>
+                                      <DialogTitle
+                                        className="text-lg font-bold mb-4"
+                                        dir="auto"
+                                        style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
+                                      >
+                                        {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
+                                      </DialogTitle>
+                                      <div className="flex items-center text-gray-500 text-sm mb-4">
+                                        <span className="mr-2 font-medium">{t("Date:")}</span>
+                                        <span>
+                                          {slot.date.toLocaleDateString(i18n.language, {
+                                            weekday: 'short',
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric'
+                                          })}
+                                        </span>
+                                      </div>
+                                    </DialogHeader>
+                                    <div className="mb-6">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-700">{t("Time:")}</span>
+                                        <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
+                                          {slot.startTime} - {slot.endTime}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-end">
+                                      <button
+                                        type="button"
+                                        disabled={!slot.available || !isEventAvailable(slot.date) || signupLoading}
+                                        style={
+                                          (!slot.available || !isEventAvailable(slot.date) || signupLoading)
+                                            ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
+                                            : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
+                                        }
+                                        onClick={() => handleSignUp(slot)}
+                                      >
+                                        {signupLoading 
+                                          ? t("Submitting Request...")
+                                          : (!slot.available || !isEventAvailable(slot.date))
+                                            ? t("Not Available")
+                                            : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
+                                              ? t("Request Pending")
+                                              : t("Request to Join")}
+                                      </button>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              ))}
                             </div>
                           ))
                         )}
@@ -615,7 +738,7 @@ const VolunteerCalendar = () => {
               <div className="month-view">
                 <div className="month-header">
                   <span className="month-title">
-                    {currentDate.toLocaleString("default", { month: "long", year: "numeric" })}
+                    {t(`months.${currentDate.getMonth()}`)} {currentDate.getFullYear()}
                   </span>
                 </div>
                 <div className="month-grid">
@@ -639,97 +762,86 @@ const VolunteerCalendar = () => {
                         className={`month-cell${isToday ? " today" : ""}${date ? "" : " empty"}`}
                       >
                         {date && <div className="month-day-number">{date.getDate()}</div>}
-                        {grouped.map((slotGroup, groupIdx) => (
-                          <div 
-                            key={groupIdx}
-                            style={{
-                              position: "relative",
-                              marginBottom: slotGroup.length > 1 ? "8px" : "2px",
-                              minHeight: slotGroup.length > 1 ? `${16 + (slotGroup.length - 1) * 6}px` : "auto"
-                            }}
-                          >
-                            {slotGroup.map((slot, stackIdx) => {
-                              const borderColor = getSessionTypeBorderColor(slot.type);
-                              const hasUserRequest = slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username);
-                              
-                              return (
-                                <Dialog key={slot.id}>
-                                  <DialogTrigger asChild>
-                                    <div
-                                      className={`month-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable" : ""}`}
-                                      style={{
-                                        position: stackIdx > 0 ? "absolute" : "relative",
-                                        top: stackIdx > 0 ? `${stackIdx * 4}px` : "0",
-                                        left: stackIdx > 0 ? `${stackIdx * 4}px` : "0",
-                                        zIndex: 10 + stackIdx,
-                                        width: stackIdx > 0 ? `calc(100% - ${stackIdx * 4}px)` : "100%",
-                                        borderLeft: "3px solid",
-                                        borderLeftColor: borderColor,
-                                        fontSize: "10px",
-                                        padding: "2px 4px",
-                                        marginBottom: stackIdx === slotGroup.length - 1 ? "2px" : "0",
-                                        boxShadow: stackIdx === slotGroup.length - 1 ? "0 1px 3px rgba(0,0,0,0.1)" : "0 1px 2px rgba(0,0,0,0.05)"
-                                      }}
-                                      title={`${slot.type} ${slot.startTime} - ${slot.endTime}`}
-                                    >
-                                      <span className="month-slot-type">{slot.type}</span>
-                                      <span className="month-slot-time">{slot.startTime}</span>
-                                      
-                                      {hasUserRequest && (
-                                        <span style={{ 
-                                          display: "inline-block", 
-                                          width: "4px", 
-                                          height: "4px", 
-                                          borderRadius: "50%", 
-                                          backgroundColor: "#2563eb", 
-                                          marginLeft: "2px" 
-                                        }}></span>
-                                      )}
-                                    </div>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
-                                    <DialogHeader>
-                                      <DialogTitle className="text-lg font-bold mb-2">
-                                        Sign Up for <span className="capitalize">{slot.type}</span> Session
-                                      </DialogTitle>
-                                      <div className="flex items-center text-gray-500 text-sm mb-4">
-                                        <span className="mr-2 font-medium">Date:</span>
-                                        <span>{slot.date.toDateString()}</span>
-                                      </div>
-                                    </DialogHeader>                                                    
-                                    <div className="space-y-3 mb-6">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-gray-700">Time:</span>
-                                        <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
-                                          {slot.startTime} - {slot.endTime}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="flex justify-end">
-                                      <button
-                                        type="button"
-                                        disabled={!slot.available || !isEventAvailable(slot.date) || signupLoading}
-                                        style={
-                                          (!slot.available || !isEventAvailable(slot.date) || signupLoading)
-                                            ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
-                                            : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
-                                        }
-                                        onClick={() => handleSignUp(slot)}
-                                      >
-                                        {signupLoading 
-                                          ? "Submitting Request..."
-                                          : (!slot.available || !isEventAvailable(slot.date))
-                                            ? "Not Available"
-                                            : hasUserRequest
-                                              ? "Request Pending"
-                                              : "Request to Join"}
-                                      </button>                         
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                              );
-                            })}
-                          </div>
+                        {slots.map((slot, slotIdx) => (
+                          <Dialog key={slot.id}>
+                            <DialogTrigger asChild>
+                              <div
+                                className={`month-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable" : ""}`}
+                                style={{
+                                  borderLeft: "4px solid",
+                                  borderLeftColor: slot.type === "reading" ? "#2563eb" : 
+                                                  slot.type === "games" ? "#db2777" : 
+                                                  slot.type === "music" ? "#d97706" : 
+                                                  slot.type === "art" ? "#059669" :
+                                                  slot.type === "crafts" ? "#7c3aed" :
+                                                  slot.type === "exercise" ? "#dc2626" :
+                                                  slot.type === "therapy" ? "#4f46e5" :
+                                                  slot.type === "social" ? "#0d9488" : "#4b5563",
+                                  // Order slots by time using their index in the sorted array
+                                  order: slotIdx
+                                }}
+                                title={`${slot.type} ${slot.startTime} - ${slot.endTime}`}
+                              >
+                                <span className="month-slot-type">{slot.type}</span>
+                                <span className="month-slot-time">{slot.startTime}</span>
+                                
+                                {/* Small indicator dot if you've requested this slot */}
+                                {slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
+                                  <span style={{ 
+                                    display: "inline-block", 
+                                    width: "6px", 
+                                    height: "6px", 
+                                    borderRadius: "50%", 
+                                    backgroundColor: "#2563eb", 
+                                    marginLeft: "4px" 
+                                  }}></span>
+                                )}
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
+                              <DialogHeader>
+                                <DialogTitle
+                                  className="text-lg font-bold mb-2"
+                                  dir="auto"
+                                  style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
+                                >
+                                  {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
+                                </DialogTitle>
+                                <div className="flex items-center text-gray-500 text-sm mb-4">
+                                  <span className="mr-2 font-medium">{t("Date:")}</span>
+                                  <span>{slot.date.toDateString()}</span>
+                                </div>
+                              </DialogHeader>                                                    
+                              <div className="space-y-3 mb-6">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-700">{t("Time:")}</span>
+                                  <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
+                                    {slot.startTime} - {slot.endTime}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex justify-end">
+                                <button
+                                  type="button"
+                                  disabled={!slot.available || !isEventAvailable(slot.date) || signupLoading}
+                                  style={
+                                    (!slot.available || !isEventAvailable(slot.date) || signupLoading)
+                                      ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
+                                      : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
+                                  }
+                                  onClick={() => handleSignUp(slot)}
+                                >
+                                  {signupLoading 
+                                    ? t("Submitting Request...")
+                                    : (!slot.available || !isEventAvailable(slot.date))
+                                      ? t("Not Available")
+                                      : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
+                                        ? t("Request Pending")
+                                        : t("Request to Join")}
+                                </button>                         
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         ))}
                       </div>
                     );
@@ -739,6 +851,21 @@ const VolunteerCalendar = () => {
             )}
           </div>
         </main>
+      </div>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe size={35} />
+        </button>
+        {showLangOptions && (
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              English
+            </button>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              עברית
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
