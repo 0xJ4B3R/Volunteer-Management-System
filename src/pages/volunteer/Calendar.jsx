@@ -559,7 +559,7 @@ const VolunteerCalendar = () => {
                       >
                         <SelectValue placeholder={t("Select session type")} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent dir={i18n.language === "he" ? "rtl" : "ltr"}>
                         <SelectItem value="all">{t("All Session Types")}</SelectItem>
                         {getSessionTypes().map((type) => (
                           <SelectItem key={type} value={type.toLowerCase()}>
