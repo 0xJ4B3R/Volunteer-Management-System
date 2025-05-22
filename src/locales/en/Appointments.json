@@ -1,0 +1,68 @@
+{
+  "appointments": {
+    "title": "Your Appointments",
+    "subtitle": "Manage and view your scheduled sessions",
+    "search": "Search appointments...",
+    "filter": "Filter",
+    "tabs": {
+      "past": "Past",
+      "upcoming": "Upcoming",
+      "pending": "Pending"
+    },
+    "note": "Note",
+    "noAppointments": "You don’t have any appointments to show.",
+    "actions": {
+      "cancel": "Cancel Request"
+    },
+    "modal": {
+      "title": "Appointment Details",
+      "close": "Close",
+      "date": "Date",
+      "time": "Time",
+      "location": "Location",
+      "category": "Category",
+      "note": "Note"
+    },
+    "categories": {
+      "Reading": "Reading",
+      "Games": "Games",
+      "Music": "Music",
+      "Art": "Art",
+      "Talk": "Conversation",
+      "Other": "Other"
+    },
+    "filters": {
+      "popular": "Popular",
+      "indoor": "Indoor",
+      "outdoor": "Outdoor"
+    },
+    "days": {
+      "Sun": "Sunday",
+      "Mon": "Monday",
+      "Tue": "Tuesday",
+      "Wed": "Wednesday",
+      "Thu": "Thursday",
+      "Fri": "Friday",
+      "Sat": "Saturday"
+    },
+    "months": {
+      "January": "January",
+      "February": "February",
+      "March": "March",
+      "April": "April",
+      "May": "May",
+      "June": "June",
+      "July": "July",
+      "August": "August",
+      "September": "September",
+      "October": "October",
+      "November": "November",
+      "December": "December"
+    },
+    "time": {
+      "AM": "AM",
+      "PM": "PM"
+    },
+    "room": "Room"
+  }
+}

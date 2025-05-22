@@ -8,6 +8,7 @@
   import sidebarEN from './locales/en/Sidebar.json';
   import CalendarEN from './locales/en/Calendar.json';
   import ProfileEN from './locales/en/Profile.json';
+  import AppointmentsEN from './locales/en/Appointments.json';
   //HE TRANSLATIONS:
   import LoginHE from './locales/he/Login.json';
   import ForgotPasswordHE from './locales/he/ForgotPassword.json';
@@ -15,7 +16,7 @@
   import sidebarHE from './locales/he/Sidebar.json';
   import CalendarHE from './locales/he/Calendar.json';
   import ProfileHE from './locales/he/Profile.json';
-
+  import AppointmentsHE from './locales/he/Appointments.json';
 
   const resources = {
     en: {
@@ -25,7 +26,8 @@
         ...VolunteerDashboardEN,
         ...sidebarEN,
         ...CalendarEN,
-        ...ProfileEN
+        ...ProfileEN,
+        ...AppointmentsEN
       }
     },
     he: {
@@ -35,7 +37,8 @@
         ...VolunteerDashboardHE,
         ...sidebarHE,
         ...CalendarHE,
-        ...ProfileHE
+        ...ProfileHE,
+        ...AppointmentsHE
       }
     }
   };
