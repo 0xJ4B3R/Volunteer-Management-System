@@ -4,6 +4,7 @@
   margin: 0 auto;
   padding: 2rem 1rem;
   position: relative;
+  background-color: transparent;
 }
 
 /* === Header === */
@@ -14,12 +15,12 @@
 .profile-title {
   font-size: 1.75rem;
   font-weight: 600;
-  color: #1a4731;
+  color: #305531;
   margin-bottom: 0.5rem;
 }
 .profile-subtitle {
   font-size: 1rem;
-  color: #3b3b3b;
+  color: #305531;
 }
 
 /* === Tabs === */
@@ -29,8 +30,8 @@
 }
 .tabs {
   display: flex;
-  background-color: #fffbeb;
-  border-radius: 8px;
+  background-color: #416a42;
+  border-radius: 5px;
   overflow: hidden;
 }
 .rtl-tabs .tabs {
@@ -51,24 +52,24 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #1a4731;
+  color: #fff;
   transition: background-color 0.2s;
 }
 .tab-item:hover {
-  background-color: #f6ead1;
+  background-color: #5c885d;
 }
 .tab-item.active {
-  background-color: #1a4731;
-  color: white;
+  background-color: #5c885d;
+  color: #fff;
   font-weight: 600;
 }
 
 /* === Profile Overview (General Card Layout) === */
 .profile-overview {
   padding: 3rem;
-  border-radius: 20px;
+  border-radius: 10px;
   border: 1px solid #cbd5c0;
-  background: #fffbeb;
+  background: transparent;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
@@ -89,8 +90,8 @@
 .profile-avatar {
   width: 9rem;
   height: 9rem;
-  background-color: #1a4731;
-  color: #f6ead1;
+  background-color: #305531;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,7 +102,7 @@
 .profile-name, .profile-joined {
   font-size: 1.15rem;
   font-weight: 600;
-  color: #1a4731;
+  color: #305531;
 }
 
 /* === Hours Progress Circle === */
@@ -128,7 +129,7 @@
 }
 .circle-value {
   fill: none;
-  stroke: #1a4731;
+  stroke: #305531;
   stroke-linecap: round;
   transition: stroke-dashoffset 1s ease;
 }
@@ -144,12 +145,12 @@
 .hours-number {
   font-size: 2.8rem;
   font-weight: 800;
-  color: #1a4731;
+  color: #305531;
 }
 .hours-label {
   font-size: 1.2rem;
   font-weight: 500;
-  color: #3b3b3b;
+  color: #305531;
 }
 
 /* === Stat Cards Grid === */
@@ -162,7 +163,7 @@
   padding: 1rem;
   min-height: 120px;
   border-radius: 12px;
-  background-color: #f6ead1;
+  background-color: #416a42;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -175,31 +176,31 @@
   transform: scale(1.03);
 }
 .stat-icon {
-  color: #1a4731;
+  color: #fff;
   font-size: 36px;
   margin-bottom: 0.75rem;
 }
 .stat-label {
   font-size: 0.95rem;
   font-weight: 500;
-  color: #1a4731;
+  color: #fff;
   margin-bottom: 0.2rem;
 }
 .stat-value {
   font-size: 1.05rem;
   font-weight: 500;
-  color: #1a4731;
+  color: #fff;
 }
 
 /* === Skills Section === */
 .skills-section {
   padding-top: 1rem;
-  border-top: 1px solid #cbd5c0;
+  border-top: 1px solid #305531;
 }
 .section-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1a4731;
+  color: #305531;
   margin-bottom: 1rem;
 }
 .skills-list {
@@ -213,15 +214,15 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
-  background-color: #f6ead1;
-  color: #1a4731;
+  background-color: #416a42;
+  color: #fff;
   border-radius: 9999px;
   font-size: 0.875rem;
   border: none;
   transition: background-color 0.2s;
 }
 .skill-badge:hover {
-  background-color: #e3dcc4;
+  background-color: #5c885d;
 }
 .remove-skill {
   cursor: pointer;
@@ -236,16 +237,16 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
-  background-color: #fffdf4;
+  background-color: #e3fae3;
   color: #1a4731;
-  border: 1px dashed #1a4731;
+  border: 1px dashed #305531;
   border-radius: 9999px;
   font-size: 0.875rem;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 .add-skill-btn:hover {
-  background-color: #f6ead1;
+  background-color: #a6cda6;
 }
 
 /* === Security Tab === */
@@ -265,7 +266,7 @@
 .form-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #1a4731;
+  color: #305531;
 }
 .password-input-container {
   position: relative;
@@ -275,17 +276,17 @@
 .password-input {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #cbd5c0;
+  border: 1px solid #305531;
   border-radius: 6px;
-  background-color: #f6ead1;
-  color: #1a4731;
+  background-color: #cbd5c0;
+  color: #000000;
 }
 .toggle-visibility {
   position: absolute;
   right: 0.5rem;
   background: none;
   border: none;
-  color: #3b3b3b;
+  color: #000000;
   cursor: pointer;
   padding: 0.25rem;
 }
@@ -296,7 +297,7 @@
 .submit-button {
   align-self: flex-start;
   padding: 0.5rem 1rem;
-  background-color: #1a4731;
+  background-color: #416a42;
   color: white;
   border: none;
   border-radius: 8px;
@@ -305,7 +306,7 @@
   margin-top: 1rem;
 }
 .submit-button:hover {
-  background-color: #14532d;
+  background-color: #5c885d;
 }
 
 .profile-header-content {

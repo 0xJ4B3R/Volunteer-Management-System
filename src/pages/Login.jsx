@@ -4,7 +4,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff } from 'lucide-react';
-import { Globe } from 'lucide-react'; // Optional: for icon-based toggle
+import { Globe } from 'lucide-react';
 
 import LoadingScreen from '@/components/volunteer/LoadingScreen';
 import './styles/Login.css';
@@ -30,12 +30,15 @@ export default function LoginPage() {
     }
 
     try {
+      setLoading(true);
+      
       const userCollection = collection(db, "users");
       const q = query(userCollection, where("username", "==", username));
       const querySnapShot = await getDocs(q);
 
       if (querySnapShot.empty) {
         setError(t("error_user_not_found"));
+        setLoading(false);
         return;
       }
 
@@ -43,10 +46,34 @@ export default function LoginPage() {
       const userData = userDoc.data();
       const role = userData.role;
       
-      if (userData.isActive) {
-        if (userData.passwordHash === password && userData.isActive) {
-        setLoading(true);
-        
+      if (!userData.isActive) {
+        setError(t("error_user_inactive"));
+        setLoading(false);
+        return;
+      }
+
+      // Check password - handle both hashed and plain text passwords
+      const storedPassword = userData.passwordHash;
+      const isPlainTextPassword = storedPassword.length < 20; // SHA-256 hashes are 64 characters
+      let passwordMatches = false;
+
+      if (isPlainTextPassword) {
+        // Plain text comparison for old passwords
+        console.log("Comparing plain text password");
+        passwordMatches = password === storedPassword;
+      } else {
+        // Hash comparison for new passwords
+        console.log("Comparing hashed password");
+        const encoder = new TextEncoder();
+        const passwordData = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', passwordData);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        passwordMatches = passwordHash === storedPassword;
+      }
+
+      if (passwordMatches) {
+        // Store user data in localStorage
         localStorage.setItem("role", role);
         localStorage.setItem("userId", userDoc.id);
         localStorage.setItem("username", username);
@@ -56,21 +83,26 @@ export default function LoginPage() {
           role: userData.role,
         }));
 
+        // Navigate based on role after a delay
         setTimeout(() => {
-          if (role === 'volunteer') navigate('/volunteer');
-          else if (role === 'manager') navigate('/manager');
-          else {
+          if (role === 'volunteer') {
+            navigate('/volunteer');
+          } else if (role === 'manager') {
+            navigate('/manager');
+          } else {
             setError(t("error_invalid_role"));
             setLoading(false);
           } 
         }, 2000);
       } else {
         setError(t("error_wrong_credentials"));
+        setLoading(false);
       }
-      } else setError(r("error_user_inactive"));
+
     } catch (error) {
       console.error("Login error:", error);
       setError(t("error_login_failed"));
+      setLoading(false);
     }
   };
 
