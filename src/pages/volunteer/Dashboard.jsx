@@ -1,289 +1,396 @@
-import React, { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
-import { Link } from 'react-router-dom';
-import { Clock, CalendarClock, CheckCircle, Calendar, MapPin, UserCircle, Globe } from 'lucide-react';
-import { collection, getDocs, query, where, orderBy, limit, setDoc, doc } from 'firebase/firestore';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect } from 'react';
+import { 
+  Clock, 
+  TrendingUp, 
+  Award, 
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  ChevronRight,
+  CalendarDays,
+  Users,
+  Activity,
+  FileText,
+  Star,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight
+} from 'lucide-react';
 import './styles/Dashboard.css';
 
-function VolunteerDashboard() {
-  const [volunteerData, setVolunteerData] = useState(null);
-  const [appointments, setAppointments] = useState([]);
+const Dashboard = () => {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showLangOptions, setShowLangOptions] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  const { t, i18n } = useTranslation();
-
-  useEffect(() => {
-    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
-  }, [i18n.language]);
-
-  const userObject = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
-  const userId = userObject?.uid || userObject?.id;
-  const username = userObject?.username;
-
-  useEffect(() => {
-    const fetchVolunteerData = async () => {
-      try {
-        let volunteerSnap = null;
-        if (userId) {
-          const q = query(collection(db, 'volunteers'), where('userId', '==', userId));
-          const snap = await getDocs(q);
-          if (!snap.empty) volunteerSnap = snap.docs[0];
-        }
-        if (!volunteerSnap && username) {
-          const q2 = query(collection(db, 'volunteers'), where('username', '==', username));
-          const snap2 = await getDocs(q2);
-          if (!snap2.empty) volunteerSnap = snap2.docs[0];
-        }
-        if (!volunteerSnap && userId) {
-          const newVolunteer = {
-            userId,
-            username: username || `user_${userId.slice(0, 6)}`,
-            fullName: userObject?.displayName || t('volunteer'),
-            avatar: null,
-            birthDate: null,
-            skills: [],
-            totalHoursVolunteered: 0,
-            createdAt: new Date().toISOString(),
-            appointmentsAttended: 0
-          };
-          await setDoc(doc(db, 'volunteers', userId), newVolunteer);
-          setVolunteerData({ ...newVolunteer, id: userId });
-        } else if (volunteerSnap) {
-          setVolunteerData({ ...volunteerSnap.data(), id: volunteerSnap.id });
-        } else {
-          setError(t('error_loading_profile'));
-        }
-      } catch (err) {
-        setError(`${t('error_loading_profile')} ${err.message}`);
-      }
-      setLoading(false);
-    };
-
-    fetchVolunteerData();
-  }, [userId, username, userObject, t]);
-
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!volunteerData?.id) return;
-      try {
-        const q = query(
-          collection(db, 'appointments'),
-          where('volunteerIds', 'array-contains', volunteerData.id),
-          orderBy('date', 'asc'),
-          limit(5)
-        );
-        const snap = await getDocs(q);
-        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAppointments(data);
-      } catch (err) {}
-    };
-    fetchAppointments();
-  }, [volunteerData]);
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat(i18n.language === 'he' ? 'he-IL' : 'en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
+  // Mock user data
+  const userData = {
+    name: 'John',
+    totalHours: 156.5,
+    hoursChange: 12.5,
+    attendanceRate: 92.3,
+    attendanceChange: 2.1,
+    sessionsCompleted: 48,
+    sessionsChange: 3,
+    currentStreak: 12,
+    streakChange: 2,
+    volunteerStatus: 'active', // active, inactive, pending
+    nextSession: '2025-05-24',
+    lastSession: '2025-05-22',
+    memberSince: '2024-01-15',
+    currentRank: 'Gold Volunteer',
+    pointsToNextRank: 150
   };
 
-  const formatTime = (timeString) => {
-    if (!timeString) return '';
-    let hours, minutes;
-    if (timeString.includes('T')) {
-      const date = new Date(timeString);
-      hours = date.getHours();
-      minutes = date.getMinutes();
-    } else {
-      [hours, minutes] = timeString.split(':').map(Number);
+  // Mock recent activity
+  const recentActivity = [
+    {
+      id: 1,
+      type: 'attendance',
+      text: 'Attended Food Bank Distribution',
+      time: '2 hours ago',
+      icon: CheckCircle2,
+      iconColor: 'icon-green'
+    },
+    {
+      id: 2,
+      type: 'signup',
+      text: 'Signed up for Community Garden',
+      time: '1 day ago',
+      icon: Calendar,
+      iconColor: 'icon-blue'
+    },
+    {
+      id: 3,
+      type: 'achievement',
+      text: 'Earned "Dedicated Helper" badge',
+      time: '3 days ago',
+      icon: Award,
+      iconColor: 'icon-amber'
+    },
+    {
+      id: 4,
+      type: 'cancel',
+      text: 'Cancelled Beach Cleanup session',
+      time: '5 days ago',
+      icon: AlertCircle,
+      iconColor: 'icon-red'
+    },
+    {
+      id: 5,
+      type: 'rating',
+      text: 'Received 5-star rating from coordinator',
+      time: '1 week ago',
+      icon: Star,
+      iconColor: 'icon-amber'
     }
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const formattedHours = hours % 12 || 12;
-    const formattedMinutes = minutes.toString().padStart(2, '0');
-    return `${formattedHours}:${formattedMinutes} ${period}`;
+  ];
+
+  // Mock upcoming sessions
+  const upcomingSessions = [
+    {
+      id: 1,
+      title: 'Senior Care Visit',
+      date: 'Tomorrow',
+      time: '2:00 PM - 4:00 PM',
+      location: 'Sunset Home'
+    },
+    {
+      id: 2,
+      title: 'Library Reading Program',
+      date: 'May 26',
+      time: '10:00 AM - 12:00 PM',
+      location: 'City Library'
+    },
+    {
+      id: 3,
+      title: 'Park Cleanup',
+      date: 'May 28',
+      time: '8:00 AM - 11:00 AM',
+      location: 'Central Park'
+    }
+  ];
+
+  useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => setLoading(false), 1000);
+    
+    // Update time every minute
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(timeInterval);
+    };
+  }, []);
+
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
-  const stats = volunteerData ? [
-    {
-      label: t('hours_volunteered'),
-      value: volunteerData.totalHoursVolunteered || 0,
-      icon: Clock,
-      color: "bg-blue-50",
-      border: "border-blue-200"
-    },
-    {
-      label: t('upcoming_appointments'),
-      value: appointments.length || 0,
-      icon: CalendarClock,
-      color: "bg-green-50",
-      border: "border-green-200"
-    },
-    {
-      label: t('appointments_attended'),
-      value: volunteerData.appointmentsAttended || 0,
-      icon: CheckCircle,
-      color: "bg-purple-50",
-      border: "border-purple-200"
-    }
-  ] : [];
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      active: { class: 'badge-active', text: 'Active' },
+      inactive: { class: 'badge-inactive', text: 'Inactive' },
+      pending: { class: 'badge-pending', text: 'Pending' }
+    };
+    return badges[status] || badges.pending;
+  };
 
   if (loading) {
-    return <div className="dashboard-loading">{t('loading')}</div>;
-  }
-
-  if (error) {
     return (
-      <div className="dashboard-error">
-        <h2>{t('error')}</h2>
-        <p>{error}</p>
-        <div className="text-sm mt-4 p-4 bg-gray-100 rounded">
-          <p><strong>{t('troubleshooting')}:</strong></p>
-          <ul className="list-disc pl-5 mt-2">
-            <li>{t('check_rules')}</li>
-            <li>{t('check_login')}</li>
-            <li>{t('check_collection')}</li>
-          </ul>
+      <div className="dashboard-container">
+        <div className="dashboard-wrapper">
+          <div className="dashboard-header">
+            <div className="loading-skeleton" style={{ width: '200px', height: '2rem' }}></div>
+            <div className="loading-skeleton" style={{ width: '300px' }}></div>
+          </div>
+          <div className="stats-grid">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="stat-card">
+                <div className="loading-skeleton" style={{ height: '3rem' }}></div>
+              </div>
+            ))}
+          </div>
         </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="dashboard-retry-button mt-4"
-        >
-          {t('try_again')}
-        </button>
       </div>
     );
   }
 
   return (
     <div className="dashboard-container">
-      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
-        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-          <Globe size={35} />
-        </button>
-        {showLangOptions && (
-          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
-              {t('English')}
-            </button>
-            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
-              {t('Hebrew')}
-            </button>
+      <div className="dashboard-wrapper">
+        {/* Header */}
+        <div className="dashboard-header">
+          <div className="dashboard-header-top">
+            <h1 className="dashboard-title">Dashboard</h1>
+            <span className="dashboard-date">{formatDate(currentTime)}</span>
           </div>
-        )}
-      </div>
-
-      <div className="dashboard-hero">
-        <div>
-          <h1 className="dashboard-welcome-text">
-            {t('welcome')}, {volunteerData?.fullName || t('volunteer')}!
-          </h1>
-          <p className="dashboard-thankyou-text">{t('thank_you')}</p>
+          <p className="dashboard-greeting">{getGreeting()}, {userData.name}! 👋</p>
         </div>
-        {volunteerData?.avatar && (
-          <img
-            src={volunteerData.avatar}
-            alt="Volunteer"
-            className="dashboard-avatar"
-          />
-        )}
-      </div>
 
-      <div className="dashboard-stats">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={stat.label}
-              className={`dashboard-stat-card ${stat.color} ${stat.border} flex items-center gap-4 p-4 rounded-lg shadow-sm`}
-            >
-              {Icon && <Icon className="w-6 h-6 text-gray-600" />}
-              <div>
-                <div className="dashboard-stat-label font-medium">{stat.label}</div>
-                <div className="dashboard-stat-value text-xl font-bold">{stat.value}</div>
+        {/* Stats Grid */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-header">
+              <div className="stat-info">
+                <p className="stat-label">Total Hours</p>
+                <p className="stat-value">{userData.totalHours}</p>
+                <div className="stat-change stat-change-positive">
+                  <ArrowUpRight className="stat-change-icon" />
+                  <span>+{userData.hoursChange} this month</span>
+                </div>
+              </div>
+              <div className="stat-icon-wrapper icon-blue">
+                <Clock className="stat-icon" />
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      <div className="dashboard-appointments">
-        <div className="appointments-header">
-          <h2 className="appointments-title">{t('upcoming_appointments')}</h2>
-          {appointments.length > 0 && (
-            <button className="view-all-button">
-              {t('view_all')}
-            </button>
-          )}
-        </div>
-
-        {appointments.length === 0 ? (
-          <div className="no-appointments">
-            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="no-appointments-text">{t('no_appointments')}</p>
-            <Link to="./calendar">
-              <button className="browse-calendar-button">
-                {t('browse_calendar')}
-              </button>
-            </Link>
           </div>
-        ) : (
-          <div className="appointments-list">
-            {appointments.map((appointment) => (
-              <div key={appointment.id} className="appointment-card">
-                <div className="appointment-date-container">
-                  <div className="appointment-date">
-                    {formatDate(appointment.date)}
-                  </div>
-                  <div className="appointment-time">
-                    {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
-                  </div>
-                </div>
-                <div className="appointment-details">
-                  <h3 className="appointment-title">{appointment.title || t('volunteer_session')}</h3>
-                  {appointment.location && (
-                    <div className="appointment-location">
-                      <MapPin className="w-4 h-4" />
-                      <span>{appointment.location}</span>
-                    </div>
-                  )}
-                  {appointment.supervisor && (
-                    <div className="appointment-supervisor">
-                      <UserCircle className="w-4 h-4" />
-                      <span>{t('supervisor')}: {appointment.supervisor}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="appointment-actions">
-                  <button className="appointment-details-button">
-                    {t('details')}
-                  </button>
+
+          <div className="stat-card">
+            <div className="stat-card-header">
+              <div className="stat-info">
+                <p className="stat-label">Attendance Rate</p>
+                <p className="stat-value">{userData.attendanceRate}%</p>
+                <div className="stat-change stat-change-positive">
+                  <ArrowUpRight className="stat-change-icon" />
+                  <span>+{userData.attendanceChange}%</span>
                 </div>
               </div>
-            ))}
+              <div className="stat-icon-wrapper icon-green">
+                <TrendingUp className="stat-icon" />
+              </div>
+            </div>
           </div>
-        )}
-      </div>
 
-      {volunteerData?.skills && volunteerData.skills.length > 0 && (
-        <div className="dashboard-skills">
-          <h3 className="skills-heading">{t('my_skills')}</h3>
-          <ul className="skills-list">
-            {volunteerData.skills.map((skill, index) => (
-              <li key={index} className="skill-item">
-                {t(`skills.${skill}`, skill)}
-              </li>
-            ))}
-          </ul>
+          <div className="stat-card">
+            <div className="stat-card-header">
+              <div className="stat-info">
+                <p className="stat-label">Sessions Completed</p>
+                <p className="stat-value">{userData.sessionsCompleted}</p>
+                <div className="stat-change stat-change-positive">
+                  <ArrowUpRight className="stat-change-icon" />
+                  <span>+{userData.sessionsChange} this month</span>
+                </div>
+              </div>
+              <div className="stat-icon-wrapper icon-purple">
+                <CheckCircle2 className="stat-icon" />
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-card-header">
+              <div className="stat-info">
+                <p className="stat-label">Current Streak</p>
+                <p className="stat-value">{userData.currentStreak} days</p>
+                <div className="stat-change stat-change-positive">
+                  <ArrowUpRight className="stat-change-icon" />
+                  <span>+{userData.streakChange} days</span>
+                </div>
+              </div>
+              <div className="stat-icon-wrapper icon-amber">
+                <Award className="stat-icon" />
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Volunteer Status */}
+        <div className="volunteer-status-card">
+          <div className="status-header">
+            <h2 className="status-title">Volunteer Status</h2>
+            <span className={`status-badge ${getStatusBadge(userData.volunteerStatus).class}`}>
+              <span className="status-badge-dot"></span>
+              {getStatusBadge(userData.volunteerStatus).text}
+            </span>
+          </div>
+          <div className="status-details">
+            <div className="status-detail-item">
+              <p className="status-detail-label">Next Session</p>
+              <p className="status-detail-value">
+                {new Date(userData.nextSession).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+            <div className="status-detail-item">
+              <p className="status-detail-label">Last Session</p>
+              <p className="status-detail-value">
+                {new Date(userData.lastSession).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+            <div className="status-detail-item">
+              <p className="status-detail-label">Member Since</p>
+              <p className="status-detail-value">
+                {new Date(userData.memberSince).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  year: 'numeric' 
+                })}
+              </p>
+            </div>
+            <div className="status-detail-item">
+              <p className="status-detail-label">Current Rank</p>
+              <p className="status-detail-value">{userData.currentRank}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Achievement Card */}
+        <div className="achievement-card">
+          <div className="achievement-content">
+            <div className="achievement-icon-wrapper">
+              <Award className="achievement-icon" />
+            </div>
+            <div className="achievement-text">
+              <p className="achievement-label">Current Achievement Level</p>
+              <p className="achievement-title">{userData.currentRank}</p>
+              <p className="achievement-progress">
+                {userData.pointsToNextRank} points to Platinum Volunteer
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="main-content-grid">
+          {/* Recent Activity */}
+          <div className="activity-card">
+            <div className="activity-header">
+              <h2 className="activity-title">Recent Activity</h2>
+            </div>
+            <ul className="activity-list">
+              {recentActivity.map((activity) => {
+                const IconComponent = activity.icon;
+                return (
+                  <li key={activity.id} className="activity-item">
+                    <div className="activity-content">
+                      <div className={`activity-icon-wrapper ${activity.iconColor}`}>
+                        <IconComponent className="activity-icon" />
+                      </div>
+                      <div className="activity-details">
+                        <p className="activity-text">{activity.text}</p>
+                        <p className="activity-time">{activity.time}</p>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* Sidebar */}
+          <div>
+            {/* Upcoming Sessions */}
+            <div className="upcoming-card">
+              <div className="upcoming-header">
+                <h2 className="upcoming-title">Upcoming Sessions</h2>
+                <a href="/appointments" className="view-all-link">
+                  View all <ChevronRight style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                </a>
+              </div>
+              <div className="upcoming-list">
+                {upcomingSessions.map((session) => (
+                  <div key={session.id} className="upcoming-item">
+                    <div className="upcoming-item-header">
+                      <h3 className="upcoming-item-title">{session.title}</h3>
+                      <span className="upcoming-item-date">{session.date}</span>
+                    </div>
+                    <div className="upcoming-item-details">
+                      <div className="upcoming-detail">
+                        <Clock className="upcoming-detail-icon" />
+                        <span>{session.time}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="quick-actions-card" style={{ marginTop: '1.5rem' }}>
+              <h2 className="quick-actions-title">Quick Actions</h2>
+              <div className="quick-actions-grid">
+                <a href="/calendar" className="quick-action-btn">
+                  <Calendar className="quick-action-icon" />
+                  <span className="quick-action-label">Sign Up</span>
+                </a>
+                <a href="/attendance" className="quick-action-btn">
+                  <CheckCircle2 className="quick-action-icon" />
+                  <span className="quick-action-label">Check In</span>
+                </a>
+                <a href="/appointments" className="quick-action-btn">
+                  <CalendarDays className="quick-action-icon" />
+                  <span className="quick-action-label">My Sessions</span>
+                </a>
+                <a href="/profile" className="quick-action-btn">
+                  <FileText className="quick-action-icon" />
+                  <span className="quick-action-label">Reports</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
 
-export default VolunteerDashboard;
+export default Dashboard;
