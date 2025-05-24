@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import {   User,   Phone,   CheckCircle2,   Lock,   Star,   BadgeCheck,   Plus,   X,   Eye,   EyeOff,   Globe,   Hand,   UserCheck,   Hammer,   HeartHandshake,   ThumbsUp,   Award,   ShieldCheck,   Users } from "lucide-react";
+import { User, Phone, CheckCircle2, Lock, Star, BadgeCheck, Plus, X, Eye, EyeOff, Globe, Hand, UserCheck, Hammer, HeartHandshake, ThumbsUp, Award, ShieldCheck, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
 import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
@@ -22,7 +22,7 @@ const getLevel = (hours, t) => {
   if (hours >= 150 && hours <= 199)
     return { label: t("Champion"), icon: <ShieldCheck size={36} /> };
   if (hours >= 200 && hours <= 420)
-    return { label: t("Humanitarian"), icon: <Globe size={36} /> }; // 200+
+    return { label: t("Humanitarian"), icon: <Globe size={36} /> };
   return { label: t("Lord of the deeds"), icon: <MarijuanaIcon />};
 };
 
@@ -39,6 +39,115 @@ const MarijuanaIcon = ({ size = 36 }) => (
   </svg>
 );
 
+// Calculate total hours and sessions from appointmentsHistory
+const calculateStatsFromHistory = (appointmentsHistory) => {
+  if (!appointmentsHistory || !Array.isArray(appointmentsHistory)) {
+    return { totalHours: 0, totalSessions: 0, unsavedAppointments: [] };
+  }
+
+  let totalHours = 0;
+  let totalSessions = 0;
+  let unsavedAppointments = [];
+
+  appointmentsHistory.forEach((appointment, index) => {
+    // Skip if already saved (already counted in database totals)
+    if (appointment.saved === true) {
+      return;
+    }
+    
+    // Track unsaved appointments for later update
+    unsavedAppointments.push(index);
+    
+    // Only count attended appointments
+    if (appointment.attendanceStatus === 'attended') {
+      totalSessions++;
+      
+      // Calculate hours for this appointment
+      if (appointment.startTime && appointment.endTime) {
+        try {
+          // Parse times - handling both "9:00" and "09:00" formats
+          const parseTime = (timeStr) => {
+            const parts = timeStr.split(':');
+            return {
+              hours: parseInt(parts[0], 10),
+              minutes: parseInt(parts[1] || '0', 10)
+            };
+          };
+          
+          const start = parseTime(appointment.startTime);
+          const end = parseTime(appointment.endTime);
+          
+          // Convert to minutes for easier calculation
+          const startMinutes = start.hours * 60 + start.minutes;
+          const endMinutes = end.hours * 60 + end.minutes;
+          
+          // Calculate duration in hours
+          const durationMinutes = endMinutes - startMinutes;
+          const durationHours = durationMinutes / 60;
+          
+          // Add to total hours if duration is positive
+          if (durationHours > 0) {
+            totalHours += durationHours;
+          }
+        } catch (error) {
+          // Silently continue
+        }
+      }
+    }
+  });
+
+  // Round total hours to nearest integer since database expects int
+  const result = { 
+    totalHours: Math.round(totalHours), // Round to nearest whole number
+    totalSessions,
+    unsavedAppointments // Array of indices that need to be marked as saved
+  };
+  
+  return result;
+};
+
+// Update volunteer stats in database
+const updateVolunteerStats = async (volunteerId, stats, appointmentsHistory) => {
+  try {
+    const volunteerRef = doc(db, "volunteers", volunteerId);
+    
+    // Get current totals to add to them
+    const volunteerDoc = await getDoc(volunteerRef);
+    const currentData = volunteerDoc.data();
+    const currentTotalHours = currentData.totalHours || 0;
+    const currentTotalSessions = currentData.totalSessions || 0;
+    
+    // Calculate new totals
+    const newTotalHours = currentTotalHours + stats.totalHours;
+    const newTotalSessions = currentTotalSessions + stats.totalSessions;
+    
+    // Mark unsaved appointments as saved
+    const updatedAppointments = [...appointmentsHistory];
+    stats.unsavedAppointments.forEach(index => {
+      updatedAppointments[index] = {
+        ...updatedAppointments[index],
+        saved: true
+      };
+    });
+    
+    const updateData = {
+      totalHours: parseInt(newTotalHours, 10), // Ensure it's an integer
+      totalSessions: parseInt(newTotalSessions, 10), // Ensure it's an integer
+      appointmentsHistory: updatedAppointments,
+      lastCalculated: new Date()
+    };
+    
+    await updateDoc(volunteerRef, updateData);
+    
+    // Return the new totals
+    return {
+      totalHours: newTotalHours,
+      totalSessions: newTotalSessions
+    };
+  } catch (error) {
+    throw error;
+  }
+};
 
 function Profile() {
   const { t, i18n } = useTranslation();
@@ -61,13 +170,12 @@ function Profile() {
   const [volunteerId, setVolunteerId] = useState(null);
   const [userDocId, setUserDocId] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
-  const [passwordChangeStatus, setPasswordChangeStatus] = useState(null); // For showing status messages
+  const [passwordChangeStatus, setPasswordChangeStatus] = useState(null);
 
   // Listen for auth state changes
   useEffect(() => {
     const checkCurrentUser = () => {
       const user = auth.currentUser;
-      console.log("Current user check:", user);
       if (user) {
         setCurrentUser(user);
         setLoading(false);
@@ -81,7 +189,6 @@ function Profile() {
     }, 1000);
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("Auth state changed:", user);
       setCurrentUser(user);
       setLoading(false);
     });
@@ -92,11 +199,10 @@ function Profile() {
     };
   }, []);
 
-  // Fetch data from Firebase - bypass auth check since user must be logged in to reach this page
+  // Fetch data from Firebase
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Try multiple ways to get the user ID
         let userId = null;
         
         // Method 1: Try localStorage keys
@@ -105,37 +211,19 @@ function Profile() {
           const storedId = localStorage.getItem(key);
           if (storedId) {
             userId = storedId;
-            console.log(`Found userId in localStorage[${key}]:`, userId);
             break;
           }
         }
 
-        // Method 2: Try Firebase auth (even if currentUser is null)
+        // Method 2: Try Firebase auth
         if (!userId && auth.currentUser) {
           userId = auth.currentUser.uid;
-          console.log("Found userId from auth.currentUser:", userId);
-        }
-
-        // Method 3: Check all localStorage for anything that looks like a Firebase UID
-        if (!userId) {
-          console.log("All localStorage items:", {...localStorage});
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            const value = localStorage.getItem(key);
-            // Firebase UIDs are typically 28 characters long
-            if (value && typeof value === 'string' && value.length >= 20 && value.length <= 35) {
-              console.log(`Potential UID found in localStorage[${key}]:`, value);
-            }
-          }
         }
 
         if (!userId) {
-          console.log("No user ID found anywhere");
           setLoading(false);
           return;
         }
-
-        console.log("Fetching data for user:", userId);
 
         // Get volunteer document by userId
         const volunteersRef = collection(db, "volunteers");
@@ -143,19 +231,36 @@ function Profile() {
         const volunteerSnapshot = await getDocs(q);
         
         if (volunteerSnapshot.empty) {
-          console.log("No volunteer found for this user");
           setLoading(false);
           return;
         }
 
         const volunteerDoc = volunteerSnapshot.docs[0];
         const volunteerData = volunteerDoc.data();
-        console.log("Volunteer data:", volunteerData);
+        
+        // Check for both old and new field names
+        const appointmentsData = volunteerData.appointmentsHistory || volunteerData.appointmentHistory;
 
         // Store the volunteer document ID for updates
         setVolunteerId(volunteerDoc.id);
 
-        // Get user document for username and store user doc ID
+        // Calculate stats from appointmentsHistory (only unsaved appointments)
+        const appointmentsHistory = volunteerData.appointmentsHistory || [];
+        const calculatedStats = calculateStatsFromHistory(appointmentsHistory);
+
+        // Check if we need to update the database (if there are unsaved appointments)
+        const needsUpdate = calculatedStats.unsavedAppointments.length > 0;
+
+        let finalTotalHours = volunteerData.totalHours || 0;
+        let finalTotalSessions = volunteerData.totalSessions || 0;
+
+        if (needsUpdate) {
+          const updatedTotals = await updateVolunteerStats(volunteerDoc.id, calculatedStats, appointmentsHistory);
+          finalTotalHours = updatedTotals.totalHours;
+          finalTotalSessions = updatedTotals.totalSessions;
+        }
+
+        // Get user document for username
         const userRef = doc(db, "users", volunteerData.userId);
         const userSnap = await getDoc(userRef);
         const userData = userSnap.exists() ? userSnap.data() : {};
@@ -169,28 +274,25 @@ function Profile() {
         
         if (!username) {
           username = userData.username || "@unknown";
-          console.log("Username from Firestore:", userData);
-        } else {
-          console.log("Username from localStorage:", username);
         }
 
-        // Combine data
+        // Combine data with final stats
         const profileData = {
           fullName: volunteerData.fullName || "",
           username: username,
           phone: volunteerData.phoneNumber || "",
           joinDate: volunteerData.createdAt?.toDate() || new Date(),
-          totalHours: volunteerData.totalHours || 0,
-          completedSessions: volunteerData.completedSessions || volunteerData.totalSessions || 0,
-          skills: volunteerData.skills || ["Reading", "Music", "Companionship"]
+          totalHours: finalTotalHours,
+          completedSessions: finalTotalSessions,
+          skills: volunteerData.skills || ["Reading", "Music", "Companionship"],
+          appointmentsHistory: appointmentsHistory
         };
 
-        console.log("Final profile data:", profileData);
         setUserProfile(profileData);
         setSkills(profileData.skills);
         
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        // Silent error handling
       } finally {
         setLoading(false);
       }
@@ -198,6 +300,8 @@ function Profile() {
 
     fetchUserData();
   }, []);
+
+  // Removed recalculateStats function
 
   useEffect(() => {
     if (userProfile?.totalHours) {
@@ -215,11 +319,9 @@ function Profile() {
     if (newSkill && !skills.includes(newSkill)) {
       const updatedSkills = [...skills, newSkill];
       
-      // Optimistically update UI
       setSkills(updatedSkills);
       
       try {
-        // Update database
         if (volunteerId) {
           const volunteerRef = doc(db, "volunteers", volunteerId);
           await updateDoc(volunteerRef, {
@@ -232,11 +334,7 @@ function Profile() {
           });
         }
       } catch (error) {
-        console.error("Error updating skills:", error);
-        
-        // Revert UI on error
         setSkills(skills);
-        
         toast({ 
           title: "Error", 
           description: "Failed to add skill. Please try again.", 
@@ -249,11 +347,9 @@ function Profile() {
   const removeSkill = async (skill) => {
     const updatedSkills = skills.filter(s => s !== skill);
     
-    // Optimistically update UI
     setSkills(updatedSkills);
     
     try {
-      // Update database
       if (volunteerId) {
         const volunteerRef = doc(db, "volunteers", volunteerId);
         await updateDoc(volunteerRef, {
@@ -266,11 +362,7 @@ function Profile() {
         });
       }
     } catch (error) {
-      console.error("Error updating skills:", error);
-      
-      // Revert UI on error
       setSkills(skills);
-      
       toast({ 
         title: "Error", 
         description: "Failed to remove skill. Please try again.", 
@@ -280,113 +372,83 @@ function Profile() {
   };
 
   const handlePasswordChange = async () => {
-    console.log("Password change button clicked!");
-    console.log("Current password:", currentPassword);
-    console.log("New password:", newPassword);
-    console.log("Confirm password:", confirmPassword);
-    console.log("User doc ID:", userDocId);
-
-    // Clear previous status
     setPasswordChangeStatus(null);
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      console.log("Validation failed - empty fields");
       setPasswordChangeStatus({ type: "error", message: "Please fill in all password fields" });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      console.log("Validation failed - passwords don't match");
       setPasswordChangeStatus({ type: "error", message: "New passwords do not match" });
       return;
     }
 
     if (newPassword.length < 6) {
-      console.log("Password too short");
       setPasswordChangeStatus({ type: "error", message: "New password must be at least 6 characters long" });
       return;
     }
 
     if (newPassword === currentPassword) {
-      console.log("New password same as current");
       setPasswordChangeStatus({ type: "error", message: "New password must be different from current password" });
       return;
     }
 
     try {
-      console.log("Starting password change process...");
       setPasswordChangeStatus({ type: "loading", message: "Changing password..." });
       
       if (!userDocId) {
-        console.log("No user doc ID");
         setPasswordChangeStatus({ type: "error", message: "User data not found" });
         return;
       }
 
-      console.log("Fetching user document...");
       const userRef = doc(db, "users", userDocId);
       const userSnap = await getDoc(userRef);
       
       if (!userSnap.exists()) {
-        console.log("User document not found");
         setPasswordChangeStatus({ type: "error", message: "User document not found" });
         return;
       }
 
       const userData = userSnap.data();
       const storedPasswordHash = userData.passwordHash;
-      console.log("Stored password hash:", storedPasswordHash);
 
       if (!storedPasswordHash) {
-        console.log("No password hash found");
         setPasswordChangeStatus({ type: "error", message: "No password set for this user" });
         return;
       }
 
-      console.log("Verifying current password...");
       const isPlainTextPassword = storedPasswordHash.length < 20;
       const encoder = new TextEncoder();
       let passwordMatches = false;
       
       if (isPlainTextPassword) {
-        console.log("Stored password is plain text, comparing directly...");
         passwordMatches = currentPassword === storedPasswordHash;
-        console.log("Plain text comparison result:", passwordMatches);
       } else {
-        console.log("Stored password is hashed, generating hash for comparison...");
         const currentPasswordData = encoder.encode(currentPassword);
         const currentHashBuffer = await crypto.subtle.digest('SHA-256', currentPasswordData);
         const currentHashArray = Array.from(new Uint8Array(currentHashBuffer));
         const currentPasswordHash = currentHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        console.log("Generated current password hash:", currentPasswordHash);
-        console.log("Stored password hash:        ", storedPasswordHash);
         passwordMatches = currentPasswordHash === storedPasswordHash;
-        console.log("Hash comparison result:", passwordMatches);
       }
 
       if (!passwordMatches) {
-        console.log("Password verification failed");
         setPasswordChangeStatus({ type: "error", message: "Current password is incorrect" });
         return;
       }
 
-      console.log("Current password verified! Generating new hash...");
       const newPasswordData = encoder.encode(newPassword);
       const newHashBuffer = await crypto.subtle.digest('SHA-256', newPasswordData);
       const newHashArray = Array.from(new Uint8Array(newHashBuffer));
       const newPasswordHash = newHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      console.log("Generated new password hash:", newPasswordHash);
 
-      console.log("Updating database...");
       await updateDoc(userRef, {
         passwordHash: newPasswordHash,
         lastPasswordChange: new Date()
       });
 
-      console.log("Password updated successfully!");
       setPasswordChangeStatus({ type: "success", message: "Password changed successfully!" });
       
-      // Clear form after successful change
       setTimeout(() => {
         setCurrentPassword(""); 
         setNewPassword(""); 
@@ -395,17 +457,24 @@ function Profile() {
       }, 3000);
       
     } catch (error) {
-      console.error("Error changing password:", error);
       setPasswordChangeStatus({ type: "error", message: "Failed to change password. Please try again." });
     }
   };
 
   if (loading) {
-  return <LoadingScreen />;
-}
+    return (
+      <div style={{ backgroundColor: '#f2f4f6', minHeight: '100vh' }}>
+        <LoadingScreen />
+      </div>
+    );
+  }
 
   if (!userProfile && !loading) {
-    return <LoadingScreen />;
+    return (
+      <div style={{ backgroundColor: '#f2f4f6', minHeight: '100vh' }}>
+        <LoadingScreen />
+      </div>
+    );
   }
 
   const formattedDate = userProfile.joinDate.toLocaleDateString(
@@ -584,46 +653,6 @@ function Profile() {
                     <span className="status-message">{passwordChangeStatus.message}</span>
                   </div>
                 )}
-
-                <style jsx>{`
-                  .password-status {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin-top: 12px;
-                    padding: 10px 12px;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    font-weight: 500;
-                  }
-                  
-                  .password-status.success {
-                    background-color: #f0f9ff;
-                    color: #166534;
-                    border: 1px solid #bbf7d0;
-                  }
-                  
-                  .password-status.error {
-                    background-color: #fef2f2;
-                    color: #dc2626;
-                    border: 1px solid #fecaca;
-                  }
-                  
-                  .password-status.loading {
-                    background-color: #f8fafc;
-                    color: #475569;
-                    border: 1px solid #e2e8f0;
-                  }
-                  
-                  .loading-spinner, .success-icon, .error-icon {
-                    font-size: 16px;
-                    flex-shrink: 0;
-                  }
-                  
-                  .status-message {
-                    flex: 1;
-                  }
-                `}</style>
               </div>
             </div>
           </div>
