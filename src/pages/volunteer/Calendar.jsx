@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
+import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Calendar.css";
 import app from "@/lib/firebase";
 
@@ -495,7 +496,7 @@ const VolunteerCalendar = () => {
   };
 
   if (isLoading) {
-    return <div className="loading-indicator">{t("Loading calendar data...")}</div>;
+    return <LoadingScreen />;
   }
 
   return (

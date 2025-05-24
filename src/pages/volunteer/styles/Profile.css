@@ -348,3 +348,42 @@
     margin-top: 1.5rem;
   }
 }
+
+/* Password status messages */
+.password-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.password-status.success {
+  background-color: #f0f9ff;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.password-status.error {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.password-status.loading {
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.loading-spinner, .success-icon, .error-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.status-message {
+  flex: 1;
+}

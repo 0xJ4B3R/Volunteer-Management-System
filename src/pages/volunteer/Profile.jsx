@@ -1,53 +1,26 @@
 import { useEffect, useState } from "react";
-import { 
-  User, 
-  Phone, 
-  CheckCircle2, 
-  Lock, 
-  Star, 
-  BadgeCheck, 
-  Plus, 
-  X, 
-  Eye, 
-  EyeOff, 
-  Globe, 
-  Hand, 
-  UserCheck, 
-  Hammer, 
-  HeartHandshake, 
-  ThumbsUp, 
-  Award, 
-  ShieldCheck, 
-  Users 
-} from "lucide-react";
+import {   User,   Phone,   CheckCircle2,   Lock,   Star,   BadgeCheck,   Plus,   X,   Eye,   EyeOff,   Globe,   Hand,   UserCheck,   Hammer,   HeartHandshake,   ThumbsUp,   Award,   ShieldCheck,   Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
 import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
+import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Profile.css";
 
 const getLevel = (hours, t) => {
   if (hours >= 0 && hours <= 9)
     return { label: t("Beginner"), icon: <Star size={36} /> };
-  if (hours >= 10 && hours <= 19)
+  if (hours >= 10 && hours <= 29)
     return { label: t("Helper"), icon: <Hand size={36} /> };
-  if (hours >= 20 && hours <= 39)
+  if (hours >= 30 && hours <= 59)
     return { label: t("Contributor"), icon: <UserCheck size={36} /> };
-  if (hours >= 40 && hours <= 59)
-    return { label: t("Doer"), icon: <CheckCircle2 size={36} /> };
-  if (hours >= 60 && hours <= 79)
-    return { label: t("Builder"), icon: <Hammer size={36} /> };
-  if (hours >= 80 && hours <= 99)
+  if (hours >= 60 && hours <= 99)
     return { label: t("Supporter"), icon: <HeartHandshake size={36} /> };
-  if (hours >= 100 && hours <= 119)
+  if (hours >= 100 && hours <= 149)
     return { label: t("Advocate"), icon: <ThumbsUp size={36} /> };
-  if (hours >= 120 && hours <= 139)
-    return { label: t("Leader"), icon: <Award size={36} /> };
-  if (hours >= 140 && hours <= 169)
+  if (hours >= 150 && hours <= 199)
     return { label: t("Champion"), icon: <ShieldCheck size={36} /> };
-  if (hours >= 170 && hours <= 199)
-    return { label: t("Mentor"), icon: <Users size={36} /> };
   if (hours >= 200 && hours <= 420)
     return { label: t("Humanitarian"), icon: <Globe size={36} /> }; // 200+
   return { label: t("Lord of the deeds"), icon: <MarijuanaIcon />};
@@ -428,31 +401,11 @@ function Profile() {
   };
 
   if (loading) {
-    return (
-      <div className="profile-page" dir={i18n.language === "he" ? "rtl" : "ltr"}>
-        <div className="profile-header">
-          <h1 className="profile-title">{t("profile.title")}</h1>
-          <p className="profile-subtitle">Loading...</p>
-          <p style={{fontSize: '12px', color: '#666'}}>
-            Waiting for auth state... currentUser = {currentUser ? 'exists' : 'null'}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  return <LoadingScreen />;
+}
 
   if (!userProfile && !loading) {
-    return (
-      <div className="profile-page" dir={i18n.language === "he" ? "rtl" : "ltr"}>
-        <div className="profile-header">
-          <h1 className="profile-title">{t("profile.title")}</h1>
-          <p className="profile-subtitle">No profile data found</p>
-          <p style={{fontSize: '12px', color: '#666'}}>
-            Check console for debugging info
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   const formattedDate = userProfile.joinDate.toLocaleDateString(

@@ -434,17 +434,6 @@
   color: #6b7280;
 }
 
-/* Loading indicator */
-.loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  font-size: 1.25rem;
-  color: #416a42;
-  font-weight: 500;
-}
-
 /* ========== Responsive Styles ========== */
 @media (max-width: 768px) {
   .calendar-header {
