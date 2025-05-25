@@ -10,20 +10,20 @@ import "./styles/Profile.css";
 
 const getLevel = (hours, t) => {
   if (hours >= 0 && hours <= 9)
-    return { label: t("Beginner"), icon: <Star size={36} /> };
+    return { label: t("profile.badges.Beginner"), icon: <Star size={36} /> };
   if (hours >= 10 && hours <= 29)
-    return { label: t("Helper"), icon: <Hand size={36} /> };
+    return { label: t("profile.badges.Helper"), icon: <Hand size={36} /> };
   if (hours >= 30 && hours <= 59)
-    return { label: t("Contributor"), icon: <UserCheck size={36} /> };
+    return { label: t("profile.badges.Contributor"), icon: <UserCheck size={36} /> };
   if (hours >= 60 && hours <= 99)
-    return { label: t("Supporter"), icon: <HeartHandshake size={36} /> };
+    return { label: t("profile.badges.Supporter"), icon: <HeartHandshake size={36} /> };
   if (hours >= 100 && hours <= 149)
-    return { label: t("Advocate"), icon: <ThumbsUp size={36} /> };
+    return { label: t("profile.badges.Advocate"), icon: <ThumbsUp size={36} /> };
   if (hours >= 150 && hours <= 199)
-    return { label: t("Champion"), icon: <ShieldCheck size={36} /> };
+    return { label: t("profile.badges.Champion"), icon: <ShieldCheck size={36} /> };
   if (hours >= 200 && hours <= 420)
-    return { label: t("Humanitarian"), icon: <Globe size={36} /> };
-  return { label: t("Lord of the deeds"), icon: <MarijuanaIcon />};
+    return { label: t("profile.badges.Humanitarian"), icon: <Globe size={36} /> };
+  return { label: t("profile.badges.Lord of the deeds"), icon: <MarijuanaIcon />};
 };
 
 const MarijuanaIcon = ({ size = 36 }) => (
@@ -204,8 +204,8 @@ function Profile() {
       } catch (error) {
         setSkills(skills);
         toast({ 
-          title: "Error", 
-          description: "Failed to add skill. Please try again.", 
+          title: t("profile.toast.errorTitle"), 
+          description: t("profile.toast.addSkillError"), 
           variant: "destructive" 
         });
       }
@@ -232,41 +232,41 @@ function Profile() {
     } catch (error) {
       setSkills(skills);
       toast({ 
-        title: "Error", 
-        description: "Failed to remove skill. Please try again.", 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.removeSkillError"), 
         variant: "destructive" 
       });
     }
   };
 
   const handlePasswordChange = async () => {
-    setPasswordChangeStatus(null);
+      (null);
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordChangeStatus({ type: "error", message: "Please fill in all password fields" });
+      setPasswordChangeStatus({ type: "error", message: t("Please fill in all password fields") });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordChangeStatus({ type: "error", message: "New passwords do not match" });
+      setPasswordChangeStatus({ type: "error", message: t("New passwords do not match") });
       return;
     }
 
     if (newPassword.length < 6) {
-      setPasswordChangeStatus({ type: "error", message: "New password must be at least 6 characters long" });
+      setPasswordChangeStatus({ type: "error", message: t("New password must be at least 6 characters long") });
       return;
     }
 
     if (newPassword === currentPassword) {
-      setPasswordChangeStatus({ type: "error", message: "New password must be different from current password" });
+      setPasswordChangeStatus({ type: "error", message: t("New password must be different from current password") });
       return;
     }
 
     try {
-      setPasswordChangeStatus({ type: "loading", message: "Changing password..." });
+      setPasswordChangeStatus({ type: "loading", message: t("Changing password...") });
       
       if (!userDocId) {
-        setPasswordChangeStatus({ type: "error", message: "User data not found" });
+        setPasswordChangeStatus({ type: "error", message: t("User data not found") });
         return;
       }
 
@@ -274,7 +274,7 @@ function Profile() {
       const userSnap = await getDoc(userRef);
       
       if (!userSnap.exists()) {
-        setPasswordChangeStatus({ type: "error", message: "User document not found" });
+        setPasswordChangeStatus({ type: "error", message: t("User document not found") });
         return;
       }
 
@@ -282,7 +282,7 @@ function Profile() {
       const storedPasswordHash = userData.passwordHash;
 
       if (!storedPasswordHash) {
-        setPasswordChangeStatus({ type: "error", message: "No password set for this user" });
+        setPasswordChangeStatus({ type: "error", message: t("No password set for this user") });
         return;
       }
 
@@ -301,7 +301,7 @@ function Profile() {
       }
 
       if (!passwordMatches) {
-        setPasswordChangeStatus({ type: "error", message: "Current password is incorrect" });
+        setPasswordChangeStatus({ type: "error", message: t("Current password is incorrect") });
         return;
       }
 
@@ -315,7 +315,7 @@ function Profile() {
         lastPasswordChange: new Date()
       });
 
-      setPasswordChangeStatus({ type: "success", message: "Password changed successfully!" });
+      setPasswordChangeStatus({ type: "success", message: t("Password changed successfully!") });
       
       setTimeout(() => {
         setCurrentPassword(""); 
@@ -325,7 +325,7 @@ function Profile() {
       }, 3000);
       
     } catch (error) {
-      setPasswordChangeStatus({ type: "error", message: "Failed to change password. Please try again." });
+      setPasswordChangeStatus({ type: "error", message: t("Failed to change password. Please try again.") });
     }
   };
 

@@ -29,13 +29,30 @@
       "removedDesc": "{{skill}} has been removed.",
       "errorTitle": "Error",
       "errorDesc": "Please check your inputs.",
-      "successTitle": "Success",
-      "successDesc": "Password updated."
+      "addSkillError": "Failed to add skill. Please try again.",
+      "removeSkillError": "Failed to remove skill. Please try again.",
+      "passwordChanged": "Password changed successfully!"
     },
-    "level": {
-      "superstar": "Superstar",
-      "active": "Active",
-      "beginner": "Beginner"
+    "errors": {
+      "fillAllFields": "Please fill in all password fields.",
+      "passwordMismatch": "New passwords do not match.",
+      "passwordTooShort": "New password must be at least 6 characters long.",
+      "passwordSame": "New password must be different from current password.",
+      "userNotFound": "User data not found.",
+      "documentNotFound": "User document not found.",
+      "noPasswordSet": "No password set for this user.",
+      "incorrectCurrent": "Current password is incorrect.",
+      "changeFailed": "Failed to change password. Please try again."
+    },
+    "badges": {
+      "Beginner": "Beginner",
+      "Helper": "Helper",
+      "Contributor": "Contributor",
+      "Supporter": "Supporter",
+      "Advocate": "Advocate",
+      "Champion": "Champion",
+      "Humanitarian": "Humanitarian",
+      "Lord of the deeds": "Lord of the deeds"
     }
   }
 }
