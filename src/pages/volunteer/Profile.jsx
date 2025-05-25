@@ -39,116 +39,6 @@ const MarijuanaIcon = ({ size = 36 }) => (
   </svg>
 );
 
-// Calculate total hours and sessions from appointmentsHistory
-const calculateStatsFromHistory = (appointmentsHistory) => {
-  if (!appointmentsHistory || !Array.isArray(appointmentsHistory)) {
-    return { totalHours: 0, totalSessions: 0, unsavedAppointments: [] };
-  }
-
-  let totalHours = 0;
-  let totalSessions = 0;
-  let unsavedAppointments = [];
-
-  appointmentsHistory.forEach((appointment, index) => {
-    // Skip if already saved (already counted in database totals)
-    if (appointment.saved === true) {
-      return;
-    }
-    
-    // Track unsaved appointments for later update
-    unsavedAppointments.push(index);
-    
-    // Only count attended appointments
-    if (appointment.attendanceStatus === 'attended') {
-      totalSessions++;
-      
-      // Calculate hours for this appointment
-      if (appointment.startTime && appointment.endTime) {
-        try {
-          // Parse times - handling both "9:00" and "09:00" formats
-          const parseTime = (timeStr) => {
-            const parts = timeStr.split(':');
-            return {
-              hours: parseInt(parts[0], 10),
-              minutes: parseInt(parts[1] || '0', 10)
-            };
-          };
-          
-          const start = parseTime(appointment.startTime);
-          const end = parseTime(appointment.endTime);
-          
-          // Convert to minutes for easier calculation
-          const startMinutes = start.hours * 60 + start.minutes;
-          const endMinutes = end.hours * 60 + end.minutes;
-          
-          // Calculate duration in hours
-          const durationMinutes = endMinutes - startMinutes;
-          const durationHours = durationMinutes / 60;
-          
-          // Add to total hours if duration is positive
-          if (durationHours > 0) {
-            totalHours += durationHours;
-          }
-        } catch (error) {
-          // Silently continue
-        }
-      }
-    }
-  });
-
-  // Round total hours to nearest integer since database expects int
-  const result = { 
-    totalHours: Math.round(totalHours), // Round to nearest whole number
-    totalSessions,
-    unsavedAppointments // Array of indices that need to be marked as saved
-  };
-  
-  return result;
-};
-
-// Update volunteer stats in database
-const updateVolunteerStats = async (volunteerId, stats, appointmentsHistory) => {
-  try {
-    const volunteerRef = doc(db, "volunteers", volunteerId);
-    
-    // Get current totals to add to them
-    const volunteerDoc = await getDoc(volunteerRef);
-    const currentData = volunteerDoc.data();
-    const currentTotalHours = currentData.totalHours || 0;
-    const currentTotalSessions = currentData.totalSessions || 0;
-    
-    // Calculate new totals
-    const newTotalHours = currentTotalHours + stats.totalHours;
-    const newTotalSessions = currentTotalSessions + stats.totalSessions;
-    
-    // Mark unsaved appointments as saved
-    const updatedAppointments = [...appointmentsHistory];
-    stats.unsavedAppointments.forEach(index => {
-      updatedAppointments[index] = {
-        ...updatedAppointments[index],
-        saved: true
-      };
-    });
-    
-    const updateData = {
-      totalHours: parseInt(newTotalHours, 10), // Ensure it's an integer
-      totalSessions: parseInt(newTotalSessions, 10), // Ensure it's an integer
-      appointmentsHistory: updatedAppointments,
-      lastCalculated: new Date()
-    };
-    
-    await updateDoc(volunteerRef, updateData);
-    
-    // Return the new totals
-    return {
-      totalHours: newTotalHours,
-      totalSessions: newTotalSessions
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
 function Profile() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -238,27 +128,8 @@ function Profile() {
         const volunteerDoc = volunteerSnapshot.docs[0];
         const volunteerData = volunteerDoc.data();
         
-        // Check for both old and new field names
-        const appointmentsData = volunteerData.appointmentsHistory || volunteerData.appointmentHistory;
-
         // Store the volunteer document ID for updates
         setVolunteerId(volunteerDoc.id);
-
-        // Calculate stats from appointmentsHistory (only unsaved appointments)
-        const appointmentsHistory = volunteerData.appointmentsHistory || [];
-        const calculatedStats = calculateStatsFromHistory(appointmentsHistory);
-
-        // Check if we need to update the database (if there are unsaved appointments)
-        const needsUpdate = calculatedStats.unsavedAppointments.length > 0;
-
-        let finalTotalHours = volunteerData.totalHours || 0;
-        let finalTotalSessions = volunteerData.totalSessions || 0;
-
-        if (needsUpdate) {
-          const updatedTotals = await updateVolunteerStats(volunteerDoc.id, calculatedStats, appointmentsHistory);
-          finalTotalHours = updatedTotals.totalHours;
-          finalTotalSessions = updatedTotals.totalSessions;
-        }
 
         // Get user document for username
         const userRef = doc(db, "users", volunteerData.userId);
@@ -276,16 +147,15 @@ function Profile() {
           username = userData.username || "@unknown";
         }
 
-        // Combine data with final stats
+        // Get the direct fields without any calculations
         const profileData = {
           fullName: volunteerData.fullName || "",
           username: username,
           phone: volunteerData.phoneNumber || "",
           joinDate: volunteerData.createdAt?.toDate() || new Date(),
-          totalHours: finalTotalHours,
-          completedSessions: finalTotalSessions,
-          skills: volunteerData.skills || ["Reading", "Music", "Companionship"],
-          appointmentsHistory: appointmentsHistory
+          totalHours: volunteerData.totalHours || 0,
+          completedSessions: volunteerData.totalSessions || 0,
+          skills: volunteerData.skills || ["Reading", "Music", "Companionship"]
         };
 
         setUserProfile(profileData);
@@ -300,8 +170,6 @@ function Profile() {
 
     fetchUserData();
   }, []);
-
-  // Removed recalculateStats function
 
   useEffect(() => {
     if (userProfile?.totalHours) {
