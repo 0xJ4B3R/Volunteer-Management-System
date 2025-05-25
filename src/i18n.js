@@ -1,6 +1,8 @@
   import i18n from 'i18next';
   import { initReactI18next } from 'react-i18next';
   import LanguageDetector from 'i18next-browser-languagedetector';
+
+
   //EN TRANSLATIONS:
   import LoginEN from './locales/en/Login.json';
   import ForgotPasswordEN from './locales/en/ForgotPassword.json';
@@ -9,6 +11,8 @@
   import CalendarEN from './locales/en/Calendar.json';
   import ProfileEN from './locales/en/Profile.json';
   import AppointmentsEN from './locales/en/Appointments.json';
+  import AttendanceEN from './locales/en/Attendance.json';
+  
   //HE TRANSLATIONS:
   import LoginHE from './locales/he/Login.json';
   import ForgotPasswordHE from './locales/he/ForgotPassword.json';
@@ -17,6 +21,7 @@
   import CalendarHE from './locales/he/Calendar.json';
   import ProfileHE from './locales/he/Profile.json';
   import AppointmentsHE from './locales/he/Appointments.json';
+  import AttendanceHE from './locales/he/Attendance.json';
 
   const resources = {
     en: {
@@ -27,7 +32,8 @@
         ...sidebarEN,
         ...CalendarEN,
         ...ProfileEN,
-        ...AppointmentsEN
+        ...AppointmentsEN,
+        ...AttendanceEN
       }
     },
     he: {
@@ -38,7 +44,8 @@
         ...sidebarHE,
         ...CalendarHE,
         ...ProfileHE,
-        ...AppointmentsHE
+        ...AppointmentsHE,
+        ...AttendanceHE
       }
     }
   };
