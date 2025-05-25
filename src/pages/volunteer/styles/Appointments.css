@@ -12,12 +12,12 @@
 .profile-title {
   font-size: 1.75rem;
   font-weight: 600;
-  color: #1eb66d;
+  color: #305531;
   margin-bottom: 0.5rem;
 }
 .profile-subtitle {
   font-size: 1rem;
-  color: #3b3b3b;
+  color: #305531;
 }
 
 .profile-tabs {
@@ -76,10 +76,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid #cbd5c0;
+  border: 1px solid #305531;
   border-radius: 8px;
   padding: 0.5rem 1rem;
-  background: #fffdf4;
+  background: #cbd5c0;
   flex: 1;
 }
 .search-bar input {
@@ -88,19 +88,18 @@
   background: none;
   flex: 1;
   font-size: 1rem;
-  color: #1a4731;
+  color: #000000;
 }
 
 .filter-group {
   position: relative;
 }
 .filter-button {
-  background: #f6ead1;
-  border: 1px solid #cbd5c0;
+  background-color: #fff;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   cursor: pointer;
-  color: #1a4731;
+  color: #000000;
   font-weight: 500;
   display: flex;
   align-items: center;
