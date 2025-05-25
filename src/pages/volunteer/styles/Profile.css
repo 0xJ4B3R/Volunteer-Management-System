@@ -7,6 +7,12 @@
   background-color: transparent;
 }
 
+.profile-content {
+  background: #F2F4F6;
+  background: linear-gradient(90deg, rgba(242, 244, 246, 1) 0%, rgba(221, 240, 229, 1) 100%, rgba(237, 221, 83, 1) 100%);
+}
+
+
 /* === Header === */
 .profile-header {
   margin-bottom: 2rem;
@@ -179,6 +185,11 @@
   color: #fff;
   font-size: 36px;
   margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  margin-top: 0.55rem;
 }
 .stat-label {
   font-size: 0.95rem;
@@ -314,6 +325,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 2rem;
+  background-color: transparent;
 }
 
 .password-status {

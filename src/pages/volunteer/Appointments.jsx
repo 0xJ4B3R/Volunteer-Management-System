@@ -35,6 +35,16 @@ const initialAppointments = [
     note: "Played piano",
     category: "Music",
     status: "Completed"
+  },
+  {
+    id: 4,
+    date: "May 15",
+    day: "Sat",
+    time: "2:00 PM - 3:30 PM",
+    location: "Recreation Area",
+    note: "Board games",
+    category: "Games",
+    status: "Pending"
   }
 ];
 
