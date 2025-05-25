@@ -601,3 +601,296 @@
 .load-more-btn:hover {
   color: #111827;
 }
+
+/* Profile Tabs Styling */
+.profile-tabs {
+  margin-bottom: 1.5rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-item:hover {
+  color: #111827;
+}
+
+.tab-item.active {
+  color: #111827;
+  border-bottom-color: #111827;
+  font-weight: 600;
+}
+
+.rtl-tabs .tabs {
+  flex-direction: row-reverse;
+}
+
+@media (max-width: 480px) {
+  .tab-item {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Responsive Grid Layout */
+.responsive-content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-content-grid {
+    grid-template-columns: 3fr 2fr;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-content-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar-area {
+    order: -1; /* Show sidebar first on mobile */
+  }
+}
+
+/* Responsive Detail Row */
+.detail-row-responsive {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 640px) {
+  .detail-row-responsive {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+/* Detail Divider */
+.detail-divider {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* Action Buttons Responsive */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 480px) {
+  .action-buttons {
+    flex-direction: row;
+  }
+}
+
+/* Button Text Responsiveness */
+.btn-text {
+  display: none;
+}
+
+@media (min-width: 375px) {
+  .btn-text {
+    display: inline;
+  }
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.stat-icon-wrapper {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+}
+
+.stat-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #6b7280;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+/* Upcoming Session Improvements */
+.upcoming-session-item {
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.upcoming-session-title {
+  font-weight: 500;
+  color: #111827;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.upcoming-session-meta {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
+}
+
+.upcoming-session-status {
+  margin-top: 0.5rem;
+}
+
+.status-badge-small {
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Sidebar Adjustments */
+.sidebar-card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #f3f4f6;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem 0;
+}
+
+/* Session Card Improvements */
+.session-card {
+  height: 100%;
+}
+
+@media (max-width: 767px) {
+  .session-card-content {
+    padding: 1.25rem;
+  }
+  
+  .session-card-title {
+    font-size: 1.125rem;
+  }
+  
+  .session-card-description {
+    font-size: 0.875rem;
+  }
+}
+
+/* Add these to existing styles for status badges */
+.status-not-confirmed {
+  color: #d97706;
+  background-color: #fef3c7;
+}
+
+.status-confirmed {
+  color: #059669;
+  background-color: #d1fae5;
+}
+
+.status-cancelled {
+  color: #dc2626;
+  background-color: #fee2e2;
+}
+
+.status-attended {
+  color: #2563eb;
+  background-color: #dbeafe;
+}
+
+.status-missed {
+  color: #dc2626;
+  background-color: #fee2e2;
+}
+
+/* Responsive Alert Box */
+.alert-box {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+@media (min-width: 480px) {
+  .alert-box {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+/* Responsive Loading Button */
+.load-more-btn {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  /* Status Badge on Mobile */
+  .status-badge {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+  }
+  
+  /* Status Row on Mobile */
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
