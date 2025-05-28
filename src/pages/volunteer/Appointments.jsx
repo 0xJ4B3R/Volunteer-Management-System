@@ -68,6 +68,7 @@ export default function Appointments() {
             status: userVolunteer ? userVolunteer.status : (data.isOpen ? "Open" : "Closed"),
             maxCapacity: data.maxCapacity,
             volunteers: data.volunteers || [],
+            volunteerRequests: data.volunteerRequests || [],
             isOpen: data.isOpen,
             residentIds: data.residentIds || [],
             rawData: data // Keep the raw data for reference
@@ -150,10 +151,33 @@ export default function Appointments() {
       
       // Find the volunteer entry to remove by username
       const volunteerToRemove = appointment.volunteers.find(v => v.username === username);
+      
       if (volunteerToRemove) {
-        await updateDoc(appointmentRef, {
+        // Create update object to remove from both arrays
+        const updateData = {
           volunteers: arrayRemove(volunteerToRemove)
-        });
+        };
+        
+        // Also remove from volunteerRequests if the user ID exists there
+        // Check different possible ID formats that might be stored in volunteerRequests
+        const possibleIds = [
+          userId,
+          volunteerToRemove.id,
+          username,
+          volunteerToRemove.username
+        ].filter(Boolean); // Remove any null/undefined values
+        
+        // Find which ID format is actually in the volunteerRequests array
+        const userIdInRequests = possibleIds.find(id => 
+          appointment.volunteerRequests?.includes(id)
+        );
+        
+        if (userIdInRequests) {
+          updateData.volunteerRequests = arrayRemove(userIdInRequests);
+        }
+        
+        // Perform the update
+        await updateDoc(appointmentRef, updateData);
         
         // Update local state
         setAppointments(prev => prev.map(a => {
@@ -161,16 +185,20 @@ export default function Appointments() {
             return {
               ...a,
               volunteers: a.volunteers.filter(v => v.username !== username),
+              volunteerRequests: a.volunteerRequests.filter(reqId => reqId !== userIdInRequests),
               status: "Open" // Reset status for this user's view
             };
           }
           return a;
         }));
+        
+        console.log(`Successfully removed user from both volunteers and volunteerRequests arrays`);
       }
       
       if (selected && selected.id === id) setSelected(null);
     } catch (error) {
       console.error("Error canceling appointment:", error);
+      alert("Error canceling appointment. Please try again.");
     }
   };
 
