@@ -9,19 +9,19 @@ import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Profile.css";
 
 const getLevel = (hours, t) => {
-  if (hours >= 0 && hours <= 9)
+  if (hours >= 0 && hours < 9)
     return { label: t("profile.badges.Beginner"), icon: <Star size={36} /> };
-  if (hours >= 10 && hours <= 29)
+  if (hours >= 10 && hours < 29)
     return { label: t("profile.badges.Helper"), icon: <Hand size={36} /> };
-  if (hours >= 30 && hours <= 59)
+  if (hours >= 30 && hours < 59)
     return { label: t("profile.badges.Contributor"), icon: <UserCheck size={36} /> };
-  if (hours >= 60 && hours <= 99)
+  if (hours >= 60 && hours < 99)
     return { label: t("profile.badges.Supporter"), icon: <HeartHandshake size={36} /> };
-  if (hours >= 100 && hours <= 149)
+  if (hours >= 100 && hours < 149)
     return { label: t("profile.badges.Advocate"), icon: <ThumbsUp size={36} /> };
-  if (hours >= 150 && hours <= 199)
+  if (hours >= 150 && hours < 199)
     return { label: t("profile.badges.Champion"), icon: <ShieldCheck size={36} /> };
-  if (hours >= 200 && hours <= 420)
+  if (hours >= 200 && hours < 420)
     return { label: t("profile.badges.Humanitarian"), icon: <Globe size={36} /> };
   return { label: t("profile.badges.Lord of the deeds"), icon: <MarijuanaIcon />};
 };
@@ -424,7 +424,7 @@ function Profile() {
                   </svg>
                   <div className="hours-display">
                     <span className="hours-number">{userProfile.totalHours}</span>
-                    <span className="hours-label">{t("profile.totalHours")}</span>
+                    <span className="hours-label">{t("profile.Hours")}</span>
                   </div>
                 </div>
               </div>
