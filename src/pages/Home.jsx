@@ -82,7 +82,7 @@ const Homepage = () => {
       {/* Header */}
       <header className="header">
         <nav className="nav">
-          <a href="#" className="logo">VolunteerHub</a>
+          <a href="#" className="logo">Neveh Horim</a>
           <ul className="nav-links">
             <li><a href="#features" onClick={(e) => handleSmoothScroll(e, '#features')}>Features</a></li>
             <li><a href="#how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')}>How It Works</a></li>
@@ -96,8 +96,8 @@ const Homepage = () => {
       {/* Hero Section */}
       <section className="hero">
         <div className="hero-content">
-          <h1>Making a Difference Together</h1>
-          <p>Connect with meaningful volunteer opportunities and manage your community service with ease. Join thousands of volunteers making an impact every day.</p>
+          <h1>Dedicated Care In a Family Atmosphere</h1>
+          <p>We believe that every person, regardless of who they are, deserves to age with dignity while preserving their respect, independence, and quality of life. We believe that every resident in the home has the right to privacy and dignity both during care and beyond.</p>
           <div className="cta-buttons">
             <button onClick={handleGetStarted} className="btn btn-primary">
               <span>Get Started</span>
@@ -114,8 +114,7 @@ const Homepage = () => {
       <section className="features" id="features">
         <div className="container">
           <div className="section-header fade-in">
-            <h2>Why Choose VolunteerHub?</h2>
-            <p>Our platform makes volunteering accessible, organized, and impactful for everyone involved.</p>
+            <h2>The platform makes volunteering accessible, organized, and impactful for everyone involved.</h2>
           </div>
           <div className="features-grid">
             <div 
@@ -127,29 +126,7 @@ const Homepage = () => {
                 📅
               </div>
               <h3>Smart Scheduling</h3>
-              <p>Easily browse and sign up for volunteer opportunities that fit your schedule. Get real-time updates and confirmations.</p>
-            </div>
-            <div 
-              className="feature-card fade-in"
-              onMouseEnter={handleCardMouseEnter}
-              onMouseLeave={handleCardMouseLeave}
-            >
-              <div className="feature-icon">
-                👥
-              </div>
-              <h3>Community Connection</h3>
-              <p>Connect with like-minded volunteers and organizations. Build lasting relationships while making a difference.</p>
-            </div>
-            <div 
-              className="feature-card fade-in"
-              onMouseEnter={handleCardMouseEnter}
-              onMouseLeave={handleCardMouseLeave}
-            >
-              <div className="feature-icon">
-                📊
-              </div>
-              <h3>Impact Tracking</h3>
-              <p>Track your volunteer hours, see your impact, and earn recognition for your community service contributions.</p>
+              <p>Easily browse and sign up for volunteer opportunities that fit your schedule.</p>
             </div>
             <div 
               className="feature-card fade-in"
@@ -188,62 +165,6 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="stats">
-        <div className="container">
-          <div className="stats-grid">
-            <div className="stat-item fade-in">
-              <h3>5,000+</h3>
-              <p>Active Volunteers</p>
-            </div>
-            <div className="stat-item fade-in">
-              <h3>250+</h3>
-              <p>Partner Organizations</p>
-            </div>
-            <div className="stat-item fade-in">
-              <h3>50,000+</h3>
-              <p>Hours Contributed</p>
-            </div>
-            <div className="stat-item fade-in">
-              <h3>1,000+</h3>
-              <p>Lives Impacted</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="how-it-works" id="how-it-works">
-        <div className="container">
-          <div className="section-header fade-in">
-            <h2>How It Works</h2>
-            <p>Getting started with volunteer work has never been easier. Follow these simple steps to begin making a difference.</p>
-          </div>
-          <div className="steps">
-            <div className="step fade-in">
-              <div className="step-number">1</div>
-              <h3>Create Your Profile</h3>
-              <p>Sign up and tell us about your interests, skills, and availability. This helps us match you with the perfect opportunities.</p>
-            </div>
-            <div className="step fade-in">
-              <div className="step-number">2</div>
-              <h3>Browse Opportunities</h3>
-              <p>Explore volunteer opportunities in your area. Filter by cause, time commitment, and skills needed to find your perfect match.</p>
-            </div>
-            <div className="step fade-in">
-              <div className="step-number">3</div>
-              <h3>Sign Up & Attend</h3>
-              <p>Register for sessions that interest you. Get confirmation, reminders, and all the details you need to make an impact.</p>
-            </div>
-            <div className="step fade-in">
-              <div className="step-number">4</div>
-              <h3>Track Your Impact</h3>
-              <p>Log your hours, share your experiences, and see the difference you're making in your community over time.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="footer" id="contact">
         <div className="footer-content">
@@ -255,7 +176,7 @@ const Homepage = () => {
             <a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>Contact</a>
           </div>
           <div className="footer-bottom">
-            <p>&copy; 2025 VolunteerHub. All rights reserved. Making communities stronger, one volunteer at a time.</p>
+            <p>&copy; 2025 Neveh Horim. All rights reserved. Making communities stronger, one volunteer at a time.</p>
           </div>
         </div>
       </footer>
