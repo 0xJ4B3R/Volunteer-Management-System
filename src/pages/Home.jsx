@@ -186,7 +186,7 @@ const Homepage = () => {
                 </div>
                 <div className="contact-details">
                   <h3>Location</h3>
-                  <p>Ma'ale Ze'ev St 3<br />Jerusalem, Israel</p>
+                  <p>Ma'ale Ze'ev Street 3<br />Jerusalem, Israel</p>
                 </div>
               </div>
               <div className="contact-item">

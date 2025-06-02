@@ -1,29 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Clock, 
-  TrendingUp, 
-  Award, 
-  Calendar,
-  CheckCircle2,
-  AlertCircle,
-  ChevronRight,
-  CalendarDays,
-  Users,
-  Activity,
-  FileText,
-  Star,
-  Target,
-  ArrowUpRight,
-  ArrowDownRight,
-  Hand,
-  UserCheck,
-  HeartHandshake,
-  ThumbsUp,
-  ShieldCheck,
-  Globe,
-  Zap,
-  TrendingDown
-} from 'lucide-react';
+import { Clock, TrendingUp, Award, Calendar, CheckCircle2, AlertCircle, ChevronRight, CalendarDays, Users, Activity, FileText, Star, Target, ArrowUpRight, ArrowDownRight, Hand, UserCheck, HeartHandshake, ThumbsUp, ShieldCheck, Globe, Zap, TrendingDown } from 'lucide-react';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { db } from '@/lib/firebase';
 import './styles/Dashboard.css';
 
 // Custom Marijuana Icon component
@@ -39,25 +17,14 @@ const Dashboard = () => {
   const [hoursProgress, setHoursProgress] = useState(0);
   const [sessionsProgress, setSessionsProgress] = useState(0);
   const [cardColors, setCardColors] = useState([]);
-
-  const userData = {
-    name: 'John',
-    totalHours: 420,
-    hoursChange: 12.5,
-    attendanceRate: 92.3,
-    attendanceChange: 2.1,
-    sessionsCompleted: 48,
-    sessionsChange: 3,
-    currentStreak: 12,
-    streakChange: 2,
-    volunteerStatus: 'active',
-    nextSession: '2025-05-24',
-    lastSession: '2025-05-22',
-    memberSince: '2024-01-15',
-    currentRank: 'Gold Volunteer',
-    pointsToNextRank: 150,
-    previousHours: 59 // Previous hours to check for level advancement
-  };
+  const [userData, setUserData] = useState({
+    name: 'Volunteer',
+    totalHours: 0,
+    totalSessions: 0,
+    previousHours: 0
+  });
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   // Preset color combinations for cards
   const colorPresets = [
@@ -89,12 +56,6 @@ const Dashboard = () => {
     return { label: "Lord of the deeds", icon: <MarijuanaIcon />, nextLevel: null, hoursToNext: 0 };
   };
 
-  const currentLevel = getLevel(userData.totalHours);
-  const previousLevel = getLevel(userData.previousHours);
-
-  // Check if user reached a new level
-  const hasLeveledUp = currentLevel.label !== previousLevel.label;
-
   // Shuffle array helper function
   const shuffleArray = (array) => {
     const shuffled = [...array];
@@ -105,48 +66,285 @@ const Dashboard = () => {
     return shuffled;
   };
 
-  useEffect(() => {
-    // Shuffle colors on component mount
-    const shuffledColors = shuffleArray(colorPresets).slice(0, 3);
-    setCardColors(shuffledColors);
+  // Fetch volunteer data
+  const fetchVolunteerData = async () => {
+    try {
+      // Get user ID from localStorage
+      const userId = localStorage.getItem('userId');
+      const username = localStorage.getItem('username');
+      
+      if (!userId) {
+        console.log("No user ID found");
+        return;
+      }
 
+      console.log("Fetching volunteer data for user:", userId);
+
+      // Get volunteer document by userId
+      const volunteersRef = collection(db, "volunteers");
+      const q = query(volunteersRef, where("userId", "==", userId));
+      const volunteerSnapshot = await getDocs(q);
+      
+      if (!volunteerSnapshot.empty) {
+        const volunteerDoc = volunteerSnapshot.docs[0];
+        const volunteerData = volunteerDoc.data();
+        
+        console.log("Volunteer data:", volunteerData);
+        
+        setUserData({
+          name: username || volunteerData.fullName || 'Volunteer',
+          totalHours: volunteerData.totalHours || 0,
+          totalSessions: volunteerData.totalSessions || 0,
+          previousHours: volunteerData.previousHours || 0,
+          volunteerId: volunteerDoc.id
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching volunteer data:", error);
+    }
+  };
+
+  // Fetch upcoming sessions from calendar_slots - simplified
+  const fetchUpcomingSessions = async () => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+
+      console.log("Fetching upcoming sessions...");
+      console.log("User ID:", userId);
+
+      const calendarSlotsRef = collection(db, "calendar_slots");
+      const q = query(calendarSlotsRef);
+      
+      const snapshot = await getDocs(q);
+      const sessions = [];
+
+      console.log("Total calendar slots found:", snapshot.size);
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log("Processing slot:", doc.id, data);
+        
+        // Check status first
+        if (data.status === "inProgress") {
+          console.log("Found inProgress slot:", doc.id);
+          
+          // Check if volunteers array exists and current user is approved
+          if (data.volunteers && Array.isArray(data.volunteers)) {
+            console.log("Volunteers array:", data.volunteers);
+            
+            const userVolunteer = data.volunteers.find(v => {
+              console.log("Checking volunteer:", v, "against userId:", userId);
+              return v.id === userId && v.status === "approved";
+            });
+            
+            if (userVolunteer) {
+              console.log("Found approved volunteer for user:", userVolunteer);
+              
+              // Parse date string (format: "2025-6-5")
+              let sessionDate;
+              if (data.date) {
+                try {
+                  const [year, month, day] = data.date.split('-');
+                  sessionDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  console.log("Parsed session date:", sessionDate);
+                } catch (error) {
+                  console.log("Error parsing date:", error);
+                  sessionDate = new Date();
+                }
+              } else {
+                sessionDate = new Date();
+              }
+              
+              const now = new Date();
+              now.setHours(0, 0, 0, 0);
+              sessionDate.setHours(0, 0, 0, 0);
+              
+              console.log("Comparing dates - Session:", sessionDate, "Now:", now);
+              
+              // Only show future sessions
+              if (sessionDate >= now) {
+                const startTime = data.startTime || "Time TBD";
+                const endTime = data.endTime || "";
+                const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
+                
+                const session = {
+                  id: doc.id,
+                  title: data.customLabel || "Session",
+                  date: sessionDate.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  }),
+                  time: timeRange,
+                  location: data.location || "Location TBD",
+                  fullDate: sessionDate
+                };
+                
+                console.log("Adding upcoming session:", session);
+                sessions.push(session);
+              } else {
+                console.log("Session is in the past, skipping");
+              }
+            } else {
+              console.log("User not found or not approved in volunteers array");
+            }
+          } else {
+            console.log("No volunteers array found");
+          }
+        } else {
+          console.log("Slot status is not inProgress:", data.status);
+        }
+      });
+
+      // Sort by date and take first 3
+      sessions.sort((a, b) => a.fullDate - b.fullDate);
+
+      console.log("Final upcoming sessions:", sessions.slice(0, 3));
+      setUpcomingSessions(sessions.slice(0, 3));
+    } catch (error) {
+      console.error("Error fetching upcoming sessions:", error);
+    }
+  };
+
+  // Fetch recent activity from attendance collection
+  const fetchRecentActivity = async () => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+
+      console.log("Fetching recent activity from attendance...");
+
+      const attendanceRef = collection(db, "attendance");
+      const q = query(attendanceRef, limit(5));
+      
+      const snapshot = await getDocs(q);
+      const activities = [];
+
+      // Check for level up first
+      const currentLevel = getLevel(userData.totalHours);
+      const previousLevel = getLevel(userData.previousHours);
+      const hasLeveledUp = currentLevel.label !== previousLevel.label;
+
+      if (hasLeveledUp) {
+        activities.push({
+          id: 'level-up',
+          type: 'level-up',
+          text: `🎉 Level up! You're now a ${currentLevel.label}!`,
+          time: 'Recent',
+          icon: Award,
+          iconColor: 'dash-icon-gold'
+        });
+      }
+
+      // Add the latest 5 attendance records
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log("Attendance data:", data);
+        
+        const status = data.status || "Unknown";
+        const notes = data.notes || "";
+        
+        // Parse confirmedAt timestamp
+        let timeAgo = "Recently";
+        if (data.confirmedAt) {
+          try {
+            const confirmedDate = data.confirmedAt.toDate ? data.confirmedAt.toDate() : new Date(data.confirmedAt);
+            const now = new Date();
+            const diffTime = Math.abs(now - confirmedDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) timeAgo = 'Today';
+            else if (diffDays === 1) timeAgo = '1 day ago';
+            else if (diffDays < 7) timeAgo = `${diffDays} days ago`;
+            else if (diffDays < 14) timeAgo = '1 week ago';
+            else timeAgo = `${Math.floor(diffDays / 7)} weeks ago`;
+          } catch (error) {
+            console.log("Error parsing confirmedAt:", error);
+          }
+        }
+
+        // Create activity text based on status
+        let activityText = "";
+        let icon = Activity;
+        let iconColor = "dash-icon-blue";
+
+        if (status === "present") {
+          activityText = `Marked as present${notes ? ` - ${notes}` : ''}`;
+          icon = CheckCircle2;
+          iconColor = "dash-icon-green";
+        } else if (status === "late") {
+          activityText = `Marked as late${notes ? ` - ${notes}` : ''}`;
+          icon = Clock;
+          iconColor = "dash-icon-amber";
+        } else if (status === "absent") {
+          activityText = `Marked as absent${notes ? ` - ${notes}` : ''}`;
+          icon = AlertCircle;
+          iconColor = "dash-icon-red";
+        } else {
+          activityText = `Attendance: ${status}${notes ? ` - ${notes}` : ''}`;
+        }
+
+        activities.push({
+          id: doc.id,
+          type: status,
+          text: activityText,
+          time: timeAgo,
+          icon: icon,
+          iconColor: iconColor
+        });
+      });
+
+      console.log("Recent activity from attendance:", activities);
+      setRecentActivity(activities);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      
+      // Fallback activity data
+      setRecentActivity([
+        { id: 'fallback-1', type: 'present', text: 'Recent attendance activity', time: '2 days ago', icon: CheckCircle2, iconColor: 'dash-icon-green' }
+      ]);
+    }
+  };
+
+  useEffect(() => {
+    const initializeData = async () => {
+      setLoading(true);
+      
+      // Shuffle colors
+      const shuffledColors = shuffleArray(colorPresets).slice(0, 3);
+      setCardColors(shuffledColors);
+      
+      // Fetch all data
+      await fetchVolunteerData();
+      await fetchUpcomingSessions();
+      
+      setLoading(false);
+    };
+
+    initializeData();
+  }, []);
+
+  // Fetch recent activity after userData is loaded
+  useEffect(() => {
+    if (userData.volunteerId || userData.totalHours > 0) {
+      fetchRecentActivity();
+    }
+  }, [userData]);
+
+  // Update progress bars when data changes
+  useEffect(() => {
     if (userData.totalHours) {
       const value = Math.min(userData.totalHours, 100);
       setTimeout(() => setHoursProgress((value / 100) * 565.48), 200);
     }
     
-    if (userData.sessionsCompleted) {
-      const maxSessions = 60; // Assuming 60 is the max for visual purposes
-      const value = Math.min(userData.sessionsCompleted, maxSessions);
+    if (userData.totalSessions) {
+      const maxSessions = 60;
+      const value = Math.min(userData.totalSessions, maxSessions);
       setTimeout(() => setSessionsProgress((value / maxSessions) * 100), 400);
     }
-  }, [userData.totalHours, userData.sessionsCompleted]);
-
-  const baseRecentActivity = [
-    { id: 2, type: 'signup', text: 'Signed up for Community Garden', time: '1 day ago', icon: Calendar, iconColor: 'dash-icon-blue' },
-    { id: 3, type: 'achievement', text: 'Earned "Dedicated Helper" badge', time: '3 days ago', icon: Award, iconColor: 'dash-icon-amber' },
-    { id: 4, type: 'cancel', text: 'Cancelled Beach Cleanup session', time: '5 days ago', icon: AlertCircle, iconColor: 'dash-icon-red' },
-    { id: 5, type: 'rating', text: 'Received 5-star rating from coordinator', time: '1 week ago', icon: Star, iconColor: 'dash-icon-amber' },
-    { id: 6, type: 'attendance', text: 'Completed Park Maintenance', time: '2 weeks ago', icon: CheckCircle2, iconColor: 'dash-icon-green' }
-  ];
-
-  // Create recent activity with level up notification if applicable
-  const recentActivity = hasLeveledUp 
-    ? [
-        { id: 1, type: 'level-up', text: `Level up! You're now a ${currentLevel.label}`, time: '2 hours ago', icon: Award, iconColor: 'dash-icon-gold' },
-        { id: 7, type: 'attendance', text: 'Attended Food Bank Distribution', time: '2 hours ago', icon: CheckCircle2, iconColor: 'dash-icon-green' },
-        ...baseRecentActivity.slice(0, 3)
-      ]
-    : [
-        { id: 7, type: 'attendance', text: 'Attended Food Bank Distribution', time: '2 hours ago', icon: CheckCircle2, iconColor: 'dash-icon-green' },
-        ...baseRecentActivity.slice(0, 4)
-      ];
-
-  const upcomingSessions = [
-    { id: 1, title: 'Senior Care Visit', date: 'Tomorrow', time: '2:00 PM - 4:00 PM', location: 'Sunset Home' },
-    { id: 2, title: 'Library Reading Program', date: 'May 26', time: '10:00 AM - 12:00 PM', location: 'City Library' },
-    { id: 3, title: 'Park Cleanup', date: 'May 28', time: '8:00 AM - 11:00 AM', location: 'Central Park' }
-  ];
+  }, [userData.totalHours, userData.totalSessions]);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1000);
@@ -166,18 +364,7 @@ const Dashboard = () => {
     return 'Good evening';
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  };
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      active: { class: 'dash-badge-active', text: 'Active' },
-      inactive: { class: 'dash-badge-inactive', text: 'Inactive' },
-      pending: { class: 'dash-badge-pending', text: 'Pending' }
-    };
-    return badges[status] || badges.pending;
-  };
+  const currentLevel = getLevel(userData.totalHours);
 
   if (loading) {
     return (
@@ -261,7 +448,7 @@ const Dashboard = () => {
             </div>
             <div className="dash-sessions-content">
               <div className="dash-sessions-display">
-                <span className="dash-sessions-number">{userData.sessionsCompleted}</span>
+                <span className="dash-sessions-number">{userData.totalSessions}</span>
               </div>
               <div className="dash-sessions-progress">
                 <div className="dash-sessions-progress-bar">
@@ -365,20 +552,26 @@ const Dashboard = () => {
                 </a>
               </div>
               <div className="dash-upcoming-list">
-                {upcomingSessions.map((session) => (
-                  <div key={session.id} className="dash-upcoming-item">
-                    <div className="dash-upcoming-item-header">
-                      <h3 className="dash-upcoming-item-title">{session.title}</h3>
-                      <span className="dash-upcoming-item-date">{session.date}</span>
-                    </div>
-                    <div className="dash-upcoming-item-details">
-                      <div className="dash-upcoming-detail">
-                        <Clock className="dash-upcoming-detail-icon" />
-                        <span>{session.time}</span>
+                {upcomingSessions.length > 0 ? (
+                  upcomingSessions.map((session) => (
+                    <div key={session.id} className="dash-upcoming-item">
+                      <div className="dash-upcoming-item-header">
+                        <h3 className="dash-upcoming-item-title">{session.title}</h3>
+                        <span className="dash-upcoming-item-date">{session.date}</span>
+                      </div>
+                      <div className="dash-upcoming-item-details">
+                        <div className="dash-upcoming-detail">
+                          <Clock className="dash-upcoming-detail-icon" />
+                          <span>{session.time}</span>
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="dash-upcoming-empty">
+                    <p>No upcoming sessions</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
