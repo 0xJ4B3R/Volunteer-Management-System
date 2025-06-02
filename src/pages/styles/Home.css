@@ -202,12 +202,58 @@
   margin-bottom: 1rem;
 }
 
-/* Grid layout optimized for 4 cards */
+.features {
+  padding: 5rem 2rem;
+  background: #f2f4f6;
+}
+
+.container {
+  max-width: 1400px; /* Increased from 1200px */
+  margin: 0 auto;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.section-header h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+/* Grid layout optimized for 4 wider cards */
+/* Features Section - Optimized for wider cards that fit screen */
+.features {
+  padding: 5rem 2rem;
+  background: #f2f4f6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.section-header h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+/* Grid layout optimized for 4 cards that fit the screen */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-  max-width: 1000px; /* Reduced from larger width to better fit 4 cards */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -219,6 +265,7 @@
   transition: all 0.3s ease;
   border: 1px solid #e2e8f0;
   cursor: pointer;
+  width: 100%;
 }
 
 .feature-card:hover {
@@ -239,7 +286,7 @@
 }
 
 .feature-card h3 {
-  font-size: 1.3rem;
+  font-size: 1.4rem; /* Increased from 1.3rem */
   font-weight: 600;
   color: #1e293b;
   margin-bottom: 1rem;
@@ -248,6 +295,7 @@
 .feature-card p {
   color: #64748b;
   line-height: 1.7;
+  font-size: 1rem; /* Added explicit font size */
 }
 
 /* Responsive adjustments for features */
@@ -255,11 +303,10 @@
   .features-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
-    max-width: 100%;
   }
   
   .feature-card {
-    padding: 1.5rem;
+    padding: 2rem;
   }
   
   .section-header h2 {
@@ -274,14 +321,153 @@
 @media (min-width: 769px) and (max-width: 1024px) {
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
-    max-width: 800px;
+    gap: 1.5rem;
   }
 }
 
 @media (min-width: 1025px) {
   .features-grid {
     grid-template-columns: repeat(4, 1fr);
-    max-width: 1000px;
+    gap: 2rem;
+  }
+}
+
+/* Contact Us Section */
+.contact-us {
+  padding: 5rem 2rem;
+  background: white;
+}
+
+.contact-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  margin-top: 3rem;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border-left: 4px solid #305531;
+}
+
+.contact-icon {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #305531 0%, #719d71 100%);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.contact-details h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.contact-details p {
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.contact-form {
+  background: #f8fafc;
+  padding: 2.5rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #305531;
+  box-shadow: 0 0 0 3px rgba(48, 85, 49, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.contact-submit-btn {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: #305531;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.contact-submit-btn:hover {
+  background: #719d71;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(48, 85, 49, 0.3);
+}
+
+/* Responsive design for contact section */
+@media (max-width: 768px) {
+  .contact-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .contact-form {
+    padding: 1.5rem;
+  }
+  
+  .contact-item {
+    padding: 1rem;
+  }
+  
+  .contact-us {
+    padding: 3rem 1rem;
   }
 }
 /* Footer */

@@ -59,7 +59,7 @@ export default function ForgotPassword() {
         </button>
 
         <div className="back-to-login">
-          <a href="/" className="back-link">
+          <a href="/login" className="back-link">
             {t('back-to-login')}
           </a>
         </div>

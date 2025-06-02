@@ -77,6 +77,13 @@ const Homepage = () => {
     e.currentTarget.style.transform = 'translateY(0) scale(1)';
   };
 
+  // Contact form handler
+  const handleContactSubmit = (e) => {
+    e.preventDefault();
+    // Add your contact form submission logic here
+    alert('Thank you for your message! We will get back to you soon.');
+  };
+
   return (
     <div className="homepage">
       {/* Header */}
@@ -84,17 +91,16 @@ const Homepage = () => {
         <nav className="nav">
           <a href="#" className="logo">Neveh Horim</a>
           <ul className="nav-links">
-            <li><a href="#features" onClick={(e) => handleSmoothScroll(e, '#features')}>Features</a></li>
-            <li><a href="#how-it-works" onClick={(e) => handleSmoothScroll(e, '#how-it-works')}>How It Works</a></li>
-            <li><a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>About</a></li>
             <li><a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>Contact</a></li>
+            <li><a href="#features" onClick={(e) => handleSmoothScroll(e, '#features')}>Features</a></li>
+            <li><a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>About</a></li>
             <li><button onClick={handleLogin} className="login-btn">Login</button></li>
           </ul>
         </nav>
       </header>
 
       {/* Hero Section */}
-      <section className="hero">
+      <section className="hero" id="about">
         <div className="hero-content">
           <h1>Dedicated Care In a Family Atmosphere</h1>
           <p>We believe that every person, regardless of who they are, deserves to age with dignity while preserving their respect, independence, and quality of life. We believe that every resident in the home has the right to privacy and dignity both during care and beyond.</p>
@@ -103,8 +109,8 @@ const Homepage = () => {
               <span>Get Started</span>
               <span>→</span>
             </button>
-            <button onClick={(e) => handleSmoothScroll(e, '#how-it-works')} className="btn btn-secondary">
-              <span>Learn More</span>
+            <button onClick={(e) => handleSmoothScroll(e, '#contact')} className="btn btn-secondary">
+              <span>Contact Us</span>
             </button>
           </div>
         </div>
@@ -165,8 +171,92 @@ const Homepage = () => {
         </div>
       </section>
 
+      {/* Contact Us Section */}
+      <section className="contact-us" id="contact">
+        <div className="container">
+          <div className="section-header fade-in">
+            <h2>Contact Us</h2>
+            <p>Get in touch with our team. We're here to help and answer any questions you may have.</p>
+          </div>
+          <div className="contact-content">
+            <div className="contact-info fade-in">
+              <div className="contact-item">
+                <div className="contact-icon">
+                  📍
+                </div>
+                <div className="contact-details">
+                  <h3>Location</h3>
+                  <p>Ma'ale Ze'ev St 3<br />Jerusalem, Israel</p>
+                </div>
+              </div>
+              <div className="contact-item">
+                <div className="contact-icon">
+                  📞
+                </div>
+                <div className="contact-details">
+                  <h3>Phone</h3>
+                  <p>02-6403333</p>
+                </div>
+              </div>
+              <div className="contact-item">
+                <div className="contact-icon">
+                  ✉️
+                </div>
+                <div className="contact-details">
+                  <h3>Email</h3>
+                  <p>mazkirut.nevehhorim@gmail.com</p>
+                </div>
+              </div>
+              <div className="contact-item">
+                <div className="contact-icon">
+                  🖨️
+                </div>
+                <div className="contact-details">
+                  <h3>Fax</h3>
+                  <p>02-6792504</p>
+                </div>
+              </div>
+            </div>
+            <div className="contact-form fade-in">
+              <form onSubmit={handleContactSubmit}>
+                <div className="form-group">
+                  <label htmlFor="name">Full Name</label>
+                  <input type="text" id="name" name="name" required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="email">Email Address</label>
+                  <input type="email" id="email" name="email" required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="phone">Phone Number</label>
+                  <input type="tel" id="phone" name="phone" />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="subject">Subject</label>
+                  <select id="subject" name="subject" required>
+                    <option value="">Select a subject</option>
+                    <option value="general">General Inquiry</option>
+                    <option value="volunteer">Volunteer Opportunities</option>
+                    <option value="support">Technical Support</option>
+                    <option value="partnership">Partnership</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="message">Message</label>
+                  <textarea id="message" name="message" rows="5" required></textarea>
+                </div>
+                <button type="submit" className="btn btn-primary contact-submit-btn">
+                  Send Message
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="footer" id="contact">
+      <footer className="footer" id="about">
         <div className="footer-content">
           <div className="footer-links">
             <a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>About Us</a>
