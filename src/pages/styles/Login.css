@@ -46,6 +46,10 @@
   box-shadow: 0 4px 15px rgba(65, 106, 66, 0.4);
   position: relative;
   overflow: hidden;
+  /* Mobile-specific improvements */
+  min-height: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .login-button::before {
@@ -59,13 +63,15 @@
   transition: left 0.5s;
 }
 
-.login-button:hover {
+.login-button:hover,
+.login-button:focus {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(65, 106, 66, 0.6);
   background: linear-gradient(135deg, #416a42 0%, #5c885d 100%);
 }
 
-.login-button:hover::before {
+.login-button:hover::before,
+.login-button:focus::before {
   left: 100%;
 }
 
@@ -73,7 +79,13 @@
   transform: translateY(0);
 }
 
-/* Everything else from original login CSS */
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Main container - responsive design */
 .login-container {
   display: flex;
   flex-direction: row;
@@ -83,6 +95,8 @@
   border-radius: 1rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .login-logo-section {
@@ -97,6 +111,7 @@
   width: 100%;
   height: auto;
   transition: all 0.3s ease-in-out;
+  max-width: 300px;
 }
 
 .login-form-section {
@@ -105,7 +120,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background-color: transparent;
+  background-color: #BE9E5C;
   background-image: url("Card.png");
   background-size: cover;
   background-position: center;
@@ -147,7 +162,7 @@
 
 .password-input-wrapper .form-input {
   width: 100%;
-  padding-right: 2.5rem;
+  padding-right: 3rem;
 }
 
 .password-toggle {
@@ -161,14 +176,20 @@
   align-items: center;
   justify-content: center;
   padding: 0;
+  /* Mobile-friendly touch target */
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.password-toggle:hover {
+.password-toggle:hover,
+.password-toggle:focus {
   color: #2d3748;
 }
 
 .password-group .form-input {
-  padding-right: 2.5rem;
+  padding-right: 3rem;
 }
 
 .form-label {
@@ -184,8 +205,16 @@
   border-radius: 0.5rem;
   background-color: rgba(255, 251, 235, 0.8);
   color: #2d3748;
-  font-size: 1rem;
+  font-size: 16px; /* Prevents zoom on iOS */
   transition: all 0.3s ease;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #719d71;
+  box-shadow: 0 0 0 3px rgba(113, 157, 113, 0.1);
 }
 
 .error-message {
@@ -193,6 +222,10 @@
   font-size: 0.875rem;
   margin-top: 0.5rem;
   text-align: center;
+  padding: 12px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
 }
 
 .forgot-password-link {
@@ -202,13 +235,20 @@
   color: #1a4731;
   text-decoration: none;
   transition: color 0.2s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  touch-action: manipulation;
 }
 
-.forgot-password-link:hover {
+.forgot-password-link:hover,
+.forgot-password-link:focus {
   color: #276749;
 }
 
-/* Language toggle from original */
+/* Language toggle */
 .language-toggle {
   position: fixed;
   bottom: 20px;
@@ -231,39 +271,18 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   color: #1a4731;
-}
-
-.lang-button:hover {
-  background-color: #ede0c8;
-}
-
-.lang-options {
-  position: absolute;
-  bottom: 3.5rem;
-  right: 0;
-  background-color: #fffaf0;
-  border: 1px solid #d8cfc0;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  min-height: 44px;
+  min-width: 44px;
   display: flex;
-  flex-direction: column;
-  width: 140px;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.lang-options button {
-  padding: 0.5rem 1rem;
-  background: none;
-  border: none;
-  text-align: left;
-  font-size: 0.875rem;
-  color: #1a4731;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.lang-options button:hover {
-  background-color: #f6ead1;
+.lang-button:hover,
+.lang-button:focus {
+  background-color: #ede0c8;
 }
 
 .lang-options {
@@ -278,6 +297,24 @@
   flex-direction: column;
   width: 140px;
   z-index: 200;
+}
+
+.lang-options button {
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #1a4731;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.lang-options button:hover,
+.lang-options button:focus {
+  background-color: #f6ead1;
 }
 
 /* Default (English) - aligns to right */
@@ -312,4 +349,407 @@
 
 .login-container {
   animation: bounceUp 1s ease-out forwards;
+}
+
+/* ========== MOBILE RESPONSIVE STYLES ========== */
+
+/* Tablet styles (768px and below) */
+@media (max-width: 768px) {
+  .login-page {
+    padding: 1rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
+  .login-container {
+    flex-direction: column;
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    border-radius: 0.75rem;
+  }
+
+  .login-logo-section {
+    min-height: 200px;
+    padding: 1.5rem;
+  }
+
+  .login-logo {
+    max-width: 200px;
+  }
+
+  .login-form-section {
+    padding: 1.5rem;
+    background-size: contain;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 1rem;
+  }
+
+  .form-input {
+    padding: 1rem;
+    font-size: 16px;
+  }
+
+  .password-input-wrapper .form-input {
+    padding-right: 3.5rem;
+  }
+
+  .password-toggle {
+    right: 1rem;
+  }
+
+  .language-toggle {
+    bottom: 15px;
+  }
+
+  .language-toggle.right {
+    right: 15px;
+  }
+
+  .language-toggle.left {
+    left: 15px;
+  }
+}
+
+/* ========== MOBILE RESPONSIVE STYLES ========== */
+
+/* Tablet styles (768px and below) */
+@media (max-width: 768px) {
+  .login-page {
+    padding: 1rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
+  .login-container {
+    flex-direction: column;
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    border-radius: 0.75rem;
+  }
+
+  .login-logo-section {
+    min-height: 200px;
+    padding: 1.5rem;
+  }
+
+  .login-logo {
+    max-width: 200px;
+  }
+
+  .login-form-section {
+    padding: 1.5rem;
+    background-color: #BE9E5C;
+    background-image: url("PhoneCard.png");
+    background-size: contain;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 1rem;
+  }
+
+  .form-input {
+    padding: 1rem;
+    font-size: 16px;
+  }
+
+  .password-input-wrapper .form-input {
+    padding-right: 3.5rem;
+  }
+
+  .password-toggle {
+    right: 1rem;
+  }
+
+  .language-toggle {
+    bottom: 15px;
+  }
+
+  .language-toggle.right {
+    right: 15px;
+  }
+
+  .language-toggle.left {
+    left: 15px;
+  }
+}
+
+/* Phone styles (640px and below) */
+@media (max-width: 640px) {
+  .login-page {
+    padding: 0.75rem;
+    padding-top: 1rem;
+  }
+
+  .login-container {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .login-logo-section {
+    min-height: 150px;
+    padding: 1rem;
+  }
+
+  .login-logo {
+    max-width: 150px;
+  }
+
+  .login-form-section {
+    padding: 1rem;
+    background-color: #BE9E5C;
+    background-image: url("PhoneCard.png");
+  }
+
+  .login-title {
+    font-size: 1.375rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .login-form {
+    gap: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.5rem;
+  }
+
+  .form-label {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-input {
+    padding: 1rem;
+    font-size: 16px;
+    border-radius: 0.75rem;
+  }
+
+  .login-button {
+    padding: 1rem;
+    font-size: 1rem;
+    border-radius: 0.75rem;
+    min-height: 50px;
+    margin-top: 1rem;
+  }
+
+  .error-message {
+    font-size: 0.8rem;
+    padding: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .forgot-password-link {
+    font-size: 0.9rem;
+    margin-top: 1rem;
+    padding: 0.75rem;
+  }
+
+  .lang-options {
+    width: 120px;
+    bottom: 4rem;
+  }
+
+  .lang-options button {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Small phone styles (480px and below) */
+@media (max-width: 480px) {
+  .login-page {
+    padding: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .login-container {
+    border-radius: 0.375rem;
+    margin-top: 0;
+  }
+
+  .login-logo-section {
+    min-height: 120px;
+    padding: 0.75rem;
+  }
+
+  .login-logo {
+    max-width: 120px;
+  }
+
+  .login-form-section {
+    padding: 0.75rem;
+    background-color: #BE9E5C;
+    background-image: url("PhoneCard.png");
+  }
+
+  .login-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .form-label {
+    font-size: 0.85rem;
+  }
+
+  .form-input {
+    padding: 0.875rem;
+    font-size: 16px;
+  }
+
+  .password-input-wrapper .form-input {
+    padding-right: 3rem;
+  }
+
+  .password-toggle {
+    right: 0.75rem;
+    min-height: 40px;
+    min-width: 40px;
+  }
+
+  .login-button {
+    padding: 0.875rem;
+    font-size: 0.95rem;
+    min-height: 48px;
+  }
+
+  .language-toggle {
+    bottom: 10px;
+  }
+
+  .language-toggle.right {
+    right: 10px;
+  }
+
+  .language-toggle.left {
+    left: 10px;
+  }
+
+  .lang-button {
+    min-height: 40px;
+    min-width: 40px;
+    padding: 0.375rem;
+  }
+
+  .lang-options {
+    width: 110px;
+    bottom: 3rem;
+  }
+
+  .lang-options button {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    min-height: 40px;
+  }
+}
+
+/* Extra small phones (360px and below) */
+@media (max-width: 360px) {
+  .login-page {
+    padding: 0.25rem;
+  }
+
+  .login-container {
+    border-radius: 0.25rem;
+  }
+
+  .login-logo-section {
+    min-height: 100px;
+    padding: 0.5rem;
+  }
+
+  .login-logo {
+    max-width: 100px;
+  }
+
+  .login-form-section {
+    padding: 0.5rem;
+    background-color: #BE9E5C;
+    background-image: url("PhoneCard.png");
+  }
+
+  .login-title {
+    font-size: 1.125rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-input {
+    padding: 0.75rem;
+  }
+
+  .login-button {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .lang-options {
+    width: 100px;
+  }
+}
+
+/* Landscape phone styles */
+@media (max-width: 767px) and (orientation: landscape) {
+  .login-page {
+    padding: 0.5rem;
+    align-items: center;
+  }
+
+  .login-container {
+    flex-direction: row;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .login-logo-section {
+    min-height: auto;
+    min-width: 40%;
+  }
+
+  .login-form-section {
+    min-width: 60%;
+    padding: 1rem;
+    background-color: #BE9E5C;
+    background-image: url("PhoneCard.png");
+  }
+
+  .login-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .login-form {
+    gap: 0.75rem;
+  }
 }

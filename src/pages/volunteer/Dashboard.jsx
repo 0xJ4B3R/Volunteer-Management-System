@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, TrendingUp, Award, Calendar, CheckCircle2, AlertCircle, ChevronRight, CalendarDays, Users, Activity, FileText, Star, Target, ArrowUpRight, ArrowDownRight, Hand, UserCheck, HeartHandshake, ThumbsUp, ShieldCheck, Globe, Zap, TrendingDown } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from '@/lib/firebase';
+import LoadingScreen from "@/components/volunteer/InnerLS";
 import './styles/Dashboard.css';
 
 // Custom Marijuana Icon component
@@ -74,11 +75,8 @@ const Dashboard = () => {
       const username = localStorage.getItem('username');
       
       if (!userId) {
-        console.log("No user ID found");
         return;
       }
-
-      console.log("Fetching volunteer data for user:", userId);
 
       // Get volunteer document by userId
       const volunteersRef = collection(db, "volunteers");
@@ -88,9 +86,7 @@ const Dashboard = () => {
       if (!volunteerSnapshot.empty) {
         const volunteerDoc = volunteerSnapshot.docs[0];
         const volunteerData = volunteerDoc.data();
-        
-        console.log("Volunteer data:", volunteerData);
-        
+                
         setUserData({
           name: username || volunteerData.fullName || 'Volunteer',
           totalHours: volunteerData.totalHours || 0,
@@ -110,36 +106,27 @@ const Dashboard = () => {
       const userId = localStorage.getItem('userId');
       if (!userId) return;
 
-      console.log("Fetching upcoming sessions...");
-      console.log("User ID:", userId);
-
       const calendarSlotsRef = collection(db, "calendar_slots");
       const q = query(calendarSlotsRef);
       
       const snapshot = await getDocs(q);
       const sessions = [];
 
-      console.log("Total calendar slots found:", snapshot.size);
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        console.log("Processing slot:", doc.id, data);
         
         // Check status first
         if (data.status === "inProgress") {
-          console.log("Found inProgress slot:", doc.id);
           
           // Check if volunteers array exists and current user is approved
           if (data.volunteers && Array.isArray(data.volunteers)) {
-            console.log("Volunteers array:", data.volunteers);
             
             const userVolunteer = data.volunteers.find(v => {
-              console.log("Checking volunteer:", v, "against userId:", userId);
               return v.id === userId && v.status === "approved";
             });
             
             if (userVolunteer) {
-              console.log("Found approved volunteer for user:", userVolunteer);
               
               // Parse date string (format: "2025-6-5")
               let sessionDate;
@@ -147,9 +134,7 @@ const Dashboard = () => {
                 try {
                   const [year, month, day] = data.date.split('-');
                   sessionDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                  console.log("Parsed session date:", sessionDate);
                 } catch (error) {
-                  console.log("Error parsing date:", error);
                   sessionDate = new Date();
                 }
               } else {
@@ -160,7 +145,6 @@ const Dashboard = () => {
               now.setHours(0, 0, 0, 0);
               sessionDate.setHours(0, 0, 0, 0);
               
-              console.log("Comparing dates - Session:", sessionDate, "Now:", now);
               
               // Only show future sessions
               if (sessionDate >= now) {
@@ -181,26 +165,16 @@ const Dashboard = () => {
                   fullDate: sessionDate
                 };
                 
-                console.log("Adding upcoming session:", session);
                 sessions.push(session);
-              } else {
-                console.log("Session is in the past, skipping");
               }
-            } else {
-              console.log("User not found or not approved in volunteers array");
             }
-          } else {
-            console.log("No volunteers array found");
           }
-        } else {
-          console.log("Slot status is not inProgress:", data.status);
-        }
+        } 
       });
 
       // Sort by date and take first 3
       sessions.sort((a, b) => a.fullDate - b.fullDate);
 
-      console.log("Final upcoming sessions:", sessions.slice(0, 3));
       setUpcomingSessions(sessions.slice(0, 3));
     } catch (error) {
       console.error("Error fetching upcoming sessions:", error);
@@ -212,8 +186,6 @@ const Dashboard = () => {
     try {
       const userId = localStorage.getItem('userId');
       if (!userId) return;
-
-      console.log("Fetching recent activity from attendance...");
 
       const attendanceRef = collection(db, "attendance");
       const q = query(attendanceRef, limit(5));
@@ -240,7 +212,6 @@ const Dashboard = () => {
       // Add the latest 5 attendance records
       snapshot.forEach((doc) => {
         const data = doc.data();
-        console.log("Attendance data:", data);
         
         const status = data.status || "Unknown";
         const notes = data.notes || "";
@@ -260,7 +231,7 @@ const Dashboard = () => {
             else if (diffDays < 14) timeAgo = '1 week ago';
             else timeAgo = `${Math.floor(diffDays / 7)} weeks ago`;
           } catch (error) {
-            console.log("Error parsing confirmedAt:", error);
+            console.error("Error parsing confirmedAt:", error);
           }
         }
 
@@ -295,7 +266,6 @@ const Dashboard = () => {
         });
       });
 
-      console.log("Recent activity from attendance:", activities);
       setRecentActivity(activities);
     } catch (error) {
       console.error("Error fetching recent activity:", error);
@@ -366,24 +336,8 @@ const Dashboard = () => {
 
   const currentLevel = getLevel(userData.totalHours);
 
-  if (loading) {
-    return (
-      <div className="dash-dashboard-container">
-        <div className="dash-dashboard-wrapper">
-          <div className="dash-dashboard-header">
-            <div className="dash-loading-skeleton" style={{ width: '200px', height: '2rem' }}></div>
-            <div className="dash-loading-skeleton" style={{ width: '300px' }}></div>
-          </div>
-          <div className="dash-stats-grid">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="dash-stat-card">
-                <div className="dash-loading-skeleton" style={{ height: '3rem' }}></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    if (loading) {
+    return <LoadingScreen />;
   }
 
   return (

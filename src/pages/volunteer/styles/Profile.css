@@ -398,3 +398,551 @@
     margin-top: 1.5rem;
   }
 }
+
+/* ========== MOBILE RESPONSIVE STYLES ========== */
+
+/* Tablet styles (768px and below) */
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .profile-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .profile-title {
+    font-size: 1.5rem;
+  }
+
+  .profile-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .profile-overview {
+    padding: 2rem 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .profile-header-content {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .profile-avatar-section {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .profile-avatar {
+    width: 7rem;
+    height: 7rem;
+    font-size: 2rem;
+  }
+
+  .profile-name, .profile-joined {
+    font-size: 1rem;
+  }
+
+  .hours-progress-container {
+    width: 160px;
+    height: 160px;
+  }
+
+  .hours-number {
+    font-size: 2.2rem;
+  }
+
+  .hours-label {
+    font-size: 1rem;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.875rem;
+    min-height: 100px;
+  }
+
+  .stat-icon {
+    font-size: 28px;
+    width: 50px;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+  }
+
+  .stat-value {
+    font-size: 0.95rem;
+  }
+
+  .tab-item {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .skills-section {
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1.125rem;
+  }
+
+  .password-form {
+    gap: 1.25rem;
+  }
+
+  .form-group {
+    gap: 0.375rem;
+  }
+}
+
+/* Phone styles (640px and below) */
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 1rem 0.5rem;
+  }
+
+  .profile-header {
+    margin-bottom: 1rem;
+  }
+
+  .profile-title {
+    font-size: 1.375rem;
+  }
+
+  .profile-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .profile-overview {
+    padding: 1.5rem 1rem;
+    gap: 1.25rem;
+  }
+
+  .profile-avatar {
+    width: 6rem;
+    height: 6rem;
+    font-size: 1.75rem;
+  }
+
+  .profile-name, .profile-joined {
+    font-size: 0.95rem;
+  }
+
+  .hours-progress-container {
+    width: 140px;
+    height: 140px;
+  }
+
+  .hours-number {
+    font-size: 1.875rem;
+  }
+
+  .hours-label {
+    font-size: 0.9rem;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .stat-card {
+    padding: 0.75rem;
+    min-height: 90px;
+    flex-direction: row;
+    text-align: left;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+  }
+
+  .stat-icon {
+    font-size: 24px;
+    width: 40px;
+    margin-bottom: 0;
+    margin-top: 0;
+    flex-shrink: 0;
+  }
+
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.125rem;
+  }
+
+  .stat-value {
+    font-size: 0.9rem;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .tab-item:last-child {
+    border-bottom: none;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .skills-list {
+    justify-content: center;
+    gap: 0.375rem;
+  }
+
+  .skill-badge, .add-skill-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .password-form {
+    gap: 1rem;
+  }
+
+  .password-input {
+    padding: 0.75rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .submit-button {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .password-status {
+    padding: 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Small phone styles (480px and below) */
+@media (max-width: 480px) {
+  .profile-page {
+    padding: 0.75rem 0.375rem;
+  }
+
+  .profile-title {
+    font-size: 1.25rem;
+  }
+
+  .profile-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .profile-overview {
+    padding: 1.25rem 0.75rem;
+    gap: 1rem;
+  }
+
+  .profile-avatar {
+    width: 5rem;
+    height: 5rem;
+    font-size: 1.5rem;
+  }
+
+  .profile-name, .profile-joined {
+    font-size: 0.875rem;
+  }
+
+  .hours-progress-container {
+    width: 120px;
+    height: 120px;
+  }
+
+  .hours-number {
+    font-size: 1.625rem;
+  }
+
+  .hours-label {
+    font-size: 0.8rem;
+  }
+
+  .stat-card {
+    padding: 0.625rem;
+    min-height: 80px;
+    gap: 0.75rem;
+  }
+
+  .stat-icon {
+    font-size: 20px;
+    width: 35px;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 0.85rem;
+  }
+
+  .tab-item {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .skills-list {
+    gap: 0.25rem;
+  }
+
+  .skill-badge, .add-skill-btn {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .password-input {
+    padding: 0.625rem;
+  }
+
+  .submit-button {
+    padding: 0.625rem;
+    font-size: 0.85rem;
+  }
+
+  .password-status {
+    padding: 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  .toggle-visibility {
+    padding: 0.375rem;
+  }
+}
+
+/* Extra small phones (360px and below) */
+@media (max-width: 360px) {
+  .profile-page {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .profile-title {
+    font-size: 1.125rem;
+  }
+
+  .profile-overview {
+    padding: 1rem 0.5rem;
+  }
+
+  .profile-avatar {
+    width: 4.5rem;
+    height: 4.5rem;
+    font-size: 1.375rem;
+  }
+
+  .hours-progress-container {
+    width: 100px;
+    height: 100px;
+  }
+
+  .hours-number {
+    font-size: 1.5rem;
+  }
+
+  .hours-label {
+    font-size: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.5rem;
+    min-height: 70px;
+    gap: 0.5rem;
+  }
+
+  .stat-icon {
+    font-size: 18px;
+    width: 30px;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .stat-value {
+    font-size: 0.8rem;
+  }
+
+  .tab-item {
+    padding: 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .skill-badge, .add-skill-btn {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.3rem;
+  }
+}
+
+/* Landscape phone styles */
+@media (max-width: 767px) and (orientation: landscape) {
+  .profile-page {
+    padding: 1rem;
+  }
+
+  .profile-header-content {
+    flex-direction: row;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .profile-avatar-section {
+    flex-direction: row;
+    text-align: left;
+    gap: 1rem;
+  }
+
+  .hours-progress-container {
+    width: 120px;
+    height: 120px;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-card {
+    flex-direction: column;
+    text-align: center;
+    min-height: 80px;
+  }
+
+  .stat-icon {
+    margin-bottom: 0.25rem;
+    margin-top: 0;
+  }
+
+  .tabs {
+    flex-direction: row;
+  }
+
+  .tab-item {
+    border-bottom: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .tab-item:last-child {
+    border-right: none;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (max-width: 768px) {
+  .tab-item {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+  }
+
+  .skill-badge {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .add-skill-btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+  }
+
+  .submit-button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+  }
+
+  .toggle-visibility {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* High contrast mode support for mobile */
+@media (prefers-contrast: high) and (max-width: 768px) {
+  .profile-overview {
+    border: 2px solid #000;
+  }
+  
+  .stat-card {
+    border: 2px solid #000;
+  }
+  
+  .password-input {
+    border: 2px solid #000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .stat-card {
+    transition: none;
+  }
+  
+  .hours-progress-container {
+    transition: none;
+  }
+  
+  .stat-card:hover,
+  .hours-progress-container:hover {
+    transform: none;
+  }
+  
+  .circle-value {
+    transition: none;
+  }
+}
+
+/* RTL improvements for mobile */
+@media (max-width: 640px) {
+  [dir="rtl"] .stat-card {
+    text-align: right;
+  }
+
+  [dir="rtl"] .stat-content {
+    align-items: flex-end;
+  }
+
+  [dir="rtl"] .toggle-visibility {
+    left: 0.5rem;
+    right: auto;
+  }
+}
+
+/* Fix for iOS Safari viewport units */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 640px) {
+    .profile-page {
+      min-height: -webkit-fill-available;
+    }
+  }
+}

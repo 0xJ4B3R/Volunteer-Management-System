@@ -14,7 +14,8 @@ import {
   CheckCircle,
   LogOut,
   ChevronDown,
-  Eye
+  Eye,
+  Menu
 } from 'lucide-react';
 
 export function Sidebar({ isSidebarOpen, toggleSidebar }) {
@@ -22,9 +23,22 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const dropdownRef = useRef(null);
 
   const isVolunteer = location.pathname.includes('/volunteer');
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const navItems = isVolunteer
     ? [
@@ -47,6 +61,13 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
     navigate('/');
   };
 
+  // Close sidebar when clicking navigation on mobile
+  const handleNavClick = () => {
+    if (isMobile) {
+      toggleSidebar();
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -57,78 +78,119 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    if (isMobile && isSidebarOpen) {
+      const handleClickOutside = (event) => {
+        const sidebar = document.querySelector('.sidebar-container');
+        const mobileButton = document.querySelector('.mobile-menu-button');
+        if (sidebar && !sidebar.contains(event.target) && 
+            mobileButton && !mobileButton.contains(event.target)) {
+          toggleSidebar();
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isMobile, isSidebarOpen, toggleSidebar]);
+
   return (
-    <div
-      dir={i18n.dir()}
-      className={`
-        ${isSidebarOpen ? 'w-64' : 'w-20'}
-        sidebar-container
-      `}
-    >
-      {/* Top Header */}
-      <div className="sidebar-header">
-        {isSidebarOpen && (
-          <span>
-            {isVolunteer ? t('Volunteer Portal') : t('Manager Portal')}
-          </span>
-        )}
-        <button
+    <>
+      {/* Mobile Menu Button - only visible on mobile when sidebar is closed */}
+      <button
+        className={`mobile-menu-button ${isMobile && !isSidebarOpen ? '' : 'hidden'}`}
+        onClick={toggleSidebar}
+        aria-label={t('Open menu')}
+      >
+        <Menu />
+      </button>
+
+      {/* Mobile overlay */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-999"
           onClick={toggleSidebar}
-          className="sidebar-toggle"
-          aria-label={isSidebarOpen ? t('Collapse sidebar') : t('Expand sidebar')}
-        >
-          {isSidebarOpen ? <ChevronLeft /> : <ChevronRight />}
-        </button>
-      </div>
-
-      {/* Main Navigation */}
-      <nav className="mt-4 flex-1">
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`
-              sidebar-link ${location.pathname === item.path ? 'active' : ''}
-              ${!isSidebarOpen ? 'justify-center' : ''}
-            `}
-          >
-            <item.icon />
-            {isSidebarOpen && <span>{item.name}</span>}
-          </Link>
-        ))}
-      </nav>
-
-      {/* Bottom Profile Section */}
-      <div className="relative p-3 border-t border-gray-700" ref={dropdownRef}>
-        <button
-          onClick={() => setShowProfileMenu((prev) => !prev)}
-          className={`sidebar-link ${!isSidebarOpen ? 'justify-center' : ''}`}
-        >
-          <UserCircle />
-          {isSidebarOpen && (
-            <>
-              <span>{t('Profile')}</span>
-              <ChevronDown className={`chevron-icon ${i18n.dir() === 'rtl' ? 'rtl-chevron' : ''}`} />
-            </>
+        />
+      )}
+      
+      <div
+        dir={i18n.dir()}
+        className={`
+          ${isMobile ? '' : (isSidebarOpen ? 'w-64' : 'w-20')}
+          sidebar-container
+          ${isMobile && isSidebarOpen ? 'open' : ''}
+        `}
+      >
+        {/* Top Header */}
+        <div className="sidebar-header">
+          {(isSidebarOpen || isMobile) && (
+            <span>
+              {isVolunteer ? t('Volunteer Portal') : t('Manager Portal')}
+            </span>
           )}
-        </button>
+          <button
+            onClick={toggleSidebar}
+            className="sidebar-toggle"
+            aria-label={isSidebarOpen ? t('Collapse sidebar') : t('Expand sidebar')}
+          >
+            {isSidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+          </button>
+        </div>
 
-        {showProfileMenu && isSidebarOpen && (
-          <div className={`profile-dropdown ${i18n.dir() === 'rtl' ? 'rtl' : 'ltr'}`}>
-            <Link to={profilePath} onClick={() => setShowProfileMenu(false)}>
-              <Eye className="dropdown-icon" />
-              {t('View Profile')}
+        {/* Main Navigation */}
+        <nav className="mt-4 flex-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={handleNavClick}
+              className={`
+                sidebar-link ${location.pathname === item.path ? 'active' : ''}
+                ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}
+              `}
+            >
+              <item.icon />
+              {(isSidebarOpen || isMobile) && <span>{item.name}</span>}
             </Link>
-            <button onClick={handleLogout}>
-              <LogOut className="dropdown-icon" id = 'Logout-icon' />
-              <p className='Logout'>
-              {t('Logout')}
-              </p>
-            </button>
-          </div>
-        )}
+          ))}
+        </nav>
+
+        {/* Bottom Profile Section */}
+        <div className="relative p-3 border-t border-gray-700" ref={dropdownRef}>
+          <button
+            onClick={() => setShowProfileMenu((prev) => !prev)}
+            className={`sidebar-link ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}`}
+          >
+            <UserCircle />
+            {(isSidebarOpen || isMobile) && (
+              <>
+                <span>{t('Profile')}</span>
+                <ChevronDown className={`chevron-icon ${i18n.dir() === 'rtl' ? 'rtl-chevron' : ''}`} />
+              </>
+            )}
+          </button>
+
+          {showProfileMenu && (isSidebarOpen || isMobile) && (
+            <div className={`profile-dropdown ${i18n.dir() === 'rtl' ? 'rtl' : 'ltr'}`}>
+              <Link to={profilePath} onClick={() => {
+                setShowProfileMenu(false);
+                handleNavClick();
+              }}>
+                <Eye className="dropdown-icon" />
+                {t('View Profile')}
+              </Link>
+              <button onClick={handleLogout}>
+                <LogOut className="dropdown-icon" id='Logout-icon' />
+                <p className='Logout'>
+                  {t('Logout')}
+                </p>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -158,3 +158,136 @@
 .Logout, #Logout-icon{
   color: red;
 }
+
+/* ========== MOBILE RESPONSIVE STYLES ========== */
+
+/* Mobile sidebar adjustments */
+@media (max-width: 768px) {
+  .sidebar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease, width 0.3s ease;
+  }
+
+  .sidebar-container.open {
+    transform: translateX(0);
+  }
+
+  /* When sidebar is closed on mobile, hide it completely */
+  .sidebar-container:not(.open) {
+    width: 0 !important;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* When sidebar is open on mobile, make it full width */
+  .sidebar-container.open {
+    width: 280px !important;
+  }
+
+  .sidebar-header {
+    padding: 0.75rem;
+  }
+
+  .sidebar-header span {
+    font-size: 1rem;
+  }
+
+  .sidebar-link {
+    padding: 1rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .sidebar-link svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .profile-dropdown {
+    width: calc(100% - 1.5rem);
+    margin: 0 0.75rem;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .sidebar-container.open {
+    width: 100vw !important;
+  }
+
+  .sidebar-header {
+    padding: 1rem;
+  }
+
+  .sidebar-link {
+    padding: 1.25rem 1rem;
+    font-size: 1rem;
+  }
+
+  .sidebar-link svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* RTL support for mobile */
+@media (max-width: 768px) {
+  [dir="rtl"] .sidebar-container {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+  }
+
+  [dir="rtl"] .sidebar-container.open {
+    transform: translateX(0);
+  }
+}
+
+/* Mobile menu button - only visible on mobile when sidebar is closed */
+.mobile-menu-button {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  z-index: 1001;
+  background-color: #416a42;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease;
+}
+
+.mobile-menu-button:hover {
+  background-color: #305031;
+}
+
+.mobile-menu-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Show mobile menu button only on mobile when sidebar is closed */
+@media (max-width: 768px) {
+  .mobile-menu-button {
+    display: block;
+  }
+
+  .mobile-menu-button.hidden {
+    display: none;
+  }
+
+  /* Position based on language direction */
+  [dir="ltr"] .mobile-menu-button {
+    left: 1rem;
+  }
+
+  [dir="rtl"] .mobile-menu-button {
+    right: 1rem;
+  }
+}
