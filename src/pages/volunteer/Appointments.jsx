@@ -6,6 +6,41 @@ import { db } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Appointments.css";
 
+// Utility functions for session type colors
+const getSessionTypeColor = (type) => {
+  switch ((type || '').toLowerCase()) {
+    case "reading": return "#3b82f6";
+    case "games": return "#ec4899";
+    case "music": return "#f59e0b";
+    case "art": return "#10b981";
+    case "crafts": return "#8b5cf6";
+    case "exercise": return "#ef4444";
+    case "therapy": return "#6366f1";
+    case "social": return "#14b8a6";
+    case "session": return "#6b7280";
+    default: return "#6b7280";
+  }
+};
+
+const getSessionTypeBorderColor = (type) => {
+  switch ((type || '').toLowerCase()) {
+    case "reading": return "#2563eb";
+    case "games": return "#db2777";
+    case "music": return "#d97706";
+    case "art": return "#059669";
+    case "crafts": return "#7c3aed";
+    case "exercise": return "#dc2626";
+    case "therapy": return "#4f46e5";
+    case "social": return "#0d9488";
+    case "session": return "#4b5563";
+    default: return "#4b5563";
+  }
+};
+
+const getSessionTypeClass = (type) => {
+  return (type || '').toLowerCase().replace(/\s+/g, '');
+};
+
 export default function Appointments() {
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState("upcoming");
@@ -55,6 +90,9 @@ export default function Appointments() {
           // Check if current user is a volunteer for this slot by username
           const userVolunteer = data.volunteers?.find(v => v.username === username);
           
+          // Get session type from customLabel, fallback to "Session"
+          const sessionType = data.customLabel || "Session";
+          
           // Format the appointment data
           return {
             id: doc.id,
@@ -62,7 +100,8 @@ export default function Appointments() {
             date: formatFirebaseDate(data.date),
             day: getDayFromDate(data.date),
             time: `${data.startTime} - ${data.endTime}`,
-            location: data.customLabel || "Session", // Default to "Session" if customLabel is null
+            location: sessionType,
+            sessionType: sessionType, // Keep separate for color logic
             note: data.notes || "",
             category: data.isCustom ? "Custom" : "Regular",
             status: userVolunteer ? userVolunteer.status : (data.isOpen ? "Open" : "Closed"),
@@ -191,8 +230,6 @@ export default function Appointments() {
           }
           return a;
         }));
-        
-        console.log(`Successfully removed user from both volunteers and volunteerRequests arrays`);
       }
       
       if (selected && selected.id === id) setSelected(null);
@@ -228,6 +265,28 @@ export default function Appointments() {
     if (!dateStr) return "";
     const [month, day] = dateStr.split(" ");
     return `${t(`appointments.months.${month}`)} ${day}`;
+  };
+
+  // Helper function to get status tag with appropriate styling
+  const getStatusTag = (appointment) => {
+    const userVolunteer = appointment.volunteers?.find(v => v.username === username);
+    const status = userVolunteer?.status || appointment.status;
+    
+    const getStatusClass = (status) => {
+      switch (status) {
+        case "approved": return "status-approved";
+        case "pending": return "status-pending";
+        case "rejected": return "status-rejected";
+        case "completed": return "status-completed";
+        default: return "status-default";
+      }
+    };
+    
+    return (
+      <div className={`tag ${getSessionTypeClass(appointment.sessionType)} ${getStatusClass(status)}`}>
+        {appointment.sessionType}
+      </div>
+    );
   };
 
   return (
@@ -292,7 +351,14 @@ export default function Appointments() {
                 <div className="note">{t("appointments.noAppointments")}</div>
               ) : (
                 filtered.map((a) => (
-                  <div className="appointment-card" key={a.id} onClick={() => setSelected(a)}>
+                  <div 
+                    className={`appointment-card ${getSessionTypeClass(a.sessionType)}`} 
+                    key={a.id} 
+                    onClick={() => setSelected(a)}
+                    style={{
+                      borderLeftColor: getSessionTypeBorderColor(a.sessionType)
+                    }}
+                  >
                     <div className="appointment-left">
                       <div className="appointment-date">{formatDate(a.date)}</div>
                       <div className="appointment-day">{t(`appointments.days.${a.day}`)}</div>
@@ -303,6 +369,7 @@ export default function Appointments() {
                       {a.note && <div className="note">{t("appointments.note")}: {a.note}</div>}
                     </div>
                     <div className="appointment-right">
+                      {getStatusTag(a)}
                       {a.status === "pending" && (
                         <div className="actions">
                           <button className="btn danger" onClick={(e) => { e.stopPropagation(); handleCancel(a.id); }}>
@@ -325,6 +392,21 @@ export default function Appointments() {
                 <p><strong>{t("appointments.modal.time")}:</strong> {formatTime(selected.time)}</p>
                 <p><strong>{t("appointments.modal.category")}:</strong> {selected.location}</p>
                 {selected.note && <p><strong>{t("appointments.modal.note")}:</strong> {selected.note}</p>}
+                
+                {/* Add colored session type indicator in modal */}
+                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                  <div 
+                    className={`tag ${getSessionTypeClass(selected.sessionType)}`}
+                    style={{
+                      backgroundColor: getSessionTypeColor(selected.sessionType),
+                      color: 'white',
+                      display: 'inline-block'
+                    }}
+                  >
+                    {selected.sessionType}
+                  </div>
+                </div>
+                
                 <button className="modal-close" onClick={() => setSelected(null)}>
                   {t("appointments.modal.close")}
                 </button>

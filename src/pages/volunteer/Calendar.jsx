@@ -1,4 +1,4 @@
-import { Calendar, CalendarDays, Filter, Users } from "lucide-react";
+import { Calendar, CalendarDays, Filter, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -26,6 +26,7 @@ const getSessionTypeColor = (type) => {
     case "exercise": return "bg-[#ef4444] text-white";
     case "therapy": return "bg-[#6366f1] text-white";
     case "social": return "bg-[#14b8a6] text-white";
+    case "session": return "bg-[#6b7280] text-white"; // Default for sessions without specific type
     default: return "bg-[#6b7280] text-white";
   }
 };
@@ -41,6 +42,7 @@ const getSessionTypeBorderColor = (type) => {
     case "exercise": return "#dc2626";
     case "therapy": return "#4f46e5";
     case "social": return "#0d9488";
+    case "session": return "#4b5563"; // Default for sessions without specific type
     default: return "#4b5563";
   }
 };
@@ -132,8 +134,8 @@ const VolunteerCalendar = () => {
     document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
   }, [i18n.language]);
 
-  // Always show current week
-  const [currentDate] = useState(() => {
+  // Current date state for navigation
+  const [currentDate, setCurrentDate] = useState(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
@@ -183,11 +185,14 @@ const VolunteerCalendar = () => {
             }
           }
           
+          // Set default type to "Session" if no customLabel or type is provided
+          const sessionType = data.customLabel || data.type || "Session";
+          
           return {
             id: doc.id,
             appointmentId: data.appointmentId || null,
-            customLabel: data.customLabel || '',
-            type: data.customLabel || "session",
+            customLabel: data.customLabel || 'Session',
+            type: sessionType,
             isCustom: data.isCustom || false,
             startTime: data.startTime || '9:00 AM',
             endTime: data.endTime || '10:00 AM',
@@ -210,6 +215,33 @@ const VolunteerCalendar = () => {
     
     fetchSlots();
   }, []);
+
+  // Navigation functions
+  const navigatePrevious = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === "week") {
+      newDate.setDate(currentDate.getDate() - 7);
+    } else {
+      newDate.setMonth(currentDate.getMonth() - 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const navigateNext = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === "week") {
+      newDate.setDate(currentDate.getDate() + 7);
+    } else {
+      newDate.setMonth(currentDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setCurrentDate(today);
+  };
 
   // Function to handle user signup for a session
   const handleSignUp = async (slot) => {
@@ -296,11 +328,13 @@ const VolunteerCalendar = () => {
           }
         }
         
+        const sessionType = data.customLabel || data.type || "Session";
+        
         return {
           id: doc.id,
           appointmentId: data.appointmentId || null,
-          customLabel: data.customLabel || '',
-          type: data.customLabel || "session",
+          customLabel: data.customLabel || 'Session',
+          type: sessionType,
           isCustom: data.isCustom || false,
           startTime: data.startTime || '9:00 AM',
           endTime: data.endTime || '10:00 AM',
@@ -375,28 +409,30 @@ const VolunteerCalendar = () => {
       );
     }
     
+    // Fixed: Check the isOpen property correctly
     if (showOnlyAvailable) {
-      filtered = filtered.filter(slot => slot.isOpen);
+      filtered = filtered.filter(slot => slot.isOpen === true);
     }
     
+    // Fixed: Handle session type filtering including default "Session" type
     if (selectedSessionType !== "all") {
-      filtered = filtered.filter(slot =>
-        (slot.customLabel || "").toLowerCase() === selectedSessionType.toLowerCase()
-      );
+      filtered = filtered.filter(slot => {
+        const slotType = slot.customLabel || slot.type || "Session";
+        return slotType.toLowerCase() === selectedSessionType.toLowerCase();
+      });
     }
     
     return filtered;
   };
 
-  // Get unique session types for filter
+  // Get unique session types for filter - Fixed to include default "Session"
   const getSessionTypes = () => {
     const types = new Set();
     calendarSlots.forEach(slot => {
-      if (slot.customLabel) {
-        types.add(slot.customLabel);
-      }
+      const sessionType = slot.customLabel || slot.type || "Session";
+      types.add(sessionType);
     });
-    return Array.from(types).filter(Boolean);
+    return Array.from(types).filter(Boolean).sort();
   };
 
   // Format date for display
@@ -612,8 +648,33 @@ const VolunteerCalendar = () => {
           {/* Calendar Header */}
           <div className="calendar-header">
             <div className="calendar-navigation">
-              <div className="current-date-display">
-                {formatDateDisplay()}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={navigatePrevious}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title={viewMode === "week" ? "Previous Week" : "Previous Month"}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                
+                <div className="current-date-display">
+                  {formatDateDisplay()}
+                </div>
+                
+                <button
+                  onClick={navigateNext}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title={viewMode === "week" ? "Next Week" : "Next Month"}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                
+                <button
+                  onClick={goToToday}
+                  className="px-3 py-1 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
+                >
+                  Today
+                </button>
               </div>
             </div>
             <div className="calendar-controls">
@@ -646,14 +707,6 @@ const VolunteerCalendar = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <div className="filter-dropdown-content">
-                    <div className="filter-option">
-                      <Switch
-                        id="available-only"
-                        checked={showOnlyAvailable}
-                        onCheckedChange={setShowOnlyAvailable}
-                      />
-                      <Label htmlFor="available-only">{t("Available slots only")}</Label>
-                    </div>
                     <Select
                       value={selectedSessionType}
                       onValueChange={setSelectedSessionType}

@@ -120,12 +120,10 @@ const Attendance = () => {
                 
                 if (!existingAttendanceSnapshot.empty) {
                   // Attendance already recorded - don't include this session
-                  console.log(`Attendance already recorded for session ${session.id}`);
                   return null;
                 }
               } catch (attendanceError) {
                 // If query fails, try manual filtering
-                console.log('Attendance query failed, checking manually...');
                 const allAttendanceSnapshot = await getDocs(collection(db, 'attendance'));
                 const existingRecord = allAttendanceSnapshot.docs.find(doc => {
                   const data = doc.data();
@@ -134,7 +132,6 @@ const Attendance = () => {
                 });
                 
                 if (existingRecord) {
-                  console.log(`Found existing attendance record manually for session ${session.id}`);
                   return null;
                 }
               }
@@ -146,7 +143,7 @@ const Attendance = () => {
                 residents: session.residentIds || [],
                 description: session.notes || 'Volunteer session with residents',
                 status: 'not_confirmed',
-                sessionType: session.isCustom ? 'Custom Session' : (session.customLabel || 'General Session'),
+                sessionType: session.isCustom ? session.customLabel : ('General Session'),
                 date: session.date,
                 appointmentId: session.appointmentId || session.id,
                 startTime: session.startTime,
@@ -258,9 +255,7 @@ const Attendance = () => {
         notes: notes
       });
       
-      alert(statusMessage);
-      console.log('Attendance confirmed with status:', finalStatus);
-      
+      alert(statusMessage);      
       // Remove this session from today's sessions after confirmation
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       
@@ -300,10 +295,7 @@ const Attendance = () => {
         confirmedAt: Timestamp.now(),
         status: 'absent',
         notes: 'Cancelled by volunteer'
-      });
-      
-      console.log('Attendance cancelled - marked as absent');
-      
+      });      
       // Remove this session from today's sessions after cancellation
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       
@@ -341,10 +333,7 @@ const Attendance = () => {
                 confirmedAt: Timestamp.now(),
                 status: 'absent',
                 notes: 'Automatically marked absent - session ended without confirmation'
-              });
-              
-              console.log(`Automatically marked as absent - session ${session.id} ended`);
-              
+              });              
               // Remove this session from today's sessions
               setTodaySessions(prev => prev.filter(s => s.id !== session.id));
             }
@@ -370,14 +359,10 @@ const Attendance = () => {
       if (!userId && !username) return;
 
       try {
-        console.log('Fetching attendance history for:', { userId, username });
-        
         const attendanceRef = collection(db, 'attendance');
         
         // Get all attendance records and filter manually (no index required)
         const snapshot = await getDocs(attendanceRef);
-        console.log('Total attendance records found:', snapshot.docs.length);
-        
         // Filter records for this user
         let userRecords = snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -385,10 +370,7 @@ const Attendance = () => {
             return record.volunteerId === userId || 
                    record.volunteerId === username ||
                    record.confirmedBy === username;
-          });
-
-        console.log('User attendance records found:', userRecords.length);
-        
+          });        
         // Sort by confirmedAt date (most recent first)
         userRecords.sort((a, b) => {
           const dateA = a.confirmedAt?.toDate ? a.confirmedAt.toDate() : new Date(a.confirmedAt || 0);
@@ -400,7 +382,6 @@ const Attendance = () => {
         let historyData = userRecords.slice(0, 5);
 
         // Get appointment details for each attendance record
-        console.log('Fetching calendar details for appointments...');
         const calendarRef = collection(db, 'calendar_slots');
         const calendarSnapshot = await getDocs(calendarRef);
         const calendarData = {};
@@ -413,8 +394,6 @@ const Attendance = () => {
             id: doc.id
           };
         });
-
-        console.log('Calendar data entries:', Object.keys(calendarData).length);
 
         const enrichedHistory = historyData.map(record => {
           const appointmentData = calendarData[record.appointmentId];
@@ -445,8 +424,7 @@ const Attendance = () => {
             appointmentId: record.appointmentId
           };
         });
-
-        console.log('Final enriched history:', enrichedHistory);
+        
         setAttendanceHistory(enrichedHistory);
         
       } catch (error) {
