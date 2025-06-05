@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import './styles/Dashboard.css';
 
-// Custom Marijuana Icon component
+// !Custom Marijuana Icon component
 const MarijuanaIcon = () => (
   <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 2c-.5 0-1 .2-1.4.6L8.8 4.4c-.8.8-2 .8-2.8 0L4.2 2.6C3.8 2.2 3.3 2 2.8 2s-1 .2-1.4.6c-.8.8-.8 2 0 2.8L3.2 7.2c.8.8.8 2 0 2.8L1.4 11.8c-.8.8-.8 2 0 2.8.4.4.9.6 1.4.6s1-.2 1.4-.6L5.8 12.8c.8-.8 2-.8 2.8 0L10.4 14.6c.4.4.9.6 1.4.6s1-.2 1.4-.6L15 12.8c.8-.8 2-.8 2.8 0l1.8 1.8c.4.4.9.6 1.4.6s1-.2 1.4-.6c.8-.8.8-2 0-2.8L20.6 10c-.8-.8-.8-2 0-2.8l1.8-1.8c.8-.8.8-2 0-2.8C22 2.2 21.5 2 21 2s-1 .2-1.4.6L17.8 4.4c-.8.8-2 .8-2.8 0L13.2 2.6C12.8 2.2 12.3 2 12 2z"/>
