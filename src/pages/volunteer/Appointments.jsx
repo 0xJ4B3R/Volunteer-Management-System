@@ -127,7 +127,7 @@ export default function Appointments() {
   const formatFirebaseDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
-    const month = date.toLocaleString('en-US', { month: 'short' });
+    const month = date.toLocaleString('en-US', { month: 'long' });
     const day = date.getDate();
     return `${month} ${day}`;
   };
