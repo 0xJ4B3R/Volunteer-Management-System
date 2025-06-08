@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Users, Check, X, AlertCircle, TrendingUp, Award, FileText, CheckCircle2, XCircle, History, CalendarDays, CalendarClock } from 'lucide-react';
+import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award, FileText, CheckCircle2, XCircle, History, CalendarDays, CalendarClock } from 'lucide-react';
 import { collection, getDocs, query, where, orderBy, limit, doc, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useTranslation } from 'react-i18next';
 import LoadingScreen from '@/components/volunteer/InnerLS';
 import './styles/Attendance.css';
 
@@ -13,6 +14,8 @@ const Attendance = () => {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState('');
+  const { t, i18n } = useTranslation();
+  const [showLangOptions, setShowLangOptions] = useState(false);
 
   // Get username from localStorage
   useEffect(() => {
@@ -25,6 +28,10 @@ const Attendance = () => {
       setUserId(storedUserId);
     }
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
+  }, [i18n.language]);
 
   // Helper function to parse time string and get current time status
   const parseTimeString = (timeStr) => {
@@ -576,7 +583,9 @@ const Attendance = () => {
             <span className="countdown-time">{timeLeft}</span>
           </div>
           <p className="countdown-text">
-            {timeLeft === 1 ? 'minute' : 'minutes'} left in grace period
+            {timeLeft === 1 
+              ? t('attendance.minuteLeft') 
+              : t('attendance.minutesLeft', { count: timeLeft })}
           </p>
         </div>
       </div>
@@ -610,24 +619,35 @@ const Attendance = () => {
   }
 
   return (
-    <div className="attendance-container">
+    <div className="attendance-container" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+          <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+            <Globe size={35} />
+          </button>
+          {showLangOptions && (
+            <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+              <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>English</button>
+              <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>עברית</button>
+            </div>
+          )}
+        </div>
       <div className="attendance-wrapper">
         {/* Header */}
         <div className="attendance-header">
-          <h1 className="attendance-title">Attendance</h1>
-          <p className="attendance-subtitle">Manage your session attendance and view history</p>
+          <h1 className="attendance-title">{t('attendance.title')}</h1>
+          <p className="attendance-subtitle">{t('attendance.subtitle')}</p>
         </div>
 
         {/* Tab Navigation */}
         <div className="profile-tabs">
           <div className="tabs">
             {["Today", "History"].map((key) => (
-              <button 
-                key={key} 
-                className={`tab-item ${activeTab === key ? "active" : ""}`} 
+              <button
+                key={key}
+                className={`tab-item ${activeTab === key ? "active" : ""}`}
                 onClick={() => setActiveTab(key)}
               >
-                {getTabIcon(key)} {key}
+                {getTabIcon(key)} {t(`attendance.tabs.${key.toLowerCase()}`)}
               </button>
             ))}
           </div>
@@ -640,7 +660,7 @@ const Attendance = () => {
               {todaySessions.length > 0 ? (
                 <div className="sessions-container">
                   <h2 className="sessions-title">
-                    Today's Sessions ({todaySessions.length})
+                    {t('attendance.todaysSessions')} ({todaySessions.length})
                   </h2>
                   {todaySessions.map((session, index) => (
                     <div key={session.id} className="session-card">
@@ -651,9 +671,7 @@ const Attendance = () => {
                           </h3>
                           <span className="session-time-badge">{session.time}</span>
                         </div>
-                        <p className="session-card-description">
-                          Please confirm your attendance for this session.
-                        </p>
+                        <p className="session-card-description">{t('attendance.pleaseConfirm')}</p>
 
                         {/* Progress Bar */}
                         <div className="session-progress-bar">
@@ -665,12 +683,12 @@ const Attendance = () => {
                             <div className="detail-content">
                               <Clock className="detail-icon" />
                               <div>
-                                <p className="detail-label">Time</p>
+                                <p className="detail-label">{t('attendance.time')}</p>
                                 <p className="detail-value">{session.time}</p>
                               </div>
                             </div>
                             <div className="detail-section">
-                              <p className="detail-label">Date</p>
+                              <p className="detail-label">{t('attendance.date')}</p>
                               <p className="detail-value">Today</p>
                             </div>
                           </div>
@@ -678,7 +696,7 @@ const Attendance = () => {
                           <div className="detail-row">
                             <Users className="detail-icon" />
                             <div className="detail-content">
-                              <p className="detail-label">Session Type</p>
+                              <p className="detail-label">{t('attendance.sessionType')}</p>
                               <p className="detail-value">{session.sessionType}</p>
                             </div>
                           </div>
@@ -688,7 +706,7 @@ const Attendance = () => {
                           <div className="detail-row">
                             <FileText className="detail-icon" />
                             <div className="detail-content">
-                              <p className="detail-label" style={{ marginBottom: '0.5rem' }}>Description</p>
+                              <p className="detail-label" style={{ marginBottom: '0.5rem' }}>{t('attendance.description')}</p>
                               <p className="detail-value">{session.description}</p>
                             </div>
                           </div>
@@ -696,7 +714,7 @@ const Attendance = () => {
 
                         <div className="status-section">
                           <div className="status-row">
-                            <span className="status-label">Status:</span>
+                            <span className="status-label">{t('attendance.status')}:</span>
                             <span className={`status-badge ${getStatusClass(selectedSessions[session.id]?.status || session.status)}`}>
                               {getStatusText(selectedSessions[session.id]?.status || session.status)}
                             </span>
@@ -707,10 +725,10 @@ const Attendance = () => {
                             const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
                             return (
                               <div className={`time-status-indicator ${attendanceStatus}`}>
-                                {attendanceStatus === 'present' && '✅ On Time'}
-                                {attendanceStatus === 'grace-period' && '⏰ Grace Period Active'}
-                                {attendanceStatus === 'late' && '⚠️ Late Confirmation'}
-                                {attendanceStatus === 'auto-absent' && '❌ Session Ended'}
+                                {attendanceStatus === 'present' && `✅ ${t('attendance.onTime')}`}
+                                {attendanceStatus === 'grace-period' && `⏰ ${t('attendance.graceActive')}`}
+                                {attendanceStatus === 'late' && `⚠️ ${t('attendance.late')}`}
+                                {attendanceStatus === 'auto-absent' && `❌ ${t('attendance.ended')}`}
                               </div>
                             );
                           })()}
@@ -728,8 +746,8 @@ const Attendance = () => {
                                 <div className={`alert-box alert-${timeStatus.type}`}>
                                   <AlertCircle className="alert-icon" />
                                   <div className="alert-content">
-                                    <p className="alert-title">Session Timing</p>
-                                    <p className="alert-message">{timeStatus.message}</p>
+                                    <p className="alert-title">{t('attendance.sessionTiming')}</p>
+                                    <p className="alert-message">{timeStatus.message}</p> 
                                   </div>
                                 </div>
                               );
@@ -747,11 +765,9 @@ const Attendance = () => {
                                 <div className="status-message status-error">
                                   <div className="status-message-header">
                                     <XCircle className="status-message-icon" />
-                                    <p className="status-message-title">Session Ended</p>
+                                    <p className="status-message-title">{t('attendance.sessionEnded')}</p>
                                   </div>
-                                  <p className="status-message-text">
-                                    This session has ended and you have been automatically marked as absent.
-                                  </p>
+                                  <p className="status-message-text">{t('attendance.autoMarkedAbsent')}</p>
                                 </div>
                               );
                             }
@@ -761,8 +777,8 @@ const Attendance = () => {
                                 <div className="alert-box alert-warning">
                                   <AlertCircle className="alert-icon" />
                                   <div className="alert-content">
-                                    <p className="alert-title">Please confirm your attendance</p>
-                                    <p className="alert-message">Your attendance needs to be confirmed for this session.</p>
+                                    <p className="alert-title">{t('attendance.confirmTitle')}</p>
+                                    <p className="alert-message">{t('attendance.confirmMessage')}</p>
                                   </div>
                                 </div>
 
@@ -772,7 +788,7 @@ const Attendance = () => {
                                     className="btn btn-cancel"
                                   >
                                     <X className="btn-icon" />
-                                    <span className="btn-text">Unable to Attend</span>
+                                    <span className="btn-text">{t('attendance.unableToAttend')}</span>
                                   </button>
                                   <button
                                     onClick={() => handleConfirm(session.id)}
@@ -781,10 +797,10 @@ const Attendance = () => {
                                     <Check className="btn-icon" />
                                     <span className="btn-text">
                                       {attendanceStatus === 'late' 
-                                        ? 'Confirm (Late)' 
+                                        ? t('attendance.confirmLate') 
                                         : attendanceStatus === 'grace-period' 
-                                          ? 'Confirm (Grace Period)' 
-                                          : 'Confirm Attendance'}
+                                          ? t('attendance.confirmGrace') 
+                                          : t('attendance.confirm')}
                                     </span>
                                   </button>
                                 </div>
@@ -799,17 +815,13 @@ const Attendance = () => {
               ) : (
                 <div className="session-card">
                   <div className="session-card-content">
-                    <h2 className="session-card-title">No Sessions Today</h2>
-                    <p className="session-card-description">
-                      You don't have any approved sessions scheduled for today.
-                    </p>
+                    <h2 className="session-card-title">{t('attendance.noSessions')}</h2>
+                    <p className="session-card-description">{t('attendance.noSessionsDesc')}</p>
                     <div className="alert-box alert-info">
                       <AlertCircle className="alert-icon" />
                       <div className="alert-content">
-                        <p className="alert-title">No sessions found</p>
-                        <p className="alert-message">
-                          Check the calendar to see your upcoming sessions or contact your coordinator.
-                        </p>
+                        <p className="alert-title">{t('attendance.noSessionsTitle')}</p>
+                        <p className="alert-message">{t('attendance.noSessionsMessage')}</p>
                       </div>
                     </div>
                   </div>
@@ -824,18 +836,18 @@ const Attendance = () => {
           <div>
             {/* Monthly Summary */}
             <div className="monthly-summary">
-              <h3 className="monthly-summary-title">This Month's Summary</h3>
+              <h3 className="monthly-summary-title">{t('attendance.thisMonth')}</h3>
               <div className="monthly-stats">
                 <div>
-                  <p className="monthly-stat-label">Sessions</p>
+                  <p className="monthly-stat-label">{t('attendance.sessions')}</p>
                   <p className="monthly-stat-value">{stats.completedSessions}</p>
                 </div>
                 <div>
-                  <p className="monthly-stat-label">Hours</p>
+                  <p className="monthly-stat-label">{t('attendance.hours')}</p>
                   <p className="monthly-stat-value">{stats.thisMonthHours.toFixed(1)}</p>
                 </div>
                 <div>
-                  <p className="monthly-stat-label">Attendance Rate</p>
+                  <p className="monthly-stat-label">{t('attendance.attendanceRate')}</p>
                   <p className="monthly-stat-value">{stats.attendanceRate}%</p>
                 </div>
               </div>
@@ -874,14 +886,14 @@ const Attendance = () => {
                         <div className="history-metrics">
                           <div className="metric-item">
                             <TrendingUp className="metric-icon" />
-                            <span className="metric-text">{session.hours.toFixed(1)} hours completed</span>
+                            <span className="metric-text">{t('attendance.hoursCompleted', { hours: session.hours.toFixed(1) })}</span>
                           </div>
                         </div>
                       )}
 
                       {session.notes && (
                         <p className="reason-text">
-                          <span className="reason-label">Notes:</span> {session.notes}
+                          <span className="reason-label">{t('attendance.notes')}:</span>
                         </p>
                       )}
                     </div>
@@ -889,7 +901,7 @@ const Attendance = () => {
                 ))
               ) : (
                 <div className="history-item">
-                  <p>No attendance history found.</p>
+                  <p>{t('attendance.noHistory')}</p>
                 </div>
               )}
             </div>
