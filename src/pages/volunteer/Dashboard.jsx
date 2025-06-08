@@ -6,17 +6,92 @@ import LoadingScreen from "@/components/volunteer/InnerLS";
 import './styles/Dashboard.css';
 
 // !Custom Marijuana Icon component
-const MarijuanaIcon = () => (
-  <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2c-.5 0-1 .2-1.4.6L8.8 4.4c-.8.8-2 .8-2.8 0L4.2 2.6C3.8 2.2 3.3 2 2.8 2s-1 .2-1.4.6c-.8.8-.8 2 0 2.8L3.2 7.2c.8.8.8 2 0 2.8L1.4 11.8c-.8.8-.8 2 0 2.8.4.4.9.6 1.4.6s1-.2 1.4-.6L5.8 12.8c.8-.8 2-.8 2.8 0L10.4 14.6c.4.4.9.6 1.4.6s1-.2 1.4-.6L15 12.8c.8-.8 2-.8 2.8 0l1.8 1.8c.4.4.9.6 1.4.6s1-.2 1.4-.6c.8-.8.8-2 0-2.8L20.6 10c-.8-.8-.8-2 0-2.8l1.8-1.8c.8-.8.8-2 0-2.8C22 2.2 21.5 2 21 2s-1 .2-1.4.6L17.8 4.4c-.8.8-2 .8-2.8 0L13.2 2.6C12.8 2.2 12.3 2 12 2z"/>
+const MarijuanaIcon = ({ size = 38 }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 840 535"
+    fill="currentColor"
+    preserveAspectRatio="xMidYMid meet"
+  >
+    <g transform="translate(0,535) scale(0.1,-0.1)">
+      <path d="M4289 4920 c-9 -5 -21 -22 -27 -37 -10 -24 -42 -196 -42 -221 0 -5
+      -9 -19 -20 -32 -18 -21 -40 -79 -40 -107 0 -6 -5 -13 -10 -15 -13 -4 -39 -74
+      -40 -105 0 -13 -9 -32 -19 -42 -13 -13 -22 -41 -27 -81 -4 -33 -12 -64 -19
+      -68 -28 -16 -45 -72 -45 -145 0 -49 -6 -85 -17 -107 -9 -19 -18 -55 -21 -82
+      -3 -28 -9 -48 -17 -48 -17 0 -35 -68 -35 -133 0 -53 -2 -57 -31 -73 l-31 -16
+      4 -84 c1 -46 0 -84 -4 -84 -3 0 -14 -23 -23 -50 -15 -47 -15 -93 1 -151 3 -10
+      -3 -18 -15 -22 -24 -6 -34 -64 -23 -134 8 -49 7 -54 -15 -68 -22 -15 -23 -21
+      -17 -63 4 -26 13 -64 20 -86 17 -47 18 -43 -6 -49 -17 -4 -20 -13 -20 -54 0
+      -26 9 -68 20 -92 14 -30 17 -47 10 -56 -6 -8 -5 -29 4 -63 12 -48 12 -52 -4
+      -52 -10 0 -23 13 -29 29 -18 41 -76 95 -96 87 -12 -4 -20 3 -30 27 -7 17 -30
+      -54 -50 -80 -30 -39 -42 -48 -63 -45 -21 -2 -33 5 -56 35 -27 36 -76 70 -94
+      65 -5 -2 -33 23 -63 54 -42 44 -63 58 -94 64 -26 4 -55 20 -83 46 -56 52 -83
+      63 -111 48 -19 -10 -27 -7 -58 21 -38 33 -90 59 -119 59 -9 0 -32 13 -50 30
+      -19 16 -53 35 -76 41 -24 7 -54 24 -68 37 -45 44 -95 72 -136 75 -21 2 -63 16
+      -92 31 -30 15 -59 25 -65 23 -7 -3 -25 6 -42 18 -30 22 -95 48 -111 44 -5 -1
+      -27 6 -48 15 -22 10 -50 16 -62 13 -13 -2 -47 4 -76 14 -71 25 -102 24 -134
+      -4 -41 -36 -28 -83 37 -140 37 -33 50 -50 45 -63 -4 -14 17 -43 79 -108 47
+      -49 85 -93 85 -98 0 -19 42 -69 88 -103 25 -20 70 -62 100 -95 51 -57 53 -62
+      43 -90 -10 -30 -9 -32 52 -75 34 -24 88 -69 119 -100 31 -30 64 -55 73 -55 11
+      0 14 -6 9 -24 -4 -19 3 -30 37 -60 24 -20 67 -48 96 -63 48 -23 53 -29 53 -58
+      0 -33 20 -49 88 -70 18 -5 22 -14 22 -45 0 -35 3 -39 43 -58 23 -11 59 -24 80
+      -30 20 -6 51 -22 69 -37 17 -14 44 -29 60 -32 18 -4 33 -15 38 -29 14 -35 51
+      -51 183 -79 18 -3 27 -12 27 -25 0 -18 -8 -19 -167 -17 -93 0 -206 1 -253 0
+      -47 -1 -168 -1 -270 -1 -136 -1 -207 -5 -267 -18 -46 -9 -83 -20 -83 -24 0 -4
+      -27 -10 -61 -13 -88 -8 -133 -58 -109 -121 12 -32 33 -43 121 -61 40 -9 76
+      -19 79 -23 11 -15 62 -32 98 -32 43 0 127 -21 162 -40 14 -8 52 -22 85 -31
+      116 -34 165 -53 165 -64 1 -26 22 -36 101 -45 46 -6 111 -15 144 -21 124 -21
+      145 -22 191 -4 32 12 48 14 58 6 8 -7 31 -8 71 -1 76 12 83 1 33 -53 -21 -23
+      -57 -62 -79 -87 -22 -25 -62 -68 -89 -97 -27 -29 -52 -62 -55 -74 -4 -11 -18
+      -37 -31 -56 -13 -20 -24 -48 -24 -62 0 -14 -9 -39 -21 -56 -37 -55 -69 -124
+      -69 -150 0 -34 45 -75 82 -75 21 0 44 14 82 50 29 28 59 50 66 50 7 0 33 11
+      59 24 25 14 66 34 91 45 25 12 60 31 77 44 73 50 103 65 122 60 13 -3 31 7 59
+      36 22 23 45 41 52 41 7 0 34 19 60 42 26 24 59 51 74 61 15 10 38 36 52 58 13
+      22 29 37 34 34 5 -3 16 7 24 22 14 27 15 23 16 -67 1 -186 28 -502 50 -578 39
+      -139 93 -220 164 -247 92 -35 189 29 188 126 -1 30 -8 49 -31 74 -47 54 -119
+      211 -131 285 -6 36 -12 164 -15 285 -5 202 -4 216 9 176 8 -24 30 -60 50 -80
+      107 -111 198 -191 218 -191 7 0 32 -18 53 -41 26 -26 46 -38 58 -35 16 4 83
+      -31 154 -81 17 -13 34 -23 38 -23 4 0 39 -16 76 -35 38 -19 74 -35 81 -35 6 0
+      35 -22 64 -50 63 -59 99 -66 141 -24 35 35 27 84 -26 169 -23 35 -41 74 -41
+      85 0 34 -80 169 -116 196 -19 15 -34 32 -34 40 0 7 -20 30 -45 51 -25 20 -45
+      42 -45 47 0 6 -17 27 -37 48 -47 48 -37 60 41 46 44 -8 60 -7 66 1 5 9 20 8
+      58 -4 32 -11 66 -15 89 -11 21 3 65 10 98 15 33 6 96 15 140 21 99 13 105 15
+      105 38 0 18 28 30 165 71 33 9 71 23 85 31 37 20 120 40 167 40 43 0 93 17 93
+      31 0 4 26 13 58 19 31 6 68 13 80 16 34 7 72 49 72 78 0 14 -13 40 -28 57 -23
+      26 -38 32 -83 37 -30 2 -59 9 -66 14 -32 25 -276 48 -448 42 -66 -3 -136 -5
+      -155 -5 -422 4 -440 5 -440 17 0 18 13 24 86 40 73 15 124 46 124 75 0 13 7
+      19 24 19 12 0 38 11 57 25 40 29 52 35 139 67 65 24 65 24 68 65 3 36 7 42 30
+      48 15 3 42 14 58 24 26 16 30 24 27 48 -4 27 -1 32 49 56 74 36 138 93 138
+      122 0 15 7 26 20 30 10 3 37 26 59 51 22 25 66 62 98 83 77 50 86 62 73 96 -9
+      25 -6 32 47 89 31 33 68 68 83 77 31 19 100 98 100 114 0 6 38 51 84 101 65
+      68 84 94 80 110 -4 16 5 29 40 55 71 54 87 111 40 148 -32 25 -71 27 -122 5
+      -20 -8 -60 -17 -88 -19 -28 -1 -62 -9 -75 -16 -13 -7 -36 -13 -51 -14 -15 -2
+      -49 -15 -75 -31 -26 -16 -54 -27 -61 -26 -7 2 -34 -9 -60 -24 -26 -14 -67 -28
+      -90 -30 -53 -5 -73 -15 -126 -64 -23 -21 -56 -41 -74 -45 -18 -4 -52 -21 -76
+      -39 -23 -18 -59 -36 -79 -40 -20 -4 -59 -25 -86 -46 -45 -36 -53 -39 -75 -29
+      -28 13 -49 3 -114 -55 -21 -19 -54 -36 -76 -40 -30 -6 -52 -21 -94 -64 -30
+      -31 -59 -56 -64 -54 -18 5 -77 -39 -97 -72 -16 -26 -26 -32 -45 -29 -28 6 -73
+      -38 -108 -104 -13 -25 -30 -43 -40 -43 -24 0 -73 -45 -88 -80 -7 -16 -24 -36
+      -38 -43 -36 -17 -59 -52 -87 -132 -13 -38 -30 -71 -37 -74 -7 -2 -21 -13 -31
+      -25 -14 -18 -14 -13 4 27 11 26 19 56 17 65 -2 10 13 49 31 86 28 54 33 71 24
+      85 -9 14 -5 31 18 78 39 81 53 154 33 169 -12 10 -12 17 6 55 11 24 20 62 20
+      84 0 22 11 72 25 110 13 39 25 78 25 87 0 9 -16 26 -35 38 -34 21 -36 24 -30
+      65 6 37 4 44 -19 62 -26 21 -26 21 -10 64 21 62 24 187 3 202 -13 10 -15 37
+      -13 167 1 85 3 160 4 165 6 27 -2 46 -23 54 -23 9 -24 16 -30 126 -4 64 -4
+      129 -1 144 9 41 -14 141 -32 141 -15 0 -19 39 -15 151 2 38 -2 76 -9 89 -6 12
+      -13 63 -15 113 -6 152 -45 237 -109 237 -17 0 -38 -5 -47 -10z" />
+    </g>
   </svg>
 );
 
+
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [animateHours, setAnimateHours] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoursProgress, setHoursProgress] = useState(0);
-  const [sessionsProgress, setSessionsProgress] = useState(0);
   const [cardColors, setCardColors] = useState([]);
   const [userData, setUserData] = useState({
     name: 'Volunteer',
@@ -41,19 +116,19 @@ const Dashboard = () => {
 
   const getLevel = (hours) => {
     if (hours >= 0 && hours < 10)
-      return { label: "Beginner", icon: <Star size={36} />, nextLevel: "Helper", hoursToNext: 10 - hours };
+      return { label: "Beginner", icon: <Star size={38} />, nextLevel: "Helper", hoursToNext: 10 - hours };
     if (hours >= 10 && hours < 30)
-      return { label: "Helper", icon: <Hand size={36} />, nextLevel: "Contributor", hoursToNext: 30 - hours };
+      return { label: "Helper", icon: <Hand size={38} />, nextLevel: "Contributor", hoursToNext: 30 - hours };
     if (hours >= 30 && hours < 60)
-      return { label: "Contributor", icon: <UserCheck size={36} />, nextLevel: "Supporter", hoursToNext: 60 - hours };
+      return { label: "Contributor", icon: <UserCheck size={38} />, nextLevel: "Supporter", hoursToNext: 60 - hours };
     if (hours >= 60 && hours < 100)
       return { label: "Supporter", icon: <HeartHandshake size={36} />, nextLevel: "Advocate", hoursToNext: 100 - hours };
     if (hours >= 100 && hours < 150)
-      return { label: "Advocate", icon: <ThumbsUp size={36} />, nextLevel: "Champion", hoursToNext: 150 - hours };
+      return { label: "Advocate", icon: <ThumbsUp size={38} />, nextLevel: "Champion", hoursToNext: 150 - hours };
     if (hours >= 150 && hours < 200)
-      return { label: "Champion", icon: <ShieldCheck size={36} />, nextLevel: "Humanitarian", hoursToNext: 200 - hours };
+      return { label: "Champion", icon: <ShieldCheck size={38} />, nextLevel: "Humanitarian", hoursToNext: 200 - hours };
     if (hours >= 200 && hours < 420)
-      return { label: "Humanitarian", icon: <Globe size={36} />, nextLevel: "Lord of the deeds", hoursToNext: 420 - hours };
+      return { label: "Humanitarian", icon: <Globe size={38} />, nextLevel: null, hoursToNext: 0 };
     return { label: "Lord of the deeds", icon: <MarijuanaIcon />, nextLevel: null, hoursToNext: 0 };
   };
 
@@ -225,8 +300,8 @@ const Dashboard = () => {
             const diffTime = Math.abs(now - confirmedDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            if (diffDays === 0) timeAgo = 'Today';
-            else if (diffDays === 1) timeAgo = '1 day ago';
+            if (diffDays === 1) timeAgo = 'Today';
+            else if (diffDays === 2) timeAgo = '1 day ago';
             else if (diffDays < 7) timeAgo = `${diffDays} days ago`;
             else if (diffDays < 14) timeAgo = '1 week ago';
             else timeAgo = `${Math.floor(diffDays / 7)} weeks ago`;
@@ -305,16 +380,17 @@ const Dashboard = () => {
   // Update progress bars when data changes
   useEffect(() => {
     if (userData.totalHours) {
-      const value = Math.min(userData.totalHours, 100);
-      setTimeout(() => setHoursProgress((value / 100) * 565.48), 200);
-    }
+      const maxHours = 200;
+      const value = Math.min(userData.totalHours, maxHours);
+      const progressRatio = value / maxHours;
+      const offset = 565.48 - (progressRatio * 565.48); // <-- correct calculation
     
-    if (userData.totalSessions) {
-      const maxSessions = 60;
-      const value = Math.min(userData.totalSessions, maxSessions);
-      setTimeout(() => setSessionsProgress((value / maxSessions) * 100), 400);
+      setTimeout(() => {
+        setHoursProgress(offset);
+        setAnimateHours(true);
+      }, 200);
     }
-  }, [userData.totalHours, userData.totalSessions]);
+  }, [userData.totalHours]);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1000);
@@ -375,8 +451,16 @@ const Dashboard = () => {
                   </linearGradient>
                 </defs>
                 <circle className="dash-circle-bg" cx="100" cy="100" r="90" strokeWidth="12" />
-                <circle className="dash-circle-value" cx="100" cy="100" r="90" strokeWidth="12"
-                  strokeDasharray="565.48" strokeDashoffset={565.48 - hoursProgress} />
+                <circle
+                  className={`dash-circle-value ${animateHours ? 'animate' : ''}`}
+                  cx="100"
+                  cy="100"
+                  r="90"
+                  strokeWidth="12"
+                  strokeDasharray="565.48"
+                  strokeDashoffset={hoursProgress}
+                  style={{ '--final-offset': hoursProgress }}
+                />
               </svg>
               <div className="dash-hours-display">
                 <span className="dash-hours-number dash-hours-number-large">{userData.totalHours}</span>
@@ -404,17 +488,6 @@ const Dashboard = () => {
               <div className="dash-sessions-display">
                 <span className="dash-sessions-number">{userData.totalSessions}</span>
               </div>
-              <div className="dash-sessions-progress">
-                <div className="dash-sessions-progress-bar">
-                  <div 
-                    className="dash-sessions-progress-fill"
-                    style={{ 
-                      width: `${sessionsProgress}%`,
-                      background: `linear-gradient(90deg, ${cardColors[1]?.primary}, ${cardColors[1]?.secondary})`
-                    }}
-                  ></div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -434,7 +507,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="dash-level-content">
-              <div className="dash-level-badge">
+            <div className={`dash-level-badge ${!currentLevel.nextLevel ? 'dash-level-badge--centered' : ''}`}>
                 <div 
                   className="dash-level-icon"
                   style={{ 

@@ -159,7 +159,10 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
         {/* Bottom Profile Section */}
         <div className="relative p-3 border-t border-gray-700" ref={dropdownRef}>
           <button
-            onClick={() => setShowProfileMenu((prev) => !prev)}
+            onClick={() => {
+              if (!isSidebarOpen) toggleSidebar();
+              setShowProfileMenu((prev) => !prev);
+            }}
             className={`sidebar-link ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}`}
           >
             <UserCircle />
