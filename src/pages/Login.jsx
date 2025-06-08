@@ -240,7 +240,13 @@ export default function LoginPage() {
           <h1 className="login-title">{t("login_title")}</h1>
           <p className="login-subtitle">{t("login_subtitle")}</p>
 
-          <div className="login-form">
+          <form
+            className="login-form"
+            onSubmit={(e) => {
+              e.preventDefault();  // Prevent default form submission behavior
+              handleLogin();       // Trigger login function
+            }}
+          >
             <div className="form-group">
               <label className="form-label" htmlFor="username">{t("username")}</label>
               <input
@@ -276,8 +282,8 @@ export default function LoginPage() {
             </div>
 
             <button 
+              type = "submit"
               className="login-button"
-              onClick={handleLogin}
             >
               {t("login_button")}
             </button>
@@ -289,7 +295,7 @@ export default function LoginPage() {
             <a href="/forgot-password" className="forgot-password-link">
               {t("forgot_password")}
             </a>
-          </div>
+          </form>
         </div>
       </div>
     </div>
