@@ -1,9 +1,7 @@
-/* Attendance.css - Mobile Optimized */
-
 /* Container */
 .attendance-container {
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: #f2f4f6;
 }
 
 .attendance-wrapper {
@@ -30,7 +28,7 @@
   font-size: 1rem;
 }
 
-/* Tab Navigation - Mobile Optimized */
+/* Tab Navigation */
 .tab-navigation {
   display: flex;
   gap: 0.25rem;
@@ -38,9 +36,6 @@
   background-color: #f3f4f6;
   border-radius: 0.5rem;
   margin-bottom: 1.5rem;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .tab-button {
@@ -57,9 +52,7 @@
   border: none;
   cursor: pointer;
   background: transparent;
-  min-height: 44px; /* Touch-friendly minimum */
   min-width: 120px;
-  white-space: nowrap;
 }
 
 .tab-button:hover {
@@ -87,20 +80,14 @@
   flex-shrink: 0;
 }
 
-/* Main Grid Layout - Mobile Responsive */
+/* Main Grid Layout */
 .content-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
 }
 
-@media (min-width: 1024px) {
-  .content-grid {
-    grid-template-columns: 2fr 1fr;
-  }
-}
-
-/* Session Card - Mobile Enhanced */
+/* Session Card */
 .session-card {
   background-color: white;
   border-radius: 0.75rem;
@@ -137,7 +124,7 @@
   line-height: 1.5;
 }
 
-/* Session Details - Mobile Optimized */
+/* Session Details */
 .session-details {
   display: flex;
   flex-direction: column;
@@ -148,7 +135,6 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .detail-icon {
@@ -161,7 +147,6 @@
 
 .detail-content {
   flex: 1;
-  min-width: 0; /* Allows text to wrap properly */
 }
 
 .detail-label {
@@ -173,13 +158,11 @@
 .detail-value {
   font-weight: 500;
   color: #111827;
-  word-wrap: break-word;
 }
 
 .detail-row-split {
   display: flex;
   gap: 2rem;
-  flex-wrap: wrap;
 }
 
 .detail-section {
@@ -187,7 +170,7 @@
   min-width: 200px;
 }
 
-/* Requirements List - Mobile Friendly */
+/* Requirements List */
 .requirements-list {
   display: flex;
   flex-direction: column;
@@ -212,7 +195,7 @@
   flex-shrink: 0;
 }
 
-/* Status Section - Mobile Enhanced */
+/* Status Section */
 .status-section {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
@@ -224,7 +207,6 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
-  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -239,7 +221,6 @@
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
-  white-space: nowrap;
   text-align: center;
   min-width: 80px;
 }
@@ -269,7 +250,12 @@
   background-color: #fee2e2;
 }
 
-/* Alert Box - Mobile Optimized */
+.status-late {
+  color: #d97706;
+  background-color: #fef3c7;
+}
+
+/* Alert Box */
 .alert-box {
   display: flex;
   align-items: flex-start;
@@ -286,6 +272,18 @@
   border-left: 4px solid #f59e0b;
 }
 
+.alert-info {
+  background-color: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-left: 4px solid #3b82f6;
+}
+
+.alert-error {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+}
+
 .alert-icon {
   width: 1.25rem;
   height: 1.25rem;
@@ -296,7 +294,6 @@
 
 .alert-content {
   flex: 1;
-  min-width: 0;
 }
 
 .alert-title {
@@ -312,11 +309,13 @@
   line-height: 1.4;
 }
 
-/* Action Buttons - Touch Optimized */
+/* Action Buttons */
 .action-buttons {
   display: flex;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .btn {
@@ -331,9 +330,9 @@
   transition: all 0.2s;
   cursor: pointer;
   border: none;
-  min-height: 44px; /* Touch-friendly */
   font-size: 0.9rem;
   min-width: 120px;
+  max-width: 200px;
 }
 
 .btn:active {
@@ -352,12 +351,28 @@
 }
 
 .btn-confirm {
-  background-color: #111827;
+  background-color: #305531;
   color: white;
 }
 
 .btn-confirm:hover {
-  background-color: #1f2937;
+  background-color: #416a42;
+}
+
+.btn-confirm.grace-period {
+  background-color: #f59e0b;
+}
+
+.btn-confirm.grace-period:hover {
+  background-color: #d97706;
+}
+
+.btn-confirm.late {
+  background-color: #ef4444;
+}
+
+.btn-confirm.late:hover {
+  background-color: #dc2626;
 }
 
 .btn-icon {
@@ -366,7 +381,7 @@
   flex-shrink: 0;
 }
 
-/* Success/Error Messages - Mobile Enhanced */
+/* Success/Error Messages */
 .status-message {
   padding: 1rem;
   border-radius: 0.5rem;
@@ -432,7 +447,7 @@
   color: #b91c1c;
 }
 
-/* Sidebar - Mobile Responsive */
+/* Sidebar */
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -466,7 +481,7 @@
   gap: 0.25rem;
 }
 
-/* Upcoming Sessions - Mobile Optimized */
+/* Upcoming Sessions */
 .upcoming-sessions {
   display: flex;
   flex-direction: column;
@@ -499,7 +514,7 @@
   line-height: 1.3;
 }
 
-/* History Tab - Mobile Enhanced */
+/* History Tab */
 .monthly-summary {
   background: linear-gradient(to right, #3b82f6, #2563eb);
   border-radius: 0.75rem;
@@ -517,7 +532,7 @@
 
 .monthly-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   text-align: center;
 }
@@ -552,7 +567,7 @@
   font-size: 0.8rem;
 }
 
-/* History List - Mobile Optimized */
+/* History List */
 .history-list {
   display: flex;
   flex-direction: column;
@@ -578,7 +593,6 @@
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .history-item-title {
@@ -590,7 +604,7 @@
 
 .history-item-details {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
   font-size: 0.875rem;
 }
@@ -609,13 +623,12 @@
   flex-shrink: 0;
 }
 
-/* History Metrics - Mobile Friendly */
+/* History Metrics */
 .history-metrics {
   display: flex;
   align-items: center;
   gap: 1rem;
   margin-top: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .metric-item {
@@ -636,12 +649,11 @@
   color: #059669;
 }
 
-/* Rating Stars - Touch Friendly */
+/* Rating Stars */
 .rating-stars {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  flex-wrap: wrap;
 }
 
 .star {
@@ -668,7 +680,7 @@
   font-weight: 500;
 }
 
-/* Load More - Touch Optimized */
+/* Load More */
 .load-more {
   text-align: center;
   margin-top: 1.5rem;
@@ -683,7 +695,6 @@
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
-  min-height: 44px;
   min-width: 120px;
 }
 
@@ -696,12 +707,11 @@
   transform: scale(0.98);
 }
 
-/* Multiple Sessions Support - Mobile Enhanced */
+/* Multiple Sessions Support */
 .sessions-container {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  counter-reset: session-counter;
 }
 
 .sessions-title {
@@ -727,7 +737,6 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
@@ -739,21 +748,6 @@
   flex: 1;
 }
 
-.session-card-title::before {
-  content: counter(session-counter);
-  counter-increment: session-counter;
-  background: #2563eb;
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.375rem;
-  margin-right: 0.5rem;
-  display: inline-block;
-  min-width: 1.5rem;
-  text-align: center;
-}
-
 .session-time-badge {
   background: #e2e8f0;
   color: #475569;
@@ -761,12 +755,11 @@
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  white-space: nowrap;
   position: relative;
   overflow: hidden;
 }
 
-/* Grace Period Styling - Mobile Optimized */
+/* Grace Period Styling */
 .status-grace-period {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: white;
@@ -825,7 +818,7 @@
   font-weight: 600;
 }
 
-/* Time Status Indicators - Mobile Enhanced */
+/* Time Status Indicators */
 .time-status-indicator {
   display: inline-flex;
   align-items: center;
@@ -870,7 +863,7 @@
   border: 1px solid #9ca3af;
 }
 
-/* Session Progress Bar - Mobile Optimized */
+/* Session Progress Bar */
 .session-progress-bar {
   width: 100%;
   height: 8px;
@@ -913,7 +906,7 @@
   width: 100%;
 }
 
-/* Sessions Summary - Mobile Friendly */
+/* Sessions Summary */
 .sessions-summary {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 1rem;
@@ -962,56 +955,37 @@
   margin-bottom: 0.5rem;
 }
 
-/* ========== Mobile Responsive Breakpoints ========== */
+/* ========== MOBILE RESPONSIVE STYLES ========== */
 
-/* Large tablets */
-@media (max-width: 1024px) {
-  .attendance-wrapper {
-    padding: 1.5rem 1rem;
-  }
-  
-  .content-grid {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-}
-
-/* Small tablets and large phones */
+/* Tablet styles (768px and below) */
 @media (max-width: 768px) {
   .attendance-wrapper {
-    padding: 1rem 0.75rem;
+    padding: 1rem;
   }
 
   .attendance-title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
   }
 
   .attendance-subtitle {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
 
-  .tab-navigation {
-    max-width: 100%;
-  }
-
-  .tab-button {
-    min-width: 100px;
-    padding: 0.75rem 0.5rem;
-    font-size: 0.8rem;
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .session-card-content {
     padding: 1.25rem;
   }
 
-  .session-card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
+  .session-card-title {
+    font-size: 1.125rem;
   }
 
-  .session-time-badge {
-    align-self: flex-start;
+  .sessions-title {
+    font-size: 1.375rem;
   }
 
   .detail-row-split {
@@ -1025,45 +999,51 @@
 
   .action-buttons {
     flex-direction: column;
+    gap: 0.5rem;
   }
 
-  .btn {
-    min-width: auto;
-  }
-
-  .status-row {
-    flex-direction: column;
-    align-items: flex-start;
+  .monthly-stats {
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
     gap: 0.75rem;
-  }
-
-  .status-badge {
-    align-self: flex-start;
-    min-width: auto;
   }
 
   .history-item-details {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 
-  .monthly-stats {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+  .history-metrics {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
-  .monthly-stat-value {
+  .tab-navigation {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-button {
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
+  .countdown-circle {
+    width: 50px;
+    height: 50px;
+  }
+
+  .countdown-time {
     font-size: 1.125rem;
-  }
-
-  .sidebar-card {
-    padding: 1.25rem;
   }
 }
 
-/* Mobile phones portrait */
+/* Phone styles (640px and below) */
 @media (max-width: 640px) {
-  .attendance-wrapper {
-    padding: 0.75rem 0.5rem;
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
   }
 
   .attendance-header {
@@ -1071,22 +1051,11 @@
   }
 
   .attendance-title {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
   }
 
   .attendance-subtitle {
-    font-size: 0.85rem;
-  }
-
-  .tab-button {
-    padding: 0.5rem 0.375rem;
-    font-size: 0.75rem;
-    min-width: 80px;
-  }
-
-  /* Hide tab text on very small screens, show only icons */
-  .tab-button span {
-    display: none;
+    font-size: 0.9rem;
   }
 
   .session-card-content {
@@ -1094,27 +1063,33 @@
   }
 
   .session-card-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
   }
 
-  .session-card-title::before {
-    font-size: 0.65rem;
-    padding: 0.2rem 0.4rem;
-    margin-right: 0.375rem;
+  .session-card-description {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .sessions-title {
+    font-size: 1.25rem;
+  }
+
+  .session-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .session-time-badge {
+    align-self: flex-end;
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
   }
 
-  .detail-row {
-    gap: 0.5rem;
-  }
-
   .detail-icon {
-    width: 1rem;
-    height: 1rem;
+    width: 1.125rem;
+    height: 1.125rem;
   }
 
   .detail-label {
@@ -1122,17 +1097,17 @@
   }
 
   .detail-value {
-    font-size: 0.875rem;
+    font-size: 0.9rem;
   }
 
-  .alert-box {
-    padding: 0.75rem;
-    gap: 0.5rem;
+  .status-label {
+    font-size: 0.8rem;
   }
 
-  .alert-icon {
-    width: 1rem;
-    height: 1rem;
+  .status-badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    min-width: 70px;
   }
 
   .alert-title {
@@ -1144,19 +1119,13 @@
   }
 
   .btn {
-    padding: 0.75rem;
-    font-size: 0.85rem;
-    min-height: 40px;
+    width: 100%;
+    max-width: 300px;
   }
 
   .btn-icon {
-    width: 1rem;
-    height: 1rem;
-  }
-
-  .status-badge {
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
+    width: 1.125rem;
+    height: 1.125rem;
   }
 
   .monthly-summary {
@@ -1167,25 +1136,12 @@
     font-size: 1rem;
   }
 
-  .monthly-stats {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
-  }
-
   .monthly-stat-value {
-    font-size: 1rem;
-  }
-
-  .monthly-stat-label {
-    font-size: 0.7rem;
-  }
-
-  .achievement-text {
-    font-size: 0.75rem;
+    font-size: 1.125rem;
   }
 
   .history-item {
-    padding: 1rem;
+    padding: 1.25rem;
   }
 
   .history-item-title {
@@ -1196,16 +1152,12 @@
     font-size: 0.8rem;
   }
 
-  .countdown-circle {
-    width: 50px;
-    height: 50px;
+  .history-detail-icon {
+    width: 0.875rem;
+    height: 0.875rem;
   }
 
-  .countdown-time {
-    font-size: 1.1rem;
-  }
-
-  .countdown-text {
+  .metric-text {
     font-size: 0.8rem;
   }
 
@@ -1214,146 +1166,8 @@
     padding: 0.375rem 0.5rem;
   }
 
-  .sidebar-card {
-    padding: 1rem;
-  }
-
-  .sidebar-title {
-    font-size: 1rem;
-  }
-
-  .upcoming-session-item {
-    padding: 0.5rem;
-  }
-
-  .upcoming-session-title {
-    font-size: 0.8rem;
-  }
-
-  .upcoming-session-meta {
-    font-size: 0.7rem;
-  }
-
-  .sessions-title {
-    font-size: 1.25rem;
-  }
-
   .grace-period-countdown {
     padding: 0.75rem;
-  }
-
-  .requirements-list {
-    gap: 0.375rem;
-  }
-
-  .requirement-item {
-    font-size: 0.85rem;
-    padding: 0.125rem 0;
-  }
-}
-
-/* Extra small phones */
-@media (max-width: 480px) {
-  .attendance-wrapper {
-    padding: 0.5rem 0.25rem;
-  }
-
-  .attendance-title {
-    font-size: 1.25rem;
-  }
-
-  .attendance-subtitle {
-    font-size: 0.8rem;
-  }
-
-  .tab-navigation {
-    gap: 0.125rem;
-    padding: 0.125rem;
-  }
-
-  .tab-button {
-    padding: 0.5rem 0.25rem;
-    min-width: 60px;
-  }
-
-  .tab-icon {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-
-  .session-card-content {
-    padding: 0.75rem;
-  }
-
-  .session-card-title {
-    font-size: 1rem;
-  }
-
-  .session-card-description {
-    font-size: 0.8rem;
-  }
-
-  .session-card-title::before {
-    font-size: 0.6rem;
-    padding: 0.15rem 0.3rem;
-    margin-right: 0.25rem;
-  }
-
-  .session-time-badge {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.4rem;
-  }
-
-  .detail-icon {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-
-  .detail-label {
-    font-size: 0.75rem;
-  }
-
-  .detail-value {
-    font-size: 0.8rem;
-  }
-
-  .alert-box {
-    padding: 0.5rem;
-  }
-
-  .btn {
-    padding: 0.5rem;
-    font-size: 0.8rem;
-    min-height: 36px;
-  }
-
-  .status-badge {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.4rem;
-  }
-
-  .monthly-summary {
-    padding: 1rem;
-  }
-
-  .monthly-summary-title {
-    font-size: 0.9rem;
-  }
-
-  .monthly-stat-value {
-    font-size: 0.9rem;
-  }
-
-  .monthly-stat-label {
-    font-size: 0.65rem;
-  }
-
-  .history-item {
-    padding: 0.75rem;
-  }
-
-  .history-item-title {
-    font-size: 0.9rem;
   }
 
   .countdown-circle {
@@ -1366,6 +1180,112 @@
   }
 
   .countdown-text {
+    font-size: 0.8rem;
+  }
+}
+
+/* Small phone styles (480px and below) */
+@media (max-width: 480px) {
+  .attendance-wrapper {
+    padding: 0.5rem;
+  }
+
+  .attendance-header {
+    margin-bottom: 1rem;
+  }
+
+  .attendance-title {
+    font-size: 1.375rem;
+  }
+
+  .attendance-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .session-card-content {
+    padding: 0.875rem;
+  }
+
+  .session-card-title {
+    font-size: 0.95rem;
+  }
+
+  .session-card-description {
+    font-size: 0.85rem;
+  }
+
+  .sessions-title {
+    font-size: 1.125rem;
+  }
+
+  .detail-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .detail-label {
+    font-size: 0.75rem;
+  }
+
+  .detail-value {
+    font-size: 0.85rem;
+  }
+
+  .status-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    min-width: 60px;
+  }
+
+  .alert-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .alert-title {
+    font-size: 0.75rem;
+  }
+
+  .alert-message {
+    font-size: 0.75rem;
+  }
+
+  .btn {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8rem;
+    min-width: 90px;
+  }
+
+  .btn-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .monthly-summary {
+    padding: 1rem;
+  }
+
+  .monthly-summary-title {
+    font-size: 0.95rem;
+  }
+
+  .monthly-stat-label {
+    font-size: 0.7rem;
+  }
+
+  .monthly-stat-value {
+    font-size: 1rem;
+  }
+
+  .history-item {
+    padding: 1rem;
+  }
+
+  .history-item-title {
+    font-size: 0.95rem;
+  }
+
+  .history-detail {
     font-size: 0.75rem;
   }
 
@@ -1374,42 +1294,99 @@
     padding: 0.25rem 0.375rem;
   }
 
-  .sidebar-card {
-    padding: 0.75rem;
-  }
-
-  .upcoming-session-item {
-    padding: 0.375rem;
-  }
-
   .grace-period-countdown {
     padding: 0.5rem;
   }
 
-  .sessions-title {
-    font-size: 1.125rem;
+  .countdown-circle {
+    width: 40px;
+    height: 40px;
   }
 
-  .sessions-title::after {
-    width: 40px;
-    height: 2px;
+  .countdown-time {
+    font-size: 0.875rem;
+  }
+
+  .countdown-text {
+    font-size: 0.75rem;
   }
 }
 
-/* Landscape orientation optimizations */
-@media (max-width: 768px) and (orientation: landscape) {
+/* Extra small phones (360px and below) */
+@media (max-width: 360px) {
   .attendance-wrapper {
+    padding: 0.375rem;
+  }
+
+  .attendance-title {
+    font-size: 1.25rem;
+  }
+
+  .attendance-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .session-card-content {
     padding: 0.75rem;
   }
 
+  .session-card-title {
+    font-size: 0.9rem;
+  }
+
+  .sessions-title {
+    font-size: 1rem;
+  }
+
+  .detail-value {
+    font-size: 0.8rem;
+  }
+
+  .btn {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+    min-width: 80px;
+  }
+
+  .monthly-summary {
+    padding: 0.875rem;
+  }
+
+  .monthly-stat-value {
+    font-size: 0.95rem;
+  }
+
+  .history-item {
+    padding: 0.875rem;
+  }
+
+  .history-item-title {
+    font-size: 0.9rem;
+  }
+
+  .countdown-circle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .countdown-time {
+    font-size: 0.8rem;
+  }
+}
+
+/* Landscape phone styles */
+@media (max-width: 767px) and (orientation: landscape) {
+  .attendance-wrapper {
+    padding: 1rem;
+  }
+
   .content-grid {
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
 
-  .session-card-header {
-    flex-direction: row;
-    align-items: center;
+  .session-card-content {
+    padding: 1rem;
   }
 
   .action-buttons {
@@ -1417,111 +1394,63 @@
   }
 
   .monthly-stats {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-/* Touch-specific optimizations */
-@media (hover: none) and (pointer: coarse) {
-  /* Remove hover effects on touch devices */
-  .tab-button:hover,
-  .btn-cancel:hover,
-  .btn-confirm:hover,
-  .load-more-btn:hover,
-  .session-card:hover,
-  .history-item:hover {
-    background-color: inherit;
-    color: inherit;
-    transform: none;
-    box-shadow: inherit;
-  }
-
-  /* Enhance active states for better touch feedback */
-  .tab-button:active {
-    background-color: rgba(17, 24, 39, 0.1);
-  }
-
-  .session-card:active {
-    transform: scale(0.98);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  .upcoming-session-item:active {
-    background-color: #e5e7eb;
-  }
-
-  .history-item:active {
-    transform: scale(0.99);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  .btn:active {
-    transform: scale(0.96);
-  }
-
-  .load-more-btn:active {
-    background-color: #e5e7eb;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .session-card,
-  .sidebar-card,
-  .history-item {
+/* High contrast mode support for mobile */
+@media (prefers-contrast: high) and (max-width: 768px) {
+  .session-card {
     border: 2px solid #000;
   }
-
-  .status-badge {
-    border: 1px solid currentColor;
+  
+  .alert-box {
+    border: 2px solid #000;
   }
-
-  .btn {
-    border: 2px solid currentColor;
+  
+  .monthly-summary {
+    border: 2px solid #000;
+  }
+  
+  .history-item {
+    border: 2px solid #000;
   }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-
+  .session-progress-fill,
   .countdown-circle,
-  .status-grace-period,
-  .session-progress-fill.grace-period,
   .time-status-indicator.grace-period {
     animation: none;
   }
+  
+  .session-card:active,
+  .btn:active {
+    transform: none;
+  }
 }
 
-
-
-/* Print styles */
-@media print {
-  .attendance-container {
-    background: white;
+/* Touch-friendly adjustments for all mobile devices */
+@media (max-width: 768px) {
+  .session-card {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
-
-  .tab-navigation,
-  .action-buttons,
-  .load-more {
-    display: none;
+  
+  .btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
   }
-
-  .session-card,
-  .sidebar-card,
-  .history-item {
-    break-inside: avoid;
-    box-shadow: none;
-    border: 1px solid #000;
+  
+  .tab-button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
-
-  .content-grid {
-    grid-template-columns: 1fr;
+  
+  .upcoming-session-item {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }

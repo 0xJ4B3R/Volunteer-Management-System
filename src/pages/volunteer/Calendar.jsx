@@ -26,7 +26,7 @@ const getSessionTypeColor = (type) => {
     case "exercise": return "bg-[#ef4444] text-white";
     case "therapy": return "bg-[#6366f1] text-white";
     case "social": return "bg-[#14b8a6] text-white";
-    case "session": return "bg-[#6b7280] text-white"; // Default for sessions without specific type
+    case "session": return "bg-[#6b7280] text-white";
     default: return "bg-[#6b7280] text-white";
   }
 };
@@ -42,7 +42,7 @@ const getSessionTypeBorderColor = (type) => {
     case "exercise": return "#dc2626";
     case "therapy": return "#4f46e5";
     case "social": return "#0d9488";
-    case "session": return "#4b5563"; // Default for sessions without specific type
+    case "session": return "#4b5563";
     default: return "#4b5563";
   }
 };
@@ -56,28 +56,21 @@ const isEventAvailable = (eventDate) => {
   return eventDay >= today;
 };
 
-// Utility: Convert time string to minutes for sorting
+// Updated utility: Convert 24-hour time string to minutes for sorting
 const timeToMinutes = (timeStr) => {
   if (!timeStr) return 0;
   
-  let hours = 0;
-  let minutes = 0;
-  
-  timeStr = timeStr.toLowerCase().trim();
-  let isPM = timeStr.includes('pm');
-  timeStr = timeStr.replace(/[ap]m/g, '').trim();
-  
-  if (timeStr.includes(':')) {
-    [hours, minutes] = timeStr.split(':').map(part => parseInt(part, 10));
-  } else {
-    hours = parseInt(timeStr, 10);
-    minutes = 0;
+  // Handle 24-hour format
+  const timeParts = timeStr.split(':');
+  if (timeParts.length === 2) {
+    const hours = parseInt(timeParts[0], 10);
+    const minutes = parseInt(timeParts[1], 10);
+    return hours * 60 + minutes;
   }
   
-  if (isPM && hours < 12) hours += 12;
-  if (!isPM && hours === 12) hours = 0;
-  
-  return hours * 60 + minutes;
+  // Fallback for single number like "9" or "13"
+  const hours = parseInt(timeStr, 10);
+  return hours * 60;
 };
 
 // Function to sort slots by time
@@ -87,6 +80,50 @@ const sortSlotsByTime = (slots) => {
     const bMinutes = timeToMinutes(b.startTime);
     return aMinutes - bMinutes;
   });
+};
+
+// Calculate vertical position based on time
+const calculateTimePosition = (timeStr) => {
+  const minutes = timeToMinutes(timeStr);
+  const startOfDay = 9 * 60; // 9 AM in minutes (540 minutes)
+  const pixelsPerHour = 50; // Pixels per hour - adjust this for spacing
+  
+  if (minutes < startOfDay) {
+    return 0; // Before 9 AM, place at top
+  }
+  
+  return ((minutes - startOfDay) / 60) * pixelsPerHour;
+};
+
+// Position slots by actual time
+const positionSlotsByTime = (slotsForDay) => {
+  const sortedSlots = sortSlotsByTime(slotsForDay);
+  
+  // Group slots that have the exact same start time for stacking
+  const timeGroups = {};
+  sortedSlots.forEach(slot => {
+    const key = slot.startTime;
+    if (!timeGroups[key]) timeGroups[key] = [];
+    timeGroups[key].push(slot);
+  });
+  
+  // Create positioned slots with calculated top positions
+  const positionedSlots = [];
+  
+  Object.entries(timeGroups).forEach(([time, slots]) => {
+    const basePosition = calculateTimePosition(time);
+    
+    slots.forEach((slot, stackIndex) => {
+      positionedSlots.push({
+        ...slot,
+        topPosition: basePosition,
+        stackIndex: stackIndex,
+        totalInStack: slots.length
+      });
+    });
+  });
+  
+  return positionedSlots;
 };
 
 // Function to group slots by time and create stacked groups
@@ -425,7 +462,7 @@ const VolunteerCalendar = () => {
     return filtered;
   };
 
-  // Get unique session types for filter - Fixed to include default "Session"
+  // Get unique session types for filter
   const getSessionTypes = () => {
     const types = new Set();
     calendarSlots.forEach(slot => {
@@ -767,205 +804,204 @@ const VolunteerCalendar = () => {
                       return slot.date && slot.date.toDateString() === date.toDateString();
                     });
                     
-                    const grouped = groupSlotsByTime(slotsForDay);
-                  
-                    return (
-                      <div key={index} className="week-day-column">
-                        {grouped.length === 0 ? (
+                    if (slotsForDay.length === 0) {
+                      return (
+                        <div key={index} className="week-day-column">
                           <div className="empty-state" style={{ boxShadow: "none", padding: "1rem" }}>
                             <div className="empty-description">{t("No sessions")}</div>
                           </div>
-                        ) : (
-                          grouped.map((slotGroup, groupIdx) => (
-                            <div key={groupIdx} className="stacked-slot-group" 
-                                 style={{ 
-                                   position: "relative", 
-                                   minHeight: `${Math.max(3.5, 2 + 0.8 * (slotGroup.length - 1))}rem`,
-                                   marginBottom: "1rem"
-                                 }}>
-                              {slotGroup.map((slot, stackIdx) => {
-                                const userApprovalStatus = getUserApprovalStatus(slot, currentUser);
-                                const borderColor = getSessionTypeBorderColor(slot.type);
-                                
-                                return (
-                                  <Dialog key={slot.id}>
-                                    <DialogTrigger asChild>
-                                      <div
-                                        className={`time-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable-slot" : ""}`}
-                                        style={{
-                                          position: "absolute",
-                                          top: `${stackIdx * 10}px`,
-                                          left: `${stackIdx * 10}px`,
-                                          zIndex: 10 + stackIdx,
-                                          width: `calc(100% - ${stackIdx * 10}px)`,
-                                          boxShadow: stackIdx === slotGroup.length - 1 ? "0 4px 12px rgba(60,60,60,0.08)" : "0 2px 6px rgba(60,60,60,0.04)",
-                                          borderLeft: "4px solid",
-                                          borderLeftColor: borderColor
-                                        }}
-                                      >
-                                        {/* Show approval status badges */}
-                                        {userApprovalStatus === "approved" && (
-                                          <div className="approved-badge" style={{
-                                            position: "absolute",
-                                            top: "4px",
-                                            right: "4px",
-                                            backgroundColor: "#10b981",
-                                            color: "white",
-                                            fontSize: "10px",
-                                            padding: "2px 6px",
-                                            borderRadius: "12px",
-                                            fontWeight: "bold",
-                                            zIndex: 20
-                                          }}>
-                                            Approved
-                                          </div>
-                                        )}
-                                        
-                                        {userApprovalStatus === "pending" && (
-                                          <div className="pending-badge" style={{
-                                            position: "absolute",
-                                            top: "4px",
-                                            right: "4px",
-                                            backgroundColor: "#f59e0b",
-                                            color: "white",
-                                            fontSize: "10px",
-                                            padding: "2px 6px",
-                                            borderRadius: "12px",
-                                            fontWeight: "bold",
-                                            zIndex: 20
-                                          }}>
-                                            Pending
-                                          </div>
-                                        )}
-                                        
-                                        {userApprovalStatus === "rejected" && (
-                                          <div className="rejected-badge" style={{
-                                            position: "absolute",
-                                            top: "4px",
-                                            right: "4px",
-                                            backgroundColor: "#ef4444",
-                                            color: "white",
-                                            fontSize: "10px",
-                                            padding: "2px 6px",
-                                            borderRadius: "12px",
-                                            fontWeight: "bold",
-                                            zIndex: 20
-                                          }}>
-                                            Rejected
-                                          </div>
-                                        )}
-                                        
-                                        {/* Add status indicator for slots you've requested */}
-                                        {!userApprovalStatus && slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
-                                          <div className="my-request-badge">My Request</div>
-                                        )}
-                                        
-                                        {/* Or show pending badge if it has any pending requests */}
-                                        {!userApprovalStatus && !slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && 
-                                         slot.volunteers?.some(v => v.status === "pending") && (
-                                          <div className="pending-badge">Pending</div>
-                                        )}
-                                        
-                                        <div className="time-slot-header">
-                                          <span className="start-time">{slot.startTime}</span>
-                                          <span className="session-type-badge">{slot.type}</span>
-                                        </div>
-                                        <div className="time-range">
-                                          {slot.startTime} - {slot.endTime}
-                                        </div>
-                                        <div className="volunteers-count">
-                                          <Users className="h-3 w-3" />
-                                          <span>
-                                            {(slot.volunteers?.length || 0)}/{slot.maxVolunteers || 1}
-                                          </span>
-                                        </div>
+                        </div>
+                      );
+                    }
+                    
+                    const positionedSlots = positionSlotsByTime(slotsForDay);
+                    
+                    return (
+                      <div key={index} className="week-day-column">
+                        <div className="day-time-container" style={{ position: "relative", minHeight: "600px" }}>
+                          {positionedSlots.map((slot) => {
+                            const userApprovalStatus = getUserApprovalStatus(slot, currentUser);
+                            const borderColor = getSessionTypeBorderColor(slot.type);
+                            
+                            return (
+                              <Dialog key={slot.id}>
+                                <DialogTrigger asChild>
+                                  <div
+                                    className={`time-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable-slot" : ""}`}
+                                    style={{
+                                      position: "absolute",
+                                      top: `${slot.topPosition + (slot.stackIndex * 12)}px`,
+                                      left: `${slot.stackIndex * 8}px`,
+                                      zIndex: 10 + slot.stackIndex,
+                                      width: `calc(100% - ${slot.stackIndex * 8}px)`,
+                                      boxShadow: slot.stackIndex === slot.totalInStack - 1 ? "0 4px 12px rgba(60,60,60,0.08)" : "0 2px 6px rgba(60,60,60,0.04)",
+                                      borderLeft: "4px solid",
+                                      borderLeftColor: borderColor,
+                                      marginBottom: "20px",
+                                      minHeight: "70px"
+                                    }}
+                                  >
+                                    {/* Show approval status badges */}
+                                    {userApprovalStatus === "approved" && (
+                                      <div className="approved-badge" style={{
+                                        position: "absolute",
+                                        top: "4px",
+                                        right: "4px",
+                                        backgroundColor: "#10b981",
+                                        color: "white",
+                                        fontSize: "10px",
+                                        padding: "2px 6px",
+                                        borderRadius: "12px",
+                                        fontWeight: "bold",
+                                        zIndex: 20
+                                      }}>
+                                        Approved
                                       </div>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
-                                      <DialogHeader>
-                                        <DialogTitle
-                                          className="text-lg font-bold mb-4"
-                                          dir="auto"
-                                          style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
-                                        >
-                                          {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
-                                        </DialogTitle>
-                                        <div className="flex items-center text-gray-500 text-sm mb-4">
-                                          <span className="mr-2 font-medium">{t("Date:")}</span>
-                                          <span>
-                                            {slot.date.toLocaleDateString(i18n.language, {
-                                              weekday: 'short',
-                                              day: 'numeric',
-                                              month: 'short',
-                                              year: 'numeric'
-                                            })}
-                                          </span>
-                                        </div>
-                                      </DialogHeader>
-                                      <div className="mb-6">
+                                    )}
+                                    
+                                    {userApprovalStatus === "pending" && (
+                                      <div className="pending-badge" style={{
+                                        position: "absolute",
+                                        top: "4px",
+                                        right: "4px",
+                                        backgroundColor: "#f59e0b",
+                                        color: "white",
+                                        fontSize: "10px",
+                                        padding: "2px 6px",
+                                        borderRadius: "12px",
+                                        fontWeight: "bold",
+                                        zIndex: 20
+                                      }}>
+                                        Pending
+                                      </div>
+                                    )}
+                                    
+                                    {userApprovalStatus === "rejected" && (
+                                      <div className="rejected-badge" style={{
+                                        position: "absolute",
+                                        top: "4px",
+                                        right: "4px",
+                                        backgroundColor: "#ef4444",
+                                        color: "white",
+                                        fontSize: "10px",
+                                        padding: "2px 6px",
+                                        borderRadius: "12px",
+                                        fontWeight: "bold",
+                                        zIndex: 20
+                                      }}>
+                                        Rejected
+                                      </div>
+                                    )}
+                                    
+                                    {/* Add status indicator for slots you've requested */}
+                                    {!userApprovalStatus && slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
+                                      <div className="my-request-badge">My Request</div>
+                                    )}
+                                    
+                                    {/* Or show pending badge if it has any pending requests */}
+                                    {!userApprovalStatus && !slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && 
+                                     slot.volunteers?.some(v => v.status === "pending") && (
+                                      <div className="pending-badge">Pending</div>
+                                    )}
+                                    
+                                    <div className="time-slot-header">
+                                      <span className="start-time">{slot.startTime}</span>
+                                      <span className="session-type-badge">{slot.type}</span>
+                                    </div>
+                                    <div className="time-range">
+                                      {slot.startTime} - {slot.endTime}
+                                    </div>
+                                    <div className="volunteers-count">
+                                      <Users className="h-3 w-3" />
+                                      <span>
+                                        {(slot.volunteers?.length || 0)}/{slot.maxVolunteers || 1}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
+                                  <DialogHeader>
+                                    <DialogTitle
+                                      className="text-lg font-bold mb-4"
+                                      dir="auto"
+                                      style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
+                                    >
+                                      {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
+                                    </DialogTitle>
+                                    <div className="flex items-center text-gray-500 text-sm mb-4">
+                                      <span className="mr-2 font-medium">{t("Date:")}</span>
+                                      <span>
+                                        {slot.date.toLocaleDateString(i18n.language, {
+                                          weekday: 'short',
+                                          day: 'numeric',
+                                          month: 'short',
+                                          year: 'numeric'
+                                        })}
+                                      </span>
+                                    </div>
+                                  </DialogHeader>
+                                  <div className="mb-6">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-700">{t("Time:")}</span>
+                                      <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
+                                        {slot.startTime} - {slot.endTime}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Show current status if user has signed up */}
+                                    {userApprovalStatus && (
+                                      <div className="mt-4 p-3 rounded-lg" style={{
+                                        backgroundColor: userApprovalStatus === "approved" ? "#d1fae5" : userApprovalStatus === "rejected" ? "#fee2e2" : "#fef3c7",
+                                        border: `1px solid ${userApprovalStatus === "approved" ? "#10b981" : userApprovalStatus === "rejected" ? "#ef4444" : "#f59e0b"}`
+                                      }}>
                                         <div className="flex items-center gap-2">
-                                          <span className="font-medium text-gray-700">{t("Time:")}</span>
-                                          <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
-                                            {slot.startTime} - {slot.endTime}
+                                          <span className="font-medium" style={{ 
+                                            color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
+                                          }}>
+                                            Status: {userApprovalStatus === "approved" ? "Approved ✅" : userApprovalStatus === "rejected" ? "Rejected ❌" : "Pending Approval ⏳"}
                                           </span>
                                         </div>
-                                        
-                                        {/* Show current status if user has signed up */}
-                                        {userApprovalStatus && (
-                                          <div className="mt-4 p-3 rounded-lg" style={{
-                                            backgroundColor: userApprovalStatus === "approved" ? "#d1fae5" : userApprovalStatus === "rejected" ? "#fee2e2" : "#fef3c7",
-                                            border: `1px solid ${userApprovalStatus === "approved" ? "#10b981" : userApprovalStatus === "rejected" ? "#ef4444" : "#f59e0b"}`
-                                          }}>
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-medium" style={{ 
-                                                color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
-                                              }}>
-                                                Status: {userApprovalStatus === "approved" ? "Approved ✅" : userApprovalStatus === "rejected" ? "Rejected ❌" : "Pending Approval ⏳"}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        )}
                                       </div>
-                                      <div className="flex justify-end">
-                                        <button
-                                          type="button"
-                                          disabled={
-                                            !slot.available || 
-                                            !isEventAvailable(slot.date) || 
-                                            signupLoading || 
-                                            userApprovalStatus === "approved" ||
-                                            userApprovalStatus === "pending" ||
-                                            userApprovalStatus === "rejected"
-                                          }
-                                          style={
-                                            (!slot.available || !isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
-                                              ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
-                                              : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
-                                          }
-                                          onClick={() => handleSignUp(slot)}
-                                        >
-                                          {signupLoading 
-                                            ? t("Submitting Request...")
-                                            : userApprovalStatus === "approved"
-                                              ? t("Already Approved")
-                                              : userApprovalStatus === "rejected"
-                                                ? t("Request Rejected")
-                                                : userApprovalStatus === "pending"
+                                    )}
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        !slot.available || 
+                                        !isEventAvailable(slot.date) || 
+                                        signupLoading || 
+                                        userApprovalStatus === "approved" ||
+                                        userApprovalStatus === "pending" ||
+                                        userApprovalStatus === "rejected"
+                                      }
+                                      style={
+                                        (!slot.available || !isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
+                                          ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
+                                          : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
+                                      }
+                                      onClick={() => handleSignUp(slot)}
+                                    >
+                                      {signupLoading 
+                                        ? t("Submitting Request...")
+                                        : userApprovalStatus === "approved"
+                                          ? t("Already Approved")
+                                          : userApprovalStatus === "rejected"
+                                            ? t("Request Rejected")
+                                            : userApprovalStatus === "pending"
+                                              ? t("Request Pending")
+                                              : (!slot.available || !isEventAvailable(slot.date))
+                                                ? t("Not Available")
+                                                : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
                                                   ? t("Request Pending")
-                                                  : (!slot.available || !isEventAvailable(slot.date))
-                                                    ? t("Not Available")
-                                                    : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
-                                                      ? t("Request Pending")
-                                                      : t("Request to Join")}
-                                        </button>
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
-                                );
-                              })}
-                            </div>
-                          ))
-                        )}
+                                                  : t("Request to Join")}
+                                    </button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}

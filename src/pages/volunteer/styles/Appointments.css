@@ -48,7 +48,7 @@
   color: #1a4731;
   transition: background-color 0.2s, transform 0.2s;
   font-size: 0.875rem;
-  min-height: 44px; /* Touch-friendly minimum */
+  min-height: 44px;
   border-right: 1px solid #cbd5c0;
 }
 
@@ -66,7 +66,6 @@
   font-weight: 600;
 }
 
-/* Touch feedback for mobile */
 .tab-item:active {
   transform: scale(0.98);
   transition: transform 0.1s ease;
@@ -85,7 +84,7 @@
 
 .controls-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 1rem;
   flex-wrap: wrap;
 }
@@ -94,12 +93,12 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid #cbd5c0;
+  border: 1px solid #cac8c8;
   border-radius: 8px;
   padding: 0.5rem 1rem;
   background: #f9f9f9;
   flex: 1;
-  min-height: 44px; /* Touch-friendly */
+  min-height: 44px;
 }
 
 .search-bar input {
@@ -116,76 +115,28 @@
   color: #6b7280;
 }
 
-.filter-group {
-  position: relative;
+.modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  padding: 1rem !important;
 }
 
-.filter-button {
-  background-color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #000000;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border: 1px solid #cbd5c0;
-  transition: background-color 0.2s, transform 0.2s;
-  min-height: 44px; /* Touch-friendly */
-  min-width: 44px;
-}
-
-.filter-button:hover {
-  background-color: #f3f4f6;
-}
-
-.filter-button:active {
-  transform: scale(0.98);
-  transition: transform 0.1s ease;
-}
-
-.filter-options {
-  position: absolute;
-  top: 110%;
-  right: 0;
-  background: #fffdf4;
-  border: 1px solid #cbd5c0;
-  border-radius: 8px;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  z-index: 10;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-width: 160px;
-}
-
-.filter-option {
-  background: none;
-  border: none;
-  color: #1a4731;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  text-align: left;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.2s, transform 0.2s;
-  min-height: 40px; /* Touch-friendly */
-}
-
-.filter-option:hover {
-  background-color: #f6ead1;
-}
-
-.filter-option:active {
-  transform: scale(0.98);
-  transition: transform 0.1s ease;
-}
-
-.filter-option.selected {
-  background-color: #d5caa3;
-  font-weight: 600;
+.appointments-modal {
+  max-width: 28rem !important;
+  width: 100% !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  background-color: white !important;
+  padding: 1.5rem !important;
+  position: relative !important;
+  margin: 0 !important;
+  height: auto !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
 }
 
 .appointments-list {
@@ -194,13 +145,13 @@
   gap: 1rem;
 }
 
-/* Base appointment card styling - mobile optimized */
+/* Base appointment card styling */
 .appointment-card {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   background: #fffdf4;
-  border-left: 5px solid #1a4731; /* Default border - will be overridden by session type */
+  border-left: 5px solid #1a4731;
   border-radius: 16px;
   padding: 1.25rem;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
@@ -318,7 +269,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  min-width: 0; /* Allows text to wrap properly */
+  min-width: 0;
 }
 
 .info {
@@ -346,14 +297,14 @@
   flex-shrink: 0;
 }
 
-/* Session type colored tags - mobile optimized */
+/* Session type colored tags */
 .tag {
   padding: 0.25rem 0.75rem;
-  background: #d5caa3; /* Default background - will be overridden */
+  background: #d5caa3;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1a4731; /* Default text color - will be overridden */
+  color: #1a4731;
   border: 1px solid transparent;
   white-space: nowrap;
   max-width: 120px;
@@ -416,11 +367,6 @@
   border-color: #4b5563;
 }
 
-/* Status-specific tag styles - simplified without status indicators */
-.tag.status-approved {
-  /* No additional styling needed */
-}
-
 .tag.status-pending {
   opacity: 0.8;
 }
@@ -429,7 +375,7 @@
   opacity: 0.6;
 }
 
-/* Optional: Add subtle glow effect to tags matching their session type */
+/* Add subtle glow effect to tags matching their session type */
 .tag.reading {
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
@@ -507,7 +453,6 @@
   background-color: #f7c7c7;
 }
 
-/* Modal - mobile optimized */
 .modal {
   position: fixed;
   inset: 0;
@@ -551,7 +496,7 @@
   border-radius: 8px;
   cursor: pointer;
   width: 100%;
-  min-height: 44px; /* Touch-friendly */
+  min-height: 44px;
   font-size: 1rem;
   font-weight: 500;
   transition: background-color 0.2s, transform 0.2s;
@@ -566,7 +511,7 @@
   transition: transform 0.1s ease;
 }
 
-/* Language toggle - mobile optimized */
+/* Language toggle */
 .language-toggle {
   position: fixed;
   bottom: 1rem;
@@ -700,17 +645,6 @@
     min-width: 100%;
   }
 
-  .filter-button {
-    align-self: flex-start;
-  }
-
-  .filter-options {
-    left: 0;
-    right: auto;
-    min-width: 100%;
-  }
-
-  /* Appointment cards stack vertically on mobile */
   .appointment-card {
     flex-direction: column;
     gap: 0.75rem;
@@ -743,6 +677,26 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .modal-overlay {
+    padding: 1rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .appointments-modal {
+    width: 100% !important;
+    max-width: 400px !important;
+    padding: 1.25rem !important;
+    border-radius: 0.75rem !important;
+    margin: 0 !important;
+    height: auto !important;
+    max-height: 80vh !important;
+  }
+
+  .appointments-modal h2 {
+    font-size: 1.125rem !important;
   }
 
   .actions {
@@ -819,6 +773,42 @@
 
   .appointment-day {
     font-size: 0.75rem;
+  }
+
+  .modal-overlay {
+    padding: 1rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .appointments-modal {
+    width: 100% !important;
+    max-width: 350px !important;
+    padding: 1rem !important;
+    border-radius: 0.75rem !important;
+    max-height: 85vh !important;
+  }
+
+  .appointments-modal h2 {
+    font-size: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .appointments-modal > div:first-child {
+    margin-bottom: 1rem !important;
+  }
+
+  .appointments-modal > div:nth-child(2) {
+    margin-bottom: 1rem !important;
+  }
+
+  .appointments-modal span {
+    font-size: 0.8rem !important;
+  }
+
+  .appointments-modal button {
+    padding: 0.75rem !important;
+    font-size: 0.9rem !important;
   }
 
   .info {
@@ -917,6 +907,29 @@
     font-size: 1rem;
   }
 
+  .modal-overlay {
+    padding-top: 1rem !important;
+  }
+
+  .appointments-modal {
+    width: 100% !important;
+    padding: 0.875rem !important;
+    max-height: 80vh !important;
+  }
+
+  .appointments-modal h2 {
+    font-size: 0.95rem !important;
+  }
+
+  .appointments-modal span {
+    font-size: 0.75rem !important;
+  }
+
+  .appointments-modal button {
+    padding: 0.625rem !important;
+    font-size: 0.85rem !important;
+  }
+
   .info {
     font-size: 0.75rem;
   }
@@ -975,13 +988,9 @@
   }
 }
 
-/* Touch-specific optimizations */
 @media (hover: none) and (pointer: coarse) {
-  /* Remove hover effects on touch devices */
   .appointment-card:hover,
   .tab-item:hover,
-  .filter-button:hover,
-  .filter-option:hover,
   .actions .btn:hover,
   .modal-close:hover,
   .lang-button:hover,
@@ -990,7 +999,6 @@
     background-color: inherit;
   }
 
-  /* Enhance active states for better touch feedback */
   .appointment-card:active {
     transform: scale(0.98);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
@@ -998,13 +1006,5 @@
 
   .tab-item:active {
     background-color: rgba(26, 71, 49, 0.1);
-  }
-
-  .filter-button:active {
-    background-color: #e5e7eb;
-  }
-
-  .filter-option:active {
-    background-color: #f6ead1;
   }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Clock3, MapPin, Search, Filter, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
+import { Clock3, MapPin, Search, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { collection, getDocs, doc, updateDoc, arrayRemove, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -45,8 +45,6 @@ export default function Appointments() {
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState("upcoming");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("");
-  const [showFilter, setShowFilter] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -125,7 +123,7 @@ export default function Appointments() {
     fetchAppointments();
   }, [username]); // Depend on username instead of userId
 
-  // Helper function to format Firebase date string to "May 27" format
+  // Format Firebase date string to "May 27" format
   const formatFirebaseDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -134,7 +132,7 @@ export default function Appointments() {
     return `${month} ${day}`;
   };
 
-  // Helper function to get day of week from date string
+  // Get day of week from date string
   const getDayFromDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -168,15 +166,11 @@ export default function Appointments() {
     return false;
   });
 
-  // Get unique categories for filtering
-  const availableCategories = [...new Set(tabAppointments.map((a) => a.location))];
-
   const filtered = tabAppointments.filter((a) => {
     const matchSearch =
       (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
       (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
-    const matchCategory = filter ? a.location === filter : true;
-    return matchSearch && matchCategory;
+    return matchSearch;
   });
 
   const handleCancel = async (id) => {
@@ -267,7 +261,7 @@ export default function Appointments() {
     return `${t(`appointments.months.${month}`)} ${day}`;
   };
 
-  // Helper function to get status tag with appropriate styling
+  // Get status tag with appropriate styling
   const getStatusTag = (appointment) => {
     const userVolunteer = appointment.volunteers?.find(v => v.username === username);
     const status = userVolunteer?.status || appointment.status;
@@ -306,12 +300,12 @@ export default function Appointments() {
               </div>
             )}
           </div>
-
+          
           <div className="profile-header">
             <h1 className="profile-title">{t("appointments.title")}</h1>
             <p className="profile-subtitle">{t("appointments.subtitle")}</p>
           </div>
-
+          
           <div className={`profile-tabs ${i18n.language === "he" ? "rtl-tabs" : ""}`}>
             <div className="tabs">
               {["past", "upcoming", "pending"].map((key) => (
@@ -321,31 +315,15 @@ export default function Appointments() {
               ))}
             </div>
           </div>
-
+            
           <div className="profile-overview">
             <div className="controls-row">
               <div className="search-bar">
                 <Search size={18} />
                 <input placeholder={t("appointments.search")} value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
-              {availableCategories.length > 0 && (
-                <div className="filter-group">
-                  <button className="filter-button" onClick={() => setShowFilter(!showFilter)}>
-                    <Filter size={16} /> {t("appointments.filter")}
-                  </button>
-                  {showFilter && (
-                    <div className="filter-options">
-                      {availableCategories.map((cat) => (
-                        <button key={cat} className={`filter-option ${filter === cat ? "selected" : ""}`} onClick={() => setFilter((prev) => (prev === cat ? "" : cat))}>
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
-
+            
             <div className="appointments-list">
               {filtered.length === 0 ? (
                 <div className="note">{t("appointments.noAppointments")}</div>
@@ -383,33 +361,185 @@ export default function Appointments() {
               )}
             </div>
           </div>
-
+            
           {selected && (
-            <div className="modal" onClick={() => setSelected(null)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <h1>{t("appointments.modal.title")}</h1>
-                <p><strong>{t("appointments.modal.date")}:</strong> {formatDate(selected.date)} ({t(`appointments.days.${selected.day}`)})</p>
-                <p><strong>{t("appointments.modal.time")}:</strong> {formatTime(selected.time)}</p>
-                <p><strong>{t("appointments.modal.category")}:</strong> {selected.location}</p>
-                {selected.note && <p><strong>{t("appointments.modal.note")}:</strong> {selected.note}</p>}
-                
-                {/* Add colored session type indicator in modal */}
-                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                  <div 
-                    className={`tag ${getSessionTypeClass(selected.sessionType)}`}
+            <div 
+              className="modal-overlay" 
+              onClick={() => setSelected(null)}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '1rem'
+              }}
+            >
+              <div 
+                className="modal-content appointments-modal" 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  maxWidth: '28rem', // max-w-md equivalent
+                  width: '100%',
+                  borderRadius: '0.75rem', // rounded-xl
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-xl
+                  backgroundColor: 'white',
+                  padding: '1.5rem', // p-6
+                  position: 'relative'
+                }}
+              >
+                {/* Modal Header */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h2 
                     style={{
-                      backgroundColor: getSessionTypeColor(selected.sessionType),
-                      color: 'white',
-                      display: 'inline-block'
+                      fontSize: '1.125rem', // text-lg
+                      fontWeight: 'bold',
+                      marginBottom: '1rem',
+                      textAlign: i18n.language === 'he' ? 'right' : 'left',
+                      direction: 'auto'
                     }}
                   >
-                    {selected.sessionType}
+                    {t("appointments.modal.title")}
+                  </h2>
+                  
+                  {/* Session Type Badge */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <span 
+                      style={{
+                        backgroundColor: getSessionTypeColor(selected.sessionType),
+                        color: 'white',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.375rem',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {selected.sessionType}
+                    </span>
+                  </div>
+                    
+                  <div 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: '#6b7280', // text-gray-500
+                      fontSize: '0.875rem', // text-sm
+                      marginBottom: '1rem'
+                    }}
+                  >
+                    <span style={{ marginRight: '0.5rem', fontWeight: '500' }}>
+                      {t("appointments.modal.date")}:
+                    </span>
+                    <span>
+                      {formatDate(selected.date)} ({t(`appointments.days.${selected.day}`)})
+                    </span>
                   </div>
                 </div>
-                
-                <button className="modal-close" onClick={() => setSelected(null)}>
-                  {t("appointments.modal.close")}
-                </button>
+                  
+                {/* Modal Body */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: '500', color: '#374151' }}>
+                        {t("appointments.modal.time")}:
+                      </span>
+                      <span 
+                        style={{
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: '0.25rem',
+                          padding: '0.125rem 0.5rem',
+                          color: '#1f2937',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        {formatTime(selected.time)}
+                      </span>
+                    </div>
+                      
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: '500', color: '#374151' }}>
+                        {t("appointments.modal.category")}:
+                      </span>
+                      <span style={{ color: '#6b7280' }}>{selected.location}</span>
+                    </div>
+                      
+                    {selected.note && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontWeight: '500', color: '#374151' }}>
+                          {t("appointments.modal.note")}:
+                        </span>
+                        <span 
+                          style={{
+                            color: '#6b7280',
+                            fontStyle: 'italic',
+                            padding: '0.5rem',
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {selected.note}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Show status if available */}
+                    {selected.status && (
+                      <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '0.5rem', backgroundColor: 
+                        selected.status === 'approved' ? '#d1fae5' : 
+                        selected.status === 'pending' ? '#fef3c7' : 
+                        selected.status === 'rejected' ? '#fee2e2' : '#f3f4f6',
+                        border: `1px solid ${
+                          selected.status === 'approved' ? '#10b981' : 
+                          selected.status === 'pending' ? '#f59e0b' : 
+                          selected.status === 'rejected' ? '#ef4444' : '#d1d5db'
+                        }`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ 
+                            fontWeight: '500', 
+                            color: selected.status === 'approved' ? '#065f46' : 
+                                   selected.status === 'pending' ? '#92400e' : 
+                                   selected.status === 'rejected' ? '#991b1b' : '#374151'
+                          }}>
+                            Status: {selected.status === 'approved' ? 'Approved ✅' : 
+                                     selected.status === 'pending' ? 'Pending ⏳' : 
+                                     selected.status === 'rejected' ? 'Rejected ❌' : selected.status}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                  
+                {/* Modal Footer */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setSelected(null)}
+                    style={{
+                      backgroundColor: '#416a42',
+                      color: 'white',
+                      width: '100%',
+                      padding: '0.625rem',
+                      borderRadius: '0.375rem',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      fontSize: '0.875rem',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#5c885d'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#416a42'}
+                  >
+                    {t("appointments.modal.close")}
+                  </button>
+                </div>
               </div>
             </div>
           )}
