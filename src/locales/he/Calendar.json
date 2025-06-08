@@ -14,6 +14,7 @@
     "Request Pending": "בקשה ממתינה",
     "Request to Join": "בקשה להצטרף",
     "Select session type": "בחר סוג מפגש",
+    "Today": "היום",
     "months": {
         "0": "ינואר",
         "1": "פברואר",
@@ -50,5 +51,14 @@
         "4": "ה'",
         "5": "ו'",
         "6": "ש'"
+    },
+    "SessionStatus": {
+      "approved": "מאושר",
+      "pending": "ממתין",
+      "rejected": "נדחה",
+      "none": "לא נדרש",
+      "pendingApproval": "ממתין לאישור ⏳",
+      "approvedStatus": "מאושר ✅",
+      "rejectedStatus": "נדחה ❌"
     }
 }

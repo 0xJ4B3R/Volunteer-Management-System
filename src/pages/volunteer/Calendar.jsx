@@ -685,32 +685,46 @@ const VolunteerCalendar = () => {
           {/* Calendar Header */}
           <div className="calendar-header">
             <div className="calendar-navigation">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4" dir={i18n.language === "he" ? "rtl" : "ltr"}>
+                {/* Previous button - always on the left */}
                 <button
                   onClick={navigatePrevious}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title={viewMode === "week" ? "Previous Week" : "Previous Month"}
+                  title={t(viewMode === "week" ? "Previous Week" : "Previous Month")}
                 >
-                  <ChevronLeft className="h-5 w-5" />
+                  {/* Flip icon based on language */}
+                  {i18n.language === "he" ? (
+                    <ChevronRight className="h-5 w-5" />
+                  ) : (
+                    <ChevronLeft className="h-5 w-5" />
+                  )}
                 </button>
                 
+                {/* Date display */}
                 <div className="current-date-display">
                   {formatDateDisplay()}
                 </div>
                 
+                {/* Next button - always on the right */}
                 <button
                   onClick={navigateNext}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title={viewMode === "week" ? "Next Week" : "Next Month"}
+                  title={t(viewMode === "week" ? "Next Week" : "Next Month")}
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  {/* Flip icon based on language */}
+                  {i18n.language === "he" ? (
+                    <ChevronLeft className="h-5 w-5" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5" />
+                  )}
                 </button>
                 
+                {/* Today button */}
                 <button
                   onClick={goToToday}
                   className="px-3 py-1 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
                 >
-                  Today
+                  {t("Today")}
                 </button>
               </div>
             </div>
@@ -855,7 +869,7 @@ const VolunteerCalendar = () => {
                                         fontWeight: "bold",
                                         zIndex: 20
                                       }}>
-                                        Approved
+                                        {t("SessionStatus.approved")}
                                       </div>
                                     )}
                                     
@@ -872,7 +886,7 @@ const VolunteerCalendar = () => {
                                         fontWeight: "bold",
                                         zIndex: 20
                                       }}>
-                                        Pending
+                                        {t("SessionStatus.pending")}
                                       </div>
                                     )}
                                     
@@ -889,7 +903,7 @@ const VolunteerCalendar = () => {
                                         fontWeight: "bold",
                                         zIndex: 20
                                       }}>
-                                        Rejected
+                                        {t("SessionStatus.rejected")}
                                       </div>
                                     )}
                                     
@@ -958,7 +972,13 @@ const VolunteerCalendar = () => {
                                           <span className="font-medium" style={{ 
                                             color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
                                           }}>
-                                            Status: {userApprovalStatus === "approved" ? "Approved ✅" : userApprovalStatus === "rejected" ? "Rejected ❌" : "Pending Approval ⏳"}
+                                              {t(
+                                                userApprovalStatus === "approved"
+                                                  ? "SessionStatus.approvedStatus"
+                                                  : userApprovalStatus === "rejected"
+                                                  ? "SessionStatus.rejectedStatus"
+                                                  : "SessionStatus.pendingApproval"
+                                              )}
                                           </span>
                                         </div>
                                       </div>
