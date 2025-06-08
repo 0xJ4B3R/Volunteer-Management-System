@@ -41,6 +41,16 @@
     "notes": "Notes",
     "sessionLabel": "Session",
     "timeUnavailable": "Time not available",
-    "defaultSessionTitle": "Volunteer Session"
+    "defaultSessionTitle": "Volunteer Session",
+    "statuses": {
+      "not_confirmed": "Not Confirmed",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "auto-absent": "Auto Absent",
+      "grace-period": "Grace Period",
+      "present": "Present",
+      "absent": "Absent",
+      "late": "Late"
+    }
   }
 }

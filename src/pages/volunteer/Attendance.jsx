@@ -536,17 +536,7 @@ const Attendance = () => {
 
   // Updated status text function to handle grace period
   const getStatusText = (status) => {
-    const texts = {
-      not_confirmed: 'Not Confirmed',
-      confirmed: 'Confirmed',
-      cancelled: 'Cancelled',
-      'auto-absent': 'Auto Absent',
-      'grace-period': 'Grace Period',
-      present: 'Present',
-      absent: 'Absent',
-      late: 'Late'
-    };
-    return texts[status] || status;
+    return t(`attendance.statuses.${status}`) || status;
   };
 
   // Real-time countdown component for grace period
@@ -869,11 +859,11 @@ const Attendance = () => {
                       <div className="history-item-details">
                         <div className="history-detail">
                           <CalendarDays className="history-detail-icon" />
-                          <span>{new Date(session.date).toLocaleDateString('en-US', { 
-                            weekday: 'short', 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
+                          <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
                           })}</span>
                         </div>
                         <div className="history-detail">

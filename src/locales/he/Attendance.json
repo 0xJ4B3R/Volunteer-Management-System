@@ -41,6 +41,16 @@
     "notes": "הערות",
     "sessionLabel": "מפגש",
     "timeUnavailable": "שעה לא זמינה",
-    "defaultSessionTitle": "מפגש התנדבות"
+    "defaultSessionTitle": "מפגש התנדבות",
+    "statuses": {
+      "not_confirmed": "לא אושר",
+      "confirmed": "מאושר",
+      "cancelled": "בוטל",
+      "auto-absent": "נעדר אוטומטית",
+      "grace-period": "תקופת חסד",
+      "present": "נוכח",
+      "absent": "נעדר",
+      "late": "איחור"
+    }
   }
 }
