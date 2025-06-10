@@ -5,7 +5,7 @@
 
   //EN TRANSLATIONS:
   import LoginEN from './locales/en/Login.json';
-  import ForgotPasswordEN from './locales/en/ForgotPassword.json';
+  import HomeEN from './locales/en/Home.json';
   import VolunteerDashboardEN from './locales/en/VolunteerDashboard.json';
   import sidebarEN from './locales/en/Sidebar.json';
   import CalendarEN from './locales/en/Calendar.json';
@@ -15,7 +15,7 @@
   
   //HE TRANSLATIONS:
   import LoginHE from './locales/he/Login.json';
-  import ForgotPasswordHE from './locales/he/ForgotPassword.json';
+  import HomeHE from './locales/he/Home.json';
   import VolunteerDashboardHE from './locales/he/VolunteerDashboard.json';
   import sidebarHE from './locales/he/Sidebar.json';
   import CalendarHE from './locales/he/Calendar.json';
@@ -27,7 +27,7 @@
     en: {
       translation: {
         ...LoginEN,
-        ...ForgotPasswordEN,
+        ...HomeEN,
         ...VolunteerDashboardEN,
         ...sidebarEN,
         ...CalendarEN,
@@ -39,7 +39,7 @@
     he: {
       translation: {
         ...LoginHE,
-        ...ForgotPasswordHE,
+        ...HomeHE,
         ...VolunteerDashboardHE,
         ...sidebarHE,
         ...CalendarHE,

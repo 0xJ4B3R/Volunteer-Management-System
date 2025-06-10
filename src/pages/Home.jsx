@@ -1,87 +1,90 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from "react-i18next";
+import { Globe } from 'lucide-react';
 import './styles/Home.css';
 
 // Services Carousel Component
 const ServicesCarousel = () => {
+  const { t } = useTranslation();
   const [currentService, setCurrentService] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
   const services = [
     {
       icon: "🏥",
-      title: "24-Hour Medical and Nursing Care",
-      description: "Provided by the home's skilled staff, including consultations with specialist doctors."
+      title: t("services.items.medical.title"),
+      description: t("services.items.medical.desc")
     },
     {
       icon: "👥",
-      title: "Social Services",
-      description: "Offers support to residents and their families, maintains connections with the community and schools, and initiates special activities."
+      title: t("services.items.social.title"),
+      description: t("services.items.social.desc")
     },
     {
       icon: "🎨",
-      title: "Cultural Activities",
-      description: "Animal therapy, gardening, weekly Torah portion study, music classes, exercise, ceramics, jewelry and bead making, guest artist performances, trips, and parties."
+      title: t("services.items.cultural.title"),
+      description: t("services.items.cultural.desc")
     },
     {
       icon: "🌱",
-      title: "Special Projects: Growing Community",
-      description: "Strengthening connections between residents and staff through meaningful community-building initiatives."
+      title: t("services.items.projects.title"),
+      description: t("services.items.projects.desc")
     },
     {
       icon: "🤝",
-      title: "Volunteers",
-      description: "Schools, pre-military programs, retirees, and neighbors assist with both group and individual activities."
+      title: t("services.items.volunteers.title"),
+      description: t("services.items.volunteers.desc")
     },
     {
       icon: "🧠",
-      title: "Occupational Therapy",
-      description: "Includes a Snoezelen room (multi-sensory stimulation) and cognitive groups for enhanced well-being."
+      title: t("services.items.therapy.title"),
+      description: t("services.items.therapy.desc")
     },
     {
       icon: "🎯",
-      title: "Employment and Social Activities",
-      description: "Handicrafts, music engagement, classes, computer room, music room, cultural performances, and more."
+      title: t("services.items.employment.title"),
+      description: t("services.items.employment.desc")
     },
     {
-      icon: "🏃",
-      title: "Physiotherapy",
-      description: "Personalized individual and group therapy in a well-equipped facility and an activity yard."
+    icon: "🏃",
+    title: t("services.items.physio.title"),
+    description: t("services.items.physio.desc")
     },
     {
       icon: "🍽️",
-      title: "Five Meals a Day",
-      description: "Supervised by a dietitian and under rabbinical supervision for optimal nutrition and kosher compliance."
+      title: t("services.items.meals.title"),
+      description: t("services.items.meals.desc")
     },
     {
       icon: "📺",
-      title: "Cable TV Connection",
-      description: "Option to install cable television in residents' rooms for entertainment and connection."
+      title: t("services.items.tv.title"),
+      description: t("services.items.tv.desc")
     },
     {
       icon: "🛡️",
-      title: "Cleaning and Security Services",
-      description: "Comprehensive cleaning and 24/7 security services to ensure a safe and comfortable environment."
+      title: t("services.items.cleaning.title"),
+      description: t("services.items.cleaning.desc")
     },
     {
       icon: "👕",
-      title: "Laundry Services",
-      description: "Professional laundry services to maintain residents' clothing and linens with care."
+      title: t("services.items.laundry.title"),
+      description: t("services.items.laundry.desc")
     },
     {
       icon: "💅",
-      title: "Hair Salon and Pedicure",
-      description: "On-site beauty services including hair styling and pedicure treatments for resident comfort."
+      title: t("services.items.beauty.title"),
+      description: t("services.items.beauty.desc")
     },
     {
       icon: "🕍",
-      title: "Synagogue",
-      description: "On-site synagogue facilities for prayer services and religious observance."
+      title: t("services.items.synagogue.title"),
+      description: t("services.items.synagogue.desc")
     },
     {
       icon: "💊",
-      title: "Pharmacy",
-      description: "Convenient on-site pharmacy services for medication management and prescription needs."
+      title: t("services.items.pharmacy.title"),
+      description: t("services.items.pharmacy.desc")
     }
   ];
 
@@ -127,15 +130,21 @@ const ServicesCarousel = () => {
       </div>
       
       <div className="service-counter">
-        {currentService + 1} of {services.length}
+        {currentService + 1} {t("services.of")} {services.length}
       </div>
     </div>
   );
 };
 
 const Homepage = () => {
+  const { t, i18n } = useTranslation();
+  const [showLangOptions, setShowLangOptions] = useState(false);
   const navigate = useNavigate();
   const observerRef = useRef(null);
+
+  useEffect(() => {
+      document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
+  }, [i18n.language]);
 
   useEffect(() => {
     // Intersection Observer for scroll animations
@@ -213,13 +222,13 @@ const Homepage = () => {
       {/* Header */}
       <header className="header">
         <nav className="nav">
-          <a href="#" className="logo">Neveh Horim</a>
+          <a href="#" className="logo">{t("nav.logo")}</a>
           <ul className="nav-links">
-            <li><a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>Contact</a></li>
-            <li><a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')}>Services</a></li>
-            <li><a href="#features" onClick={(e) => handleSmoothScroll(e, '#features')}>Features</a></li>
-            <li><a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>About</a></li>
-            <li><button onClick={handleLogin} className="login-btn">Login</button></li>
+            <li><a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>{t("nav.contact")}</a></li>
+            <li><a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')}>{t("nav.services")}</a></li>
+            <li><a href="#features" onClick={(e) => handleSmoothScroll(e, '#features')}>{t("nav.features")}</a></li>
+            <li><a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>{t("nav.about")}</a></li>
+            <li><button onClick={handleLogin} className="login-btn">{t("nav.login")}</button></li>
           </ul>
         </nav>
       </header>
@@ -227,81 +236,73 @@ const Homepage = () => {
       {/* Hero Section */}
       <section className="hero" id="about">
         <div className="hero-content">
-          <h1>Dedicated Care In a Family Atmosphere</h1>
-          <p>We believe that every person, regardless of who they are, deserves to age with dignity while preserving their respect, independence, and quality of life. We believe that every resident in the home has the right to privacy and dignity both during care and beyond.</p>
+          <h1>{t("hero.title")}</h1>
+          <p>{t("hero.description")}</p>
           <div className="cta-buttons">
             <button onClick={handleGetStarted} className="btn btn-primary">
-              <span>Get Started</span>
+              <span>{t("hero.getStarted")}</span>
               <span>→</span>
             </button>
             <button onClick={(e) => handleSmoothScroll(e, '#contact')} className="btn btn-secondary">
-              <span>Contact Us</span>
+              <span>{t("hero.contactUs")}</span>
             </button>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="features" id="features">
-        <div className="container">
-          <div className="section-header fade-in">
-            <h2>The platform makes volunteering accessible, organized, and impactful for everyone involved.</h2>
-          </div>
-          <div className="features-grid">
-            <div 
-              className="feature-card fade-in"
-              onMouseEnter={handleCardMouseEnter}
-              onMouseLeave={handleCardMouseLeave}
-            >
-              <div className="feature-icon">
-                📅
-              </div>
-              <h3>Smart Scheduling</h3>
-              <p>Easily browse and sign up for volunteer opportunities that fit your schedule.</p>
+        <section className="features" id="features">
+          <div className="container">
+            <div className="section-header fade-in">
+              <h2>{t("features.title")}</h2>
             </div>
-            <div 
-              className="feature-card fade-in"
-              onMouseEnter={handleCardMouseEnter}
-              onMouseLeave={handleCardMouseLeave}
-            >
-              <div className="feature-icon">
-                🎯
+            <div className="features-grid">
+              <div
+                className="feature-card fade-in"
+                onMouseEnter={handleCardMouseEnter}
+                onMouseLeave={handleCardMouseLeave}
+              >
+                <div className="feature-icon">📅</div>
+                <h3>{t("features.smartScheduling.title")}</h3>
+                <p>{t("features.smartScheduling.desc")}</p>
               </div>
-              <h3>Personalized Matching</h3>
-              <p>Find opportunities that match your skills, interests, and availability. Make every hour count.</p>
-            </div>
-            <div 
-              className="feature-card fade-in"
-              onMouseEnter={handleCardMouseEnter}
-              onMouseLeave={handleCardMouseLeave}
-            >
-              <div className="feature-icon">
-                📱
+              <div
+                className="feature-card fade-in"
+                onMouseEnter={handleCardMouseEnter}
+                onMouseLeave={handleCardMouseLeave}
+              >
+                <div className="feature-icon">🎯</div>
+                <h3>{t("features.personalizedMatching.title")}</h3>
+                <p>{t("features.personalizedMatching.desc")}</p>
               </div>
-              <h3>Mobile Friendly</h3>
-              <p>Access your volunteer dashboard anywhere. Confirm attendance, check schedules, and stay connected on the go.</p>
-            </div>
-            <div 
-              className="feature-card fade-in"
-              onMouseEnter={handleCardMouseEnter}
-              onMouseLeave={handleCardMouseLeave}
-            >
-              <div className="feature-icon">
-                🏆
+              <div
+                className="feature-card fade-in"
+                onMouseEnter={handleCardMouseEnter}
+                onMouseLeave={handleCardMouseLeave}
+              >
+                <div className="feature-icon">📱</div>
+                <h3>{t("features.mobileFriendly.title")}</h3>
+                <p>{t("features.mobileFriendly.desc")}</p>
               </div>
-              <h3>Achievement System</h3>
-              <p>Earn badges and recognition for your volunteer work. Celebrate milestones and inspire others to get involved.</p>
+              <div
+                className="feature-card fade-in"
+                onMouseEnter={handleCardMouseEnter}
+                onMouseLeave={handleCardMouseLeave}
+              >
+                <div className="feature-icon">🏆</div>
+                <h3>{t("features.achievements.title")}</h3>
+                <p>{t("features.achievements.desc")}</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* Services Section */}
       <section className="services" id="services">
         <div className="container">
           <div className="section-header fade-in">
-            <h2>Our Services</h2>
-            <p>Comprehensive care and support services designed to enhance quality of life</p>
+            <h2>{t("services.title")}</h2>
+            <p>{t("services.subtitle")}</p>
           </div>
           <div className="services-widget fade-in">
             <ServicesCarousel />
@@ -313,44 +314,39 @@ const Homepage = () => {
       <section className="contact-us" id="contact">
         <div className="container">
           <div className="section-header fade-in">
-            <h2>Contact Us</h2>
-            <p>Get in touch with our team. We're here to help and answer any questions you may have.</p>
+            <h2>{t("contact.title")}</h2>
+            <p>{t("contact.subtitle")}</p>
           </div>
           <div className="contact-content">
             <div className="contact-info fade-in">
               <div className="contact-item">
-                <div className="contact-icon">
-                  📍
-                </div>
+                <div className="contact-icon">📍</div>
                 <div className="contact-details">
-                  <h3>Location</h3>
-                  <p>Ma'ale Ze'ev Street 3<br />Jerusalem, Israel</p>
+                  <h3>{t("contact.location")}</h3>
+                  <p>
+                    {t("contact.address.line1")}<br />
+                    {t("contact.address.line2")}
+                  </p>
                 </div>
               </div>
               <div className="contact-item">
-                <div className="contact-icon">
-                  📞
-                </div>
+                <div className="contact-icon">📞</div>
                 <div className="contact-details">
-                  <h3>Phone</h3>
+                  <h3>{t("contact.phone")}</h3>
                   <p>02-6403333</p>
                 </div>
               </div>
               <div className="contact-item">
-                <div className="contact-icon">
-                  ✉️
-                </div>
+                <div className="contact-icon">✉️</div>
                 <div className="contact-details">
-                  <h3>Email</h3>
+                  <h3>{t("contact.email")}</h3>
                   <p>mazkirut.nevehhorim@gmail.com</p>
                 </div>
               </div>
               <div className="contact-item">
-                <div className="contact-icon">
-                  🖨️
-                </div>
+                <div className="contact-icon">🖨️</div>
                 <div className="contact-details">
-                  <h3>Fax</h3>
+                  <h3>{t("contact.fax")}</h3>
                   <p>02-6792504</p>
                 </div>
               </div>
@@ -375,18 +371,39 @@ const Homepage = () => {
       <footer className="footer" id="about">
         <div className="footer-content">
           <div className="footer-links">
-            <a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>About Us</a>
-            <a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')}>Services</a>
-            <a href="#privacy">Privacy Policy</a>
-            <a href="#terms">Terms of Service</a>
-            <a href="#support">Support</a>
-            <a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>Contact</a>
+            <a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>
+              {t("footer.aboutUs")}
+            </a>
+            <a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')}>
+              {t("footer.services")}
+            </a>
+            <a href="#privacy">{t("footer.privacy")}</a>
+            <a href="#terms">{t("footer.terms")}</a>
+            <a href="#support">{t("footer.support")}</a>
+            <a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>
+              {t("footer.contact")}
+            </a>
           </div>
           <div className="footer-bottom">
-            <p>&copy; 2025 Neveh Horim. All rights reserved. Making communities stronger, one volunteer at a time.</p>
+            <p>{t("footer.rights")}</p>
           </div>
         </div>
       </footer>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe size={35} />
+        </button>
+        {showLangOptions && (
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              English
+            </button>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              עברית
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
