@@ -28,21 +28,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem 0 1rem 2rem;
+  width: 100%;
+  padding: 1rem 2rem 1rem 2rem;
   background: url('/Logo.png');
   background-size: 70px 70px;
   background-repeat: no-repeat;
-  margin-left: 30px;
+  background-position: 30px center;
 }
 
 .logo {
   font-size: 1.5rem;
   font-weight: bold;
+  margin-left: 30px;
   color: #416a42;
   text-decoration: none;
-  padding-left: 55px
+  padding-left: 55px;
 }
 .nav-links {
   display: flex;
@@ -297,12 +297,6 @@
 
 /* Responsive adjustments for features */
 
-@media (min-width: 1400px) {
-  .nav {
-    padding-right: 0.5rem; 
-  }
-}
-
 @media (max-width: 768px) {
   .features-grid {
     grid-template-columns: 1fr;
@@ -323,7 +317,7 @@
 
   .nav {
     padding: 1rem;
-    margin-left: 15px;
+    background-position: 15px center;
   }
 }
 

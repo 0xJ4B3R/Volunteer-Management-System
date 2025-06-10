@@ -5,8 +5,7 @@ import { db } from '@/lib/firebase';
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import './styles/Dashboard.css';
 
-// !Custom Marijuana Icon component
-const MarijuanaIcon = ({ size = 38 }) => (
+const Icon = ({ size = 38 }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -129,7 +128,7 @@ const Dashboard = () => {
       return { label: "Champion", icon: <ShieldCheck size={38} />, nextLevel: "Humanitarian", hoursToNext: 200 - hours };
     if (hours >= 200 && hours < 420)
       return { label: "Humanitarian", icon: <Globe size={38} />, nextLevel: null, hoursToNext: 0 };
-    return { label: "Lord of the deeds", icon: <MarijuanaIcon />, nextLevel: null, hoursToNext: 0 };
+    return { label: "Lord of the deeds", icon: <Icon />, nextLevel: null, hoursToNext: 0 };
   };
 
   // Shuffle array helper function
@@ -140,6 +139,47 @@ const Dashboard = () => {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
+  };
+
+  // Helper function to parse time string and combine with date
+  const parseTimeAndCombineWithDate = (dateStr, timeStr) => {
+    try {
+      // Parse date string (format: "YYYY-MM-DD")
+      const [year, month, day] = dateStr.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      if (!timeStr) return date;
+      
+      // Parse time string (could be "2:00 PM", "14:00", etc.)
+      let hours = 0;
+      let minutes = 0;
+      
+      // Handle AM/PM format
+      if (timeStr.includes('AM') || timeStr.includes('PM')) {
+        const timePart = timeStr.replace(/\s*(AM|PM)/i, '');
+        const [hourStr, minuteStr = '0'] = timePart.split(':');
+        hours = parseInt(hourStr);
+        minutes = parseInt(minuteStr);
+        
+        // Convert to 24-hour format
+        if (timeStr.toUpperCase().includes('PM') && hours !== 12) {
+          hours += 12;
+        } else if (timeStr.toUpperCase().includes('AM') && hours === 12) {
+          hours = 0;
+        }
+      } else {
+        // Handle 24-hour format
+        const [hourStr, minuteStr = '0'] = timeStr.split(':');
+        hours = parseInt(hourStr);
+        minutes = parseInt(minuteStr);
+      }
+      
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    } catch (error) {
+      console.error("Error parsing date/time:", error);
+      return new Date();
+    }
   };
 
   // Fetch volunteer data
@@ -175,7 +215,7 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch upcoming sessions from calendar_slots - simplified
+  // Fetch upcoming sessions from calendar_slots with proper time validation
   const fetchUpcomingSessions = async () => {
     try {
       const userId = localStorage.getItem('userId');
@@ -186,7 +226,7 @@ const Dashboard = () => {
       
       const snapshot = await getDocs(q);
       const sessions = [];
-
+      const now = new Date();
 
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -203,41 +243,57 @@ const Dashboard = () => {
             
             if (userVolunteer) {
               
-              // Parse date string (format: "2025-6-5")
-              let sessionDate;
-              if (data.date) {
-                try {
-                  const [year, month, day] = data.date.split('-');
-                  sessionDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                } catch (error) {
-                  sessionDate = new Date();
-                }
+              // Parse end time to determine if session has actually ended
+              const endTime = data.endTime;
+              let sessionEndDateTime;
+              
+              if (data.date && endTime) {
+                sessionEndDateTime = parseTimeAndCombineWithDate(data.date, endTime);
               } else {
-                sessionDate = new Date();
+                // If no end time, use start time + 2 hours as fallback
+                const startTime = data.startTime;
+                if (data.date && startTime) {
+                  sessionEndDateTime = parseTimeAndCombineWithDate(data.date, startTime);
+                  sessionEndDateTime.setHours(sessionEndDateTime.getHours() + 2); // Add 2 hours
+                } else {
+                  // Fallback to just date
+                  try {
+                    const [year, month, day] = data.date.split('-');
+                    sessionEndDateTime = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    sessionEndDateTime.setHours(23, 59, 59, 999); // End of day
+                  } catch (error) {
+                    sessionEndDateTime = new Date();
+                  }
+                }
               }
               
-              const now = new Date();
-              now.setHours(0, 0, 0, 0);
-              sessionDate.setHours(0, 0, 0, 0);
-              
-              
-              // Only show future sessions
-              if (sessionDate >= now) {
+              // Only show sessions that haven't ended yet
+              if (sessionEndDateTime > now) {
                 const startTime = data.startTime || "Time TBD";
-                const endTime = data.endTime || "";
-                const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
+                const endTimeStr = data.endTime || "";
+                const timeRange = endTimeStr ? `${startTime} - ${endTimeStr}` : startTime;
+                
+                // Format display date
+                let displayDate;
+                try {
+                  const [year, month, day] = data.date.split('-');
+                  const sessionDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  displayDate = sessionDate.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  });
+                } catch (error) {
+                  displayDate = "Date TBD";
+                }
                 
                 const session = {
                   id: doc.id,
                   title: data.customLabel || "Session",
-                  date: sessionDate.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
-                  }),
+                  date: displayDate,
                   time: timeRange,
                   location: data.location || "Location TBD",
-                  fullDate: sessionDate
+                  fullDateTime: sessionEndDateTime
                 };
                 
                 sessions.push(session);
@@ -247,8 +303,8 @@ const Dashboard = () => {
         } 
       });
 
-      // Sort by date and take first 3
-      sessions.sort((a, b) => a.fullDate - b.fullDate);
+      // Sort by end date/time and take first 3
+      sessions.sort((a, b) => a.fullDateTime - b.fullDateTime);
 
       setUpcomingSessions(sessions.slice(0, 3));
     } catch (error) {
@@ -383,7 +439,7 @@ const Dashboard = () => {
       const maxHours = 200;
       const value = Math.min(userData.totalHours, maxHours);
       const progressRatio = value / maxHours;
-      const offset = 565.48 - (progressRatio * 565.48); // <-- correct calculation
+      const offset = 565.48 - (progressRatio * 565.48);
     
       setTimeout(() => {
         setHoursProgress(offset);

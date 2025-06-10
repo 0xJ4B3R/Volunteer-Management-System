@@ -51,6 +51,16 @@ export default function Appointments() {
   const [showLangOptions, setShowLangOptions] = useState(false);
   const [userId, setUserId] = useState(""); 
   const [username, setUsername] = useState("");
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+
+  // Function to show notifications
+  const showNotification = (message, type = "error") => {
+    setNotification({ show: true, message, type });
+    // Auto hide after 5 seconds
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "" });
+    }, 5000);
+  };
 
   // Set RTL/LTR based on language
   useEffect(() => {
@@ -71,6 +81,56 @@ export default function Appointments() {
       setUserId(storedUserId);
     }
   }, []);
+
+  // Function to check if appointment date has passed and update status
+  const updatePastAppointments = async (appointmentsData) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const updatePromises = [];
+    const updatedAppointments = [...appointmentsData];
+    
+    for (let i = 0; i < appointmentsData.length; i++) {
+      const appointment = appointmentsData[i];
+      const appointmentDate = new Date(appointment.rawData.date);
+      const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
+      
+      // Check if appointment date has passed and status is not already "completed"
+      if (appointmentDay < today && appointment.rawData.status !== "completed") {        
+        // Update in Firebase
+        const appointmentRef = doc(db, "calendar_slots", appointment.id);
+        const updatePromise = updateDoc(appointmentRef, {
+          status: "completed"
+        }).then(() => {
+          // Update local state
+          updatedAppointments[i] = {
+            ...appointment,
+            rawData: {
+              ...appointment.rawData,
+              status: "completed"
+            }
+          };
+        }).catch((error) => {
+          console.error(`Error updating appointment ${appointment.id}:`, error);
+        });
+        
+        updatePromises.push(updatePromise);
+      }
+    }
+    
+    // Wait for all updates to complete
+    if (updatePromises.length > 0) {
+      try {
+        await Promise.all(updatePromises);
+        return updatedAppointments;
+      } catch (error) {
+        console.error("Error updating some appointments:", error);
+        return updatedAppointments;
+      }
+    }
+    
+    return appointmentsData;
+  };
 
   // Fetch appointments from Firebase
   useEffect(() => {
@@ -112,7 +172,10 @@ export default function Appointments() {
           };
         });
         
-        setAppointments(appointmentsData);
+        // Update past appointments automatically
+        const updatedAppointments = await updatePastAppointments(appointmentsData);
+        
+        setAppointments(updatedAppointments);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching appointments:", error);
@@ -123,7 +186,21 @@ export default function Appointments() {
     fetchAppointments();
   }, [username]); // Depend on username instead of userId
 
-  // Format Firebase date string to "May 27" format
+  // Periodic check for past appointments (every 5 minutes)
+  useEffect(() => {
+    if (appointments.length === 0) return;
+    
+    const intervalId = setInterval(async () => {
+      const updatedAppointments = await updatePastAppointments(appointments);
+      if (updatedAppointments !== appointments) {
+        setAppointments(updatedAppointments);
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
+    
+    return () => clearInterval(intervalId);
+  }, [appointments]);
+
+  // Format Firebase date string to "MONTH DATE for example May 27" format
   const formatFirebaseDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -227,9 +304,12 @@ export default function Appointments() {
       }
       
       if (selected && selected.id === id) setSelected(null);
+      
+      // Show success notification
+      showNotification("Appointment canceled successfully!", "success");
     } catch (error) {
       console.error("Error canceling appointment:", error);
-      alert("Error canceling appointment. Please try again.");
+      showNotification("Error canceling appointment. Please try again.", "error");
     }
   };
 
@@ -285,6 +365,53 @@ export default function Appointments() {
 
   return (
     <div className="profile-page">
+      {/* Notification Toast */}
+      {notification.show && (
+        <div 
+          className={`notification-toast ${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            padding: '1rem 1.5rem',
+            borderRadius: '0.5rem',
+            color: 'white',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+            backgroundColor: notification.type === 'error' ? '#ef4444' : 
+                           notification.type === 'success' ? '#10b981' : '#3b82f6',
+            transform: 'translateX(0)',
+            transition: 'all 0.3s ease',
+            maxWidth: '300px',
+            wordWrap: 'break-word'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {notification.type === 'error' && <span>❌</span>}
+            {notification.type === 'success' && <span>✅</span>}
+            {notification.type === 'info' && <span>ℹ️</span>}
+            <span>{notification.message}</span>
+            <button
+              onClick={() => setNotification({ show: false, message: "", type: "" })}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '1.2rem',
+                cursor: 'pointer',
+                marginLeft: 'auto',
+                padding: '0',
+                lineHeight: '1'
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+      
       {loading ? (
         <LoadingScreen />
       ) : (

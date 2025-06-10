@@ -16,6 +16,7 @@ const Attendance = () => {
   const [userId, setUserId] = useState('');
   const { t, i18n } = useTranslation();
   const [showLangOptions, setShowLangOptions] = useState(false);
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
 
   // Pagination state for history
   const [historyPage, setHistoryPage] = useState(0);
@@ -25,6 +26,15 @@ const Attendance = () => {
   const [totalHistoryCount, setTotalHistoryCount] = useState(0);
 
   const RECORDS_PER_PAGE = 5;
+
+  // Function to show notifications
+  const showNotification = (message, type = "error") => {
+    setNotification({ show: true, message, type });
+    // Auto hide after 5 seconds
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "" });
+    }, 5000);
+  };
 
   // Get username from localStorage
   useEffect(() => {
@@ -205,7 +215,7 @@ const Attendance = () => {
       
       // Don't allow confirmation if session has ended
       if (attendanceStatus === 'auto-absent') {
-        alert('Cannot confirm attendance - the session has already ended.');
+        showNotification('Cannot confirm attendance - the session has already ended.', 'error');
         return;
       }
 
@@ -241,7 +251,7 @@ const Attendance = () => {
       const existingSnapshot = await getDocs(existingQuery);
       
       if (!existingSnapshot.empty) {
-        alert('Attendance already recorded for this session.');
+        showNotification('Attendance already recorded for this session.', 'warning');
         setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
         return;
       }
@@ -271,7 +281,7 @@ const Attendance = () => {
         notes: notes
       });
       
-      alert(statusMessage);      
+      showNotification(statusMessage, 'success');      
       // Remove this session from today's sessions after confirmation
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       
@@ -280,7 +290,7 @@ const Attendance = () => {
       
     } catch (error) {
       console.error('Error confirming attendance:', error);
-      alert('Error confirming attendance. Please try again.');
+      showNotification('Error confirming attendance. Please try again.', 'error');
     }
   };
 
@@ -300,7 +310,7 @@ const Attendance = () => {
       const existingSnapshot = await getDocs(existingQuery);
       
       if (!existingSnapshot.empty) {
-        alert('Attendance already recorded for this session.');
+        showNotification('Attendance already recorded for this session.', 'warning');
         // Remove this session from today's sessions
         setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
         return;
@@ -314,7 +324,9 @@ const Attendance = () => {
         confirmedAt: Timestamp.now(),
         status: 'absent',
         notes: 'Cancelled by volunteer'
-      });      
+      });    
+      
+      showNotification('Marked as unable to attend.', 'info');  
       // Remove this session from today's sessions after cancellation
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       
@@ -323,7 +335,7 @@ const Attendance = () => {
       
     } catch (error) {
       console.error('Error cancelling attendance:', error);
-      alert('Error cancelling attendance. Please try again.');
+      showNotification('Error cancelling attendance. Please try again.', 'error');
     }
   };
 
@@ -684,6 +696,55 @@ const Attendance = () => {
 
   return (
     <div className="attendance-container" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+      {/* Notification Toast */}
+      {notification.show && (
+        <div 
+          className={`notification-toast ${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            padding: '1rem 1.5rem',
+            borderRadius: '0.5rem',
+            color: 'white',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+            backgroundColor: notification.type === 'error' ? '#ef4444' : 
+                           notification.type === 'success' ? '#10b981' : 
+                           notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
+            transform: 'translateX(0)',
+            transition: 'all 0.3s ease',
+            maxWidth: '300px',
+            wordWrap: 'break-word'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {notification.type === 'error' && <span>❌</span>}
+            {notification.type === 'success' && <span>✅</span>}
+            {notification.type === 'warning' && <span>⚠️</span>}
+            {notification.type === 'info' && <span>ℹ️</span>}
+            <span>{notification.message}</span>
+            <button
+              onClick={() => setNotification({ show: false, message: "", type: "" })}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '1.2rem',
+                cursor: 'pointer',
+                marginLeft: 'auto',
+                padding: '0',
+                lineHeight: '1'
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
         <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
           <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
             <Globe size={35} />
@@ -901,16 +962,16 @@ const Attendance = () => {
             {/* Monthly Summary */}
             <div className="monthly-summary">
               <h3 className="monthly-summary-title">{t('attendance.thisMonth')}</h3>
-              <div className="monthly-stats">
+              <div className="monthly-stats" style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
                 <div>
                   <p className="monthly-stat-label">{t('attendance.sessions')}</p>
                   <p className="monthly-stat-value">{stats.completedSessions}</p>
                 </div>
-                <div>
+                <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
                   <p className="monthly-stat-label">{t('attendance.hours')}</p>
                   <p className="monthly-stat-value">{stats.thisMonthHours.toFixed(1)}</p>
                 </div>
-                <div>
+                <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
                   <p className="monthly-stat-label">{t('attendance.attendanceRate')}</p>
                   <p className="monthly-stat-value">{stats.attendanceRate}%</p>
                 </div>
