@@ -283,24 +283,20 @@ const VolunteerCalendar = () => {
   // Function to handle user signup for a session
   const handleSignUp = async (slot) => {
     if (!currentUser || !currentUser.username) {
-      alert("Please log in to sign up for sessions");
       navigate("/");
       return;
     }
 
     if (!slot.available || !isEventAvailable(slot.date)) {
-      alert("This slot is not available for signup");
       return;
     }
 
     // Check if user is already approved or rejected
     const userStatus = getUserApprovalStatus(slot, currentUser);
     if (userStatus === "approved") {
-      alert("You are already approved for this session");
       return;
     }
     if (userStatus === "rejected") {
-      alert("Your request for this session has been rejected");
       return;
     }
 
@@ -319,13 +315,11 @@ const VolunteerCalendar = () => {
       const volunteerRequests = slotData.volunteerRequests || [];
       
       if (volunteers.some(v => v.id === currentUser.uid || v.username === currentUser.username)) {
-        alert("You are already signed up for this session");
         setSignupLoading(false);
         return;
       }
       
       if (volunteerRequests && volunteerRequests.includes(currentUser.uid)) {
-        alert("You already have a pending request for this session");
         setSignupLoading(false);
         return;
       }
@@ -333,7 +327,6 @@ const VolunteerCalendar = () => {
       const approvedVolunteersCount = volunteers.filter(v => v.status !== "pending").length;
       
       if (approvedVolunteersCount >= (slotData.maxVolunteers || 1)) {
-        alert("This session is already at maximum capacity");
         setSignupLoading(false);
         return;
       }
@@ -385,11 +378,9 @@ const VolunteerCalendar = () => {
       });
       
       setCalendarSlots(updatedSlots);
-      alert(`Your request to join ${slot.type} session on ${slot.date.toDateString()} at ${slot.startTime} has been submitted. Waiting for approval.`);
       
     } catch (error) {
       console.error("Error signing up for session:", error);
-      alert(`Error signing up: ${error.message}`);
     } finally {
       setSignupLoading(false);
     }

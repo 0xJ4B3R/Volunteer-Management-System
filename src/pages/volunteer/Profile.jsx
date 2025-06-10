@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, Phone, CheckCircle2, Lock, Star, BadgeCheck, Plus, X, Eye, EyeOff, Globe, Hand, UserCheck, Hammer, HeartHandshake, ThumbsUp, Award, ShieldCheck, Users } from "lucide-react";
+import { User, Phone, CheckCircle2, Lock, Star, BadgeCheck, Plus, X, Eye, EyeOff, Globe, Hand, UserCheck, Hammer, HeartHandshake, ThumbsUp, Award, ShieldCheck, Users, Languages, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
 import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
@@ -23,10 +23,10 @@ const getLevel = (hours, t) => {
     return { label: t("profile.badges.Champion"), icon: <ShieldCheck size={36} /> };
   if (hours >= 200 && hours < 420)
     return { label: t("profile.badges.Humanitarian"), icon: <Globe size={36} /> };
-  return { label: t("profile.badges.Lord of the deeds"), icon: <MarijuanaIcon />};
+  return { label: t("profile.badges.Lord of the deeds"), icon: <Icon />};
 };
 
-const MarijuanaIcon = ({ size = 50 }) => (
+const Icon = ({ size = 50 }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -111,6 +111,7 @@ function Profile() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [skills, setSkills] = useState([]);
+  const [languages, setLanguages] = useState([]);
   const [progress, setProgress] = useState(0);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -119,6 +120,12 @@ function Profile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLangOptions, setShowLangOptions] = useState(false);
+  
+  // Professional input states
+  const [showSkillInput, setShowSkillInput] = useState(false);
+  const [showLanguageInput, setShowLanguageInput] = useState(false);
+  const [newSkillInput, setNewSkillInput] = useState("");
+  const [newLanguageInput, setNewLanguageInput] = useState("");
   
   // Firebase data state
   const [userProfile, setUserProfile] = useState(null);
@@ -222,11 +229,13 @@ function Profile() {
           joinDate: volunteerData.createdAt?.toDate() || new Date(),
           totalHours: volunteerData.totalHours || 0,
           completedSessions: volunteerData.totalSessions || 0,
-          skills: volunteerData.skills || ["Reading", "Music", "Companionship"]
+          skills: volunteerData.skills || ["Reading", "Music", "Companionship"],
+          languages: volunteerData.languages || ["English", "Hebrew"]
         };
 
         setUserProfile(profileData);
         setSkills(profileData.skills);
+        setLanguages(profileData.languages);
         
       } catch (error) {
         // Silent error handling
@@ -249,33 +258,119 @@ function Profile() {
     document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
   }, [i18n.language]);
 
-  const addSkill = async () => {
-    const newSkill = prompt(t("profile.prompt.newSkill"));
-    if (newSkill && !skills.includes(newSkill)) {
-      const updatedSkills = [...skills, newSkill];
-      
-      setSkills(updatedSkills);
-      
-      try {
-        if (volunteerId) {
-          const volunteerRef = doc(db, "volunteers", volunteerId);
-          await updateDoc(volunteerRef, {
-            skills: updatedSkills
-          });
-          
-          toast({ 
-            title: t("profile.toast.addedTitle"), 
-            description: t("profile.toast.addedDesc", { skill: newSkill }) 
-          });
-        }
-      } catch (error) {
-        setSkills(skills);
+  // Professional skill adding function
+  const handleAddSkill = async () => {
+    const trimmedSkill = newSkillInput.trim();
+    
+    if (!trimmedSkill) {
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.emptySkill"), 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (skills.length >= 5) {
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.maxSkills"), 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (skills.includes(trimmedSkill)) {
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.duplicateSkill"), 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    const updatedSkills = [...skills, trimmedSkill];
+    setSkills(updatedSkills);
+    setNewSkillInput("");
+    setShowSkillInput(false);
+    
+    try {
+      if (volunteerId) {
+        const volunteerRef = doc(db, "volunteers", volunteerId);
+        await updateDoc(volunteerRef, {
+          skills: updatedSkills
+        });
+        
         toast({ 
-          title: t("profile.toast.errorTitle"), 
-          description: t("profile.toast.addSkillError"), 
-          variant: "destructive" 
+          title: t("profile.toast.addedTitle"), 
+          description: t("profile.toast.addedDesc", { skill: trimmedSkill }) 
         });
       }
+    } catch (error) {
+      setSkills(skills);
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.addSkillError"), 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  // Professional language adding function
+  const handleAddLanguage = async () => {
+    const trimmedLanguage = newLanguageInput.trim();
+    
+    if (!trimmedLanguage) {
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.emptyLanguage"), 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (languages.length >= 5) {
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.maxLanguages"), 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (languages.includes(trimmedLanguage)) {
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.duplicateLanguage"), 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    const updatedLanguages = [...languages, trimmedLanguage];
+    setLanguages(updatedLanguages);
+    setNewLanguageInput("");
+    setShowLanguageInput(false);
+    
+    try {
+      if (volunteerId) {
+        const volunteerRef = doc(db, "volunteers", volunteerId);
+        await updateDoc(volunteerRef, {
+          languages: updatedLanguages
+        });
+        
+        toast({ 
+          title: t("profile.toast.addedTitle"), 
+          description: t("profile.toast.languageAdded", { language: trimmedLanguage }) 
+        });
+      }
+    } catch (error) {
+      setLanguages(languages);
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.addLanguageError"), 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -306,34 +401,165 @@ function Profile() {
     }
   };
 
-  const handlePasswordChange = async () => {
-      (null);
+  const removeLanguage = async (language) => {
+    const updatedLanguages = languages.filter(l => l !== language);
+    
+    setLanguages(updatedLanguages);
+    
+    try {
+      if (volunteerId) {
+        const volunteerRef = doc(db, "volunteers", volunteerId);
+        await updateDoc(volunteerRef, {
+          languages: updatedLanguages
+        });
+        
+        toast({ 
+          title: t("profile.toast.removedTitle"), 
+          description: t("profile.toast.languageRemoved", { language }) 
+        });
+      }
+    } catch (error) {
+      setLanguages(languages);
+      toast({ 
+        title: t("profile.toast.errorTitle"), 
+        description: t("profile.toast.removeLanguageError"), 
+        variant: "destructive" 
+      });
+    }
+  };
 
+  // JavaScript SHA-256 implementation for Samsung browser compatibility
+  const sha256 = async (message) => {
+    // Pure JavaScript SHA-256 implementation
+    function rightRotate(value, amount) {
+      return (value >>> amount) | (value << (32 - amount));
+    }
+
+    function sha256Hash(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      
+      // Pre-processing: adding a single 1 bit
+      const msgLength = msgBuffer.length;
+      const bitLength = msgLength * 8;
+      
+      // Create a new array with padding
+      const paddedLength = Math.ceil((bitLength + 65) / 512) * 512;
+      const paddedArray = new Uint8Array(paddedLength / 8);
+      paddedArray.set(msgBuffer);
+      paddedArray[msgLength] = 0x80;
+      
+      // Append original length as 64-bit big-endian
+      const view = new DataView(paddedArray.buffer);
+      view.setUint32(paddedArray.length - 4, bitLength, false);
+      
+      // SHA-256 constants
+      const k = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+      ];
+      
+      // Initial hash values
+      let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
+      let h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+      
+      // Process message in 512-bit chunks
+      for (let chunk = 0; chunk < paddedArray.length; chunk += 64) {
+        const w = new Array(64);
+        
+        // Copy chunk into first 16 words
+        for (let i = 0; i < 16; i++) {
+          w[i] = view.getUint32(chunk + i * 4, false);
+        }
+        
+        // Extend the first 16 words into the remaining 48 words
+        for (let i = 16; i < 64; i++) {
+          const s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+          const s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+          w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+        }
+        
+        // Initialize working variables
+        let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+        
+        // Compression function main loop
+        for (let i = 0; i < 64; i++) {
+          const S1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+          const ch = (e & f) ^ (~e & g);
+          const temp1 = (h + S1 + ch + k[i] + w[i]) >>> 0;
+          const S0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+          const maj = (a & b) ^ (a & c) ^ (b & c);
+          const temp2 = (S0 + maj) >>> 0;
+          
+          h = g; g = f; f = e; e = (d + temp1) >>> 0;
+          d = c; c = b; b = a; a = (temp1 + temp2) >>> 0;
+        }
+        
+        // Add this chunk's hash to result
+        h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0; h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
+        h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0; h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
+      }
+      
+      // Produce the final hash value as a 256-bit number (hex string)
+      return [h0, h1, h2, h3, h4, h5, h6, h7]
+        .map(h => h.toString(16).padStart(8, '0'))
+        .join('');
+    }
+    
+    return sha256Hash(message);
+  };
+
+  // Universal hash function that works on all devices
+  const createHash = async (password) => {
+    // First try crypto.subtle (works on desktop)
+    try {
+      if (crypto && crypto.subtle && crypto.subtle.digest) {
+        const msgUint8 = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
+      }
+    } catch (error) {
+      // Fall through to JavaScript implementation
+    }
+    
+    // Fallback to JavaScript SHA-256 (works on Samsung browser)
+    const hash = await sha256(password);
+    return hash;
+  };
+
+  const handlePasswordChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordChangeStatus({ type: "error", message: t("Please fill in all password fields") });
+      setPasswordChangeStatus({ type: "error", message: "Please fill in all password fields" });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordChangeStatus({ type: "error", message: t("New passwords do not match") });
+      setPasswordChangeStatus({ type: "error", message: "New passwords do not match" });
       return;
     }
 
     if (newPassword.length < 6) {
-      setPasswordChangeStatus({ type: "error", message: t("New password must be at least 6 characters long") });
+      setPasswordChangeStatus({ type: "error", message: "New password must be at least 6 characters long" });
       return;
     }
 
     if (newPassword === currentPassword) {
-      setPasswordChangeStatus({ type: "error", message: t("New password must be different from current password") });
+      setPasswordChangeStatus({ type: "error", message: "New password must be different from current password" });
       return;
     }
 
     try {
-      setPasswordChangeStatus({ type: "loading", message: t("Changing password...") });
+      setPasswordChangeStatus({ type: "loading", message: "Changing password..." });
       
       if (!userDocId) {
-        setPasswordChangeStatus({ type: "error", message: t("User data not found") });
+        setPasswordChangeStatus({ type: "error", message: "User data not found" });
         return;
       }
 
@@ -341,7 +567,7 @@ function Profile() {
       const userSnap = await getDoc(userRef);
       
       if (!userSnap.exists()) {
-        setPasswordChangeStatus({ type: "error", message: t("User document not found") });
+        setPasswordChangeStatus({ type: "error", message: "User document not found" });
         return;
       }
 
@@ -349,40 +575,48 @@ function Profile() {
       const storedPasswordHash = userData.passwordHash;
 
       if (!storedPasswordHash) {
-        setPasswordChangeStatus({ type: "error", message: t("No password set for this user") });
+        setPasswordChangeStatus({ type: "error", message: "No password set for this user" });
         return;
       }
 
-      const isPlainTextPassword = storedPasswordHash.length < 20;
-      const encoder = new TextEncoder();
+      // Check if stored password is plain text
+      const isPlainTextPassword = storedPasswordHash.length < 30;
       let passwordMatches = false;
       
       if (isPlainTextPassword) {
         passwordMatches = currentPassword === storedPasswordHash;
       } else {
-        const currentPasswordData = encoder.encode(currentPassword);
-        const currentHashBuffer = await crypto.subtle.digest('SHA-256', currentPasswordData);
-        const currentHashArray = Array.from(new Uint8Array(currentHashBuffer));
-        const currentPasswordHash = currentHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        passwordMatches = currentPasswordHash === storedPasswordHash;
+        try {
+          const currentPasswordHash = await createHash(currentPassword);
+          passwordMatches = currentPasswordHash === storedPasswordHash;
+        } catch (hashError) {
+          setPasswordChangeStatus({ 
+            type: "error", 
+            message: `Unable to verify password: ${hashError.message}` 
+          });
+          return;
+        }
       }
 
       if (!passwordMatches) {
-        setPasswordChangeStatus({ type: "error", message: t("Current password is incorrect") });
+        setPasswordChangeStatus({ type: "error", message: "Current password is incorrect" });
         return;
       }
 
-      const newPasswordData = encoder.encode(newPassword);
-      const newHashBuffer = await crypto.subtle.digest('SHA-256', newPasswordData);
-      const newHashArray = Array.from(new Uint8Array(newHashBuffer));
-      const newPasswordHash = newHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      let newPasswordHash;
+      try {
+        newPasswordHash = await createHash(newPassword);
+      } catch (hashError) {
+        setPasswordChangeStatus({ type: "error", message: "Cannot create secure password on this device" });
+        return;
+      }
 
       await updateDoc(userRef, {
         passwordHash: newPasswordHash,
         lastPasswordChange: new Date()
       });
 
-      setPasswordChangeStatus({ type: "success", message: t("Password changed successfully!") });
+      setPasswordChangeStatus({ type: "success", message: "Password changed successfully!" });
       
       setTimeout(() => {
         setCurrentPassword(""); 
@@ -392,8 +626,27 @@ function Profile() {
       }, 3000);
       
     } catch (error) {
-      setPasswordChangeStatus({ type: "error", message: t("Failed to change password. Please try again.") });
+      let errorMessage = "Failed to change password. Please try again.";
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = "Permission denied. Please log in again.";
+      } else if (error.code === 'network-request-failed') {
+        errorMessage = "Network error. Please check your connection.";
+      }
+      
+      setPasswordChangeStatus({ type: "error", message: errorMessage });
     }
+  };
+
+  // Cancel input functions
+  const cancelSkillInput = () => {
+    setNewSkillInput("");
+    setShowSkillInput(false);
+  };
+
+  const cancelLanguageInput = () => {
+    setNewLanguageInput("");
+    setShowLanguageInput(false);
   };
 
   if (loading) {
@@ -523,7 +776,7 @@ function Profile() {
 
             {/* Skills section */}
             <div className="skills-section">
-              <h4 className="section-title">{t("profile.skills")}</h4>
+              <h4 className="section-title">{t("profile.skills")} ({skills.length}/5)</h4>
               <div className="skills-list">
                 {skills.map((skill, i) => (
                   <span className="skill-badge" key={i}>
@@ -531,9 +784,78 @@ function Profile() {
                     <X size={14} className="remove-skill" onClick={() => removeSkill(skill)} />
                   </span>
                 ))}
-                <button className="add-skill-btn" onClick={addSkill}>
-                  <Plus size={14} /> {t("profile.addSkill")}
-                </button>
+                
+                {/* Professional Skill Input */}
+                {showSkillInput ? (
+                  <div className="professional-input-container">
+                    <input
+                      type="text"
+                      value={newSkillInput}
+                      onChange={(e) => setNewSkillInput(e.target.value)}
+                      placeholder={t("profile.enterSkill")}
+                      className="professional-input"
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+                      autoFocus
+                    />
+                    <div className="input-actions">
+                      <button className="confirm-btn" onClick={handleAddSkill}>
+                        <Check size={14} />
+                      </button>
+                      <button className="cancel-btn" onClick={cancelSkillInput}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  skills.length < 5 && (
+                    <button className="add-skill-btn" onClick={() => setShowSkillInput(true)}>
+                      <Plus size={14} /> {t("profile.addSkill")}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Languages section */}
+            <div className="skills-section">
+              <h4 className="section-title">{t("profile.languages")} ({languages.length}/5)</h4>
+              <div className="skills-list">
+                {languages.map((language, i) => (
+                  <span className="language-badge" key={i}>
+                    <Languages size={14} />
+                    {language}
+                    <X size={14} className="remove-skill" onClick={() => removeLanguage(language)} />
+                  </span>
+                ))}
+                
+                {/* Professional Language Input */}
+                {showLanguageInput ? (
+                  <div className="professional-input-container">
+                    <input
+                      type="text"
+                      value={newLanguageInput}
+                      onChange={(e) => setNewLanguageInput(e.target.value)}
+                      placeholder={t("profile.enterLanguage")}
+                      className="professional-input"
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddLanguage()}
+                      autoFocus
+                    />
+                    <div className="input-actions">
+                      <button className="confirm-btn" onClick={handleAddLanguage}>
+                        <Check size={14} />
+                      </button>
+                      <button className="cancel-btn" onClick={cancelLanguageInput}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  languages.length < 5 && (
+                    <button className="add-language-btn" onClick={() => setShowLanguageInput(true)}>
+                      <Plus size={14} /> {t("profile.addLanguage")}
+                    </button>
+                  )
+                )}
               </div>
             </div>
           </div>

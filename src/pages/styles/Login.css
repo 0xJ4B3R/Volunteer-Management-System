@@ -1,4 +1,4 @@
-/* Background and button styles from new code */
+/* Background and button styles */
 .login-page {
   display: flex;
   justify-content: center;
@@ -85,7 +85,7 @@
   transform: none;
 }
 
-/* Main container - responsive design */
+/* Main container */
 .login-container {
   display: flex;
   flex-direction: row;
@@ -176,7 +176,7 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  /* Mobile-friendly touch target */
+  /* Mobile-friendly */
   min-height: 44px;
   min-width: 44px;
   touch-action: manipulation;

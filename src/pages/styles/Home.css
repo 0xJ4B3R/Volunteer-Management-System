@@ -26,17 +26,15 @@
 
 .nav {
   display: flex;
-  flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 1rem 0 1rem 2rem;
   background: url('/Logo.png');
   background-size: 70px 70px;
   background-repeat: no-repeat;
-  position: relative;
-  direction: ltr;
+  margin-left: 30px;
 }
 
 .logo {
@@ -44,16 +42,13 @@
   font-weight: bold;
   color: #416a42;
   text-decoration: none;
-  padding-left: 55px;
-  flex-shrink: 0;
+  padding-left: 55px
 }
-
 .nav-links {
   display: flex;
   list-style: none;
   gap: 2rem;
   align-items: center;
-  margin-left: auto;
 }
 
 .nav-links a {

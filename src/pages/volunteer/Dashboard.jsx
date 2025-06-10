@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Clock, TrendingUp, Award, Calendar, CheckCircle2, AlertCircle, ChevronRight, CalendarDays, Users, Activity, FileText, Star, Target, ArrowUpRight, ArrowDownRight, Hand, UserCheck, HeartHandshake, ThumbsUp, ShieldCheck, Globe, Zap, TrendingDown } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from '@/lib/firebase';
-import { useTranslation } from 'react-i18next';
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import './styles/Dashboard.css';
 
@@ -90,8 +89,6 @@ const MarijuanaIcon = ({ size = 38 }) => (
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
-  const { t, i18n } = useTranslation();
-  const [showLangOptions, setShowLangOptions] = useState(false);
   const [animateHours, setAnimateHours] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoursProgress, setHoursProgress] = useState(0);
@@ -233,10 +230,10 @@ const Dashboard = () => {
                 const session = {
                   id: doc.id,
                   title: data.customLabel || "Session",
-                  date: sessionDate.toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric'
+                  date: sessionDate.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
                   }),
                   time: timeRange,
                   location: data.location || "Location TBD",
@@ -280,8 +277,8 @@ const Dashboard = () => {
         activities.push({
           id: 'level-up',
           type: 'level-up',
-          text: t("dashboard.levelUp", { level: t(`dashboard.levels.${currentLevel.label}`) }),
-          time: t("dashboard.time.recent"),
+          text: `🎉 Level up! You're now a ${currentLevel.label}!`,
+          time: 'Recent',
           icon: Award,
           iconColor: 'dash-icon-gold'
         });
@@ -295,7 +292,7 @@ const Dashboard = () => {
         const notes = data.notes || "";
         
         // Parse confirmedAt timestamp
-        let timeAgo = t("dashboard.time.recent");
+        let timeAgo = "Recently";
         if (data.confirmedAt) {
           try {
             const confirmedDate = data.confirmedAt.toDate ? data.confirmedAt.toDate() : new Date(data.confirmedAt);
@@ -303,11 +300,11 @@ const Dashboard = () => {
             const diffTime = Math.abs(now - confirmedDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            if (diffDays === 1) timeAgo = t("dashboard.time.today");
-            else if (diffDays === 2) timeAgo = t("dashboard.time.yesterday");
-            else if (diffDays < 7) timeAgo = t("dashboard.time.daysAgo", { count: diffDays });
-            else if (diffDays < 14) timeAgo = t("dashboard.time.weekAgo");
-            else timeAgo = t("dashboard.time.weeksAgo", { count: Math.floor(diffDays / 7) });
+            if (diffDays === 1) timeAgo = 'Today';
+            else if (diffDays === 2) timeAgo = '1 day ago';
+            else if (diffDays < 7) timeAgo = `${diffDays} days ago`;
+            else if (diffDays < 14) timeAgo = '1 week ago';
+            else timeAgo = `${Math.floor(diffDays / 7)} weeks ago`;
           } catch (error) {
             console.error("Error parsing confirmedAt:", error);
           }
@@ -319,21 +316,19 @@ const Dashboard = () => {
         let iconColor = "dash-icon-blue";
 
         if (status === "present") {
-          activityText = t("dashboard.activity.present", { notes });
+          activityText = `Marked as present${notes ? ` - ${notes}` : ''}`;
           icon = CheckCircle2;
           iconColor = "dash-icon-green";
         } else if (status === "late") {
-          activityText = t("dashboard.activity.late", { notes });
+          activityText = `Marked as late${notes ? ` - ${notes}` : ''}`;
           icon = Clock;
           iconColor = "dash-icon-amber";
         } else if (status === "absent") {
-              if (notes.toLowerCase() === "cancelled by volunteer") {
-                activityText = t("dashboard.activity.cancelledByVolunteer");
-              }
+          activityText = `Marked as absent${notes ? ` - ${notes}` : ''}`;
           icon = AlertCircle;
           iconColor = "dash-icon-red";
         } else {
-          activityText = t("dashboard.activity.generic", { status, notes });
+          activityText = `Attendance: ${status}${notes ? ` - ${notes}` : ''}`;
         }
 
         activities.push({
@@ -358,20 +353,22 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
-  }, [i18n.language]);
-
-  useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
+      
+      // Shuffle colors
       const shuffledColors = shuffleArray(colorPresets).slice(0, 3);
       setCardColors(shuffledColors);
+      
+      // Fetch all data
       await fetchVolunteerData();
       await fetchUpcomingSessions();
+      
       setLoading(false);
     };
+
     initializeData();
-  }, [i18n.language]);
+  }, []);
 
   // Fetch recent activity after userData is loaded
   useEffect(() => {
@@ -386,7 +383,7 @@ const Dashboard = () => {
       const maxHours = 200;
       const value = Math.min(userData.totalHours, maxHours);
       const progressRatio = value / maxHours;
-      const offset = 565.48 - (progressRatio * 565.48);
+      const offset = 565.48 - (progressRatio * 565.48); // <-- correct calculation
     
       setTimeout(() => {
         setHoursProgress(offset);
@@ -408,9 +405,9 @@ const Dashboard = () => {
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
-    if (hour < 12) return t("dashboard.greeting.morning");
-    if (hour < 18) return t("dashboard.greeting.afternoon");
-    return t("dashboard.greeting.evening");
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
   const currentLevel = getLevel(userData.totalHours);
@@ -424,9 +421,9 @@ const Dashboard = () => {
       <div className="dash-dashboard-wrapper">
         <div className="dash-dashboard-header">
           <div className="dash-dashboard-header-top">
-            <h1 className="dash-dashboard-title">{t("dashboard.title")}</h1>
+            <h1 className="dash-dashboard-title">Dashboard</h1>
           </div>
-          <p className="dash-dashboard-greeting">{`${getGreeting()}, ${userData.name}! 👋`}</p>
+          <p className="dash-dashboard-greeting">{getGreeting()}, {userData.name}! 👋</p>
         </div>
 
         <div className="dash-new-layout-grid">
@@ -440,8 +437,8 @@ const Dashboard = () => {
                     <CheckCircle2 className="dash-checkin-icon" />
                   </div>
                   <div className="dash-checkin-text">
-                    <span className="dash-checkin-title">{t("dashboard.checkIn.title")}</span>
-                    <span className="dash-checkin-subtitle">{t("dashboard.checkIn.subtitle")}</span>
+                    <span className="dash-checkin-title">Check In</span>
+                    <span className="dash-checkin-subtitle">Mark your attendance</span>
                   </div>
                   <ChevronRight className="dash-checkin-arrow" />
                 </div>
@@ -451,9 +448,9 @@ const Dashboard = () => {
             {/* Upcoming Sessions */}
             <div className="dash-upcoming-card">
               <div className="dash-upcoming-header">
-                <h2 className="dash-upcoming-title">{t("dashboard.upcoming.title")}</h2>
+                <h2 className="dash-upcoming-title">Upcoming Sessions</h2>
                 <a href="/volunteer/appointments" className="dash-view-all-link">
-                  {t("dashboard.upcoming.viewAll")} <ChevronRight style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                  View all <ChevronRight style={{ width: '1rem', height: '1rem', display: 'inline' }} />
                 </a>
               </div>
               <div className="dash-upcoming-list">
@@ -474,7 +471,7 @@ const Dashboard = () => {
                   ))
                 ) : (
                   <div className="dash-upcoming-empty">
-                    <p>{t("dashboard.upcoming.none")}</p>
+                    <p>No upcoming sessions</p>
                   </div>
                 )}
               </div>
@@ -483,7 +480,7 @@ const Dashboard = () => {
             {/* Recent Activity */}
             <div className="dash-activity-card">
               <div className="dash-activity-header">
-                <h2 className="dash-activity-title">{t("dashboard.activity.title")}</h2>
+                <h2 className="dash-activity-title">Recent Activity</h2>
               </div>
               <ul className="dash-activity-list">
                 {recentActivity.map((activity) => {
@@ -514,7 +511,7 @@ const Dashboard = () => {
               style={{ background: cardColors[0]?.bg }}
             >
               <div className="dash-widget-header">
-                <p className="dash-widget-label">{t("dashboard.stats.totalHours")}</p>
+                <p className="dash-widget-label">Total Hours</p>
                 <div 
                   className="dash-widget-icon-wrapper"
                   style={{ 
@@ -546,7 +543,7 @@ const Dashboard = () => {
                 </svg>
                 <div className="dash-hours-display">
                   <span className="dash-hours-number dash-hours-number-large">{userData.totalHours}</span>
-                  <span className="dash-hours-label">{t("dashboard.stats.hoursLabel")}</span>
+                  <span className="dash-hours-label">Hours</span>
                 </div>
               </div>
             </div>
@@ -557,7 +554,7 @@ const Dashboard = () => {
               style={{ background: cardColors[2]?.bg }}
             >
               <div className="dash-widget-header">
-                <p className="dash-widget-label">{t("dashboard.stats.level")}</p>
+                <p className="dash-widget-label">Current Level</p>
                 <div 
                   className="dash-widget-icon-wrapper dash-icon-amber"
                   style={{ 
@@ -579,14 +576,14 @@ const Dashboard = () => {
                   >
                     {currentLevel.icon}
                   </div>
-                  <span className="dash-level-name">{t(`dashboard.levels.${currentLevel.label}`)}</span>
+                  <span className="dash-level-name">{currentLevel.label}</span>
                   {currentLevel.nextLevel && (
                     <div className="dash-next-level-mini">
                       <span className="dash-next-level-mini-text">
-                        {t("dashboard.nextLevel", { level: t(`dashboard.levels.${currentLevel.nextLevel}`) })}
+                        Next: {currentLevel.nextLevel}
                       </span>
                       <span className="dash-next-level-mini-hours">
-                        {t("dashboard.hoursToGo", { count: currentLevel.hoursToNext })}
+                        {currentLevel.hoursToNext} hours to go
                       </span>
                       <div className="dash-next-level-mini-progress">
                         <div className="dash-next-level-mini-progress-bar">
@@ -611,7 +608,7 @@ const Dashboard = () => {
               style={{ background: cardColors[1]?.bg }}
             >
               <div className="dash-widget-header">
-                <p className="dash-widget-label">{t("dashboard.stats.sessionsCompleted")}</p>
+                <p className="dash-widget-label">Sessions Completed</p>
                 <div 
                   className="dash-widget-icon-wrapper dash-icon-purple"
                   style={{ 
@@ -629,21 +626,6 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-      </div>
-      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
-        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-          <Globe size={35} />
-        </button>
-        {showLangOptions && (
-          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
-              English
-            </button>
-            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
-              עברית
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
