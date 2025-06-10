@@ -426,151 +426,26 @@ const Dashboard = () => {
           <p className="dash-dashboard-greeting">{getGreeting()}, {userData.name}! 👋</p>
         </div>
 
-        <div className="dash-stats-row">
-          <div 
-            className="dash-stat-widget dash-hours-widget" 
-            style={{ background: cardColors[0]?.bg }}
-          >
-            <div className="dash-widget-header">
-              <p className="dash-widget-label">Total Hours</p>
-              <div 
-                className="dash-widget-icon-wrapper"
-                style={{ 
-                  background: `linear-gradient(135deg, ${cardColors[0]?.primary}, ${cardColors[0]?.secondary})` 
-                }}
-              >
-                <Clock className="dash-widget-icon" />
-              </div>
-            </div>
-            <div className="dash-hours-progress-container dash-hours-progress-large">
-              <svg className="dash-circle-progress dash-circle-progress-large" viewBox="0 0 200 200">
-                <defs>
-                  <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor={cardColors[0]?.primary || '#3b82f6'} />
-                    <stop offset="100%" stopColor={cardColors[0]?.secondary || '#8b5cf6'} />
-                  </linearGradient>
-                </defs>
-                <circle className="dash-circle-bg" cx="100" cy="100" r="90" strokeWidth="12" />
-                <circle
-                  className={`dash-circle-value ${animateHours ? 'animate' : ''}`}
-                  cx="100"
-                  cy="100"
-                  r="90"
-                  strokeWidth="12"
-                  strokeDasharray="565.48"
-                  strokeDashoffset={hoursProgress}
-                  style={{ '--final-offset': hoursProgress }}
-                />
-              </svg>
-              <div className="dash-hours-display">
-                <span className="dash-hours-number dash-hours-number-large">{userData.totalHours}</span>
-                <span className="dash-hours-label">Hours</span>
-              </div>
-            </div>
-          </div>
-
-          <div 
-            className="dash-stat-widget dash-sessions-widget"
-            style={{ background: cardColors[1]?.bg }}
-          >
-            <div className="dash-widget-header">
-              <p className="dash-widget-label">Sessions Completed</p>
-              <div 
-                className="dash-widget-icon-wrapper dash-icon-purple"
-                style={{ 
-                  background: `linear-gradient(135deg, ${cardColors[1]?.primary}, ${cardColors[1]?.secondary})` 
-                }}
-              >
-                <CheckCircle2 className="dash-widget-icon" />
-              </div>
-            </div>
-            <div className="dash-sessions-content">
-              <div className="dash-sessions-display">
-                <span className="dash-sessions-number">{userData.totalSessions}</span>
-              </div>
-            </div>
-          </div>
-
-          <div 
-            className="dash-stat-widget dash-level-widget"
-            style={{ background: cardColors[2]?.bg }}
-          >
-            <div className="dash-widget-header">
-              <p className="dash-widget-label">Current Level</p>
-              <div 
-                className="dash-widget-icon-wrapper dash-icon-amber"
-                style={{ 
-                  background: `linear-gradient(135deg, ${cardColors[2]?.primary}, ${cardColors[2]?.secondary})` 
-                }}
-              >
-                <Award className="dash-widget-icon" />
-              </div>
-            </div>
-            <div className="dash-level-content">
-            <div className={`dash-level-badge ${!currentLevel.nextLevel ? 'dash-level-badge--centered' : ''}`}>
-                <div 
-                  className="dash-level-icon"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${cardColors[2]?.bg})`,
-                    borderColor: cardColors[2]?.primary,
-                    color: cardColors[2]?.primary
-                  }}
-                >
-                  {currentLevel.icon}
-                </div>
-                <span className="dash-level-name">{currentLevel.label}</span>
-                {currentLevel.nextLevel && (
-                  <div className="dash-next-level-mini">
-                    <span className="dash-next-level-mini-text">
-                      Next: {currentLevel.nextLevel}
-                    </span>
-                    <span className="dash-next-level-mini-hours">
-                      {currentLevel.hoursToNext} hours to go
-                    </span>
-                    <div className="dash-next-level-mini-progress">
-                      <div className="dash-next-level-mini-progress-bar">
-                        <div 
-                          className="dash-next-level-mini-progress-fill"
-                          style={{ 
-                            width: `${Math.min(((userData.totalHours % 100) / (currentLevel.hoursToNext + (userData.totalHours % 100))) * 100, 100)}%`,
-                            background: cardColors[2]?.primary
-                          }}
-                        ></div>
-                      </div>
-                    </div>
+        <div className="dash-new-layout-grid">
+          {/* Left Column */}
+          <div className="dash-left-column">
+            {/* Check In Card */}
+            <div className="dash-checkin-card">
+              <a href="/volunteer/attendance" className="dash-checkin-button">
+                <div className="dash-checkin-content">
+                  <div className="dash-checkin-icon-wrapper">
+                    <CheckCircle2 className="dash-checkin-icon" />
                   </div>
-                )}
-              </div>
+                  <div className="dash-checkin-text">
+                    <span className="dash-checkin-title">Check In</span>
+                    <span className="dash-checkin-subtitle">Mark your attendance</span>
+                  </div>
+                  <ChevronRight className="dash-checkin-arrow" />
+                </div>
+              </a>
             </div>
-          </div>
-        </div>
 
-        <div className="dash-main-content-grid">
-          <div className="dash-activity-card">
-            <div className="dash-activity-header">
-              <h2 className="dash-activity-title">Recent Activity</h2>
-            </div>
-            <ul className="dash-activity-list">
-              {recentActivity.map((activity) => {
-                const IconComponent = activity.icon;
-                return (
-                  <li key={activity.id} className="dash-activity-item">
-                    <div className="dash-activity-content">
-                      <div className={`dash-activity-icon-wrapper ${activity.iconColor}`}>
-                        <IconComponent className="dash-activity-icon" />
-                      </div>
-                      <div className="dash-activity-details">
-                        <p className="dash-activity-text">{activity.text}</p>
-                        <p className="dash-activity-time">{activity.time}</p>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          <div>
+            {/* Upcoming Sessions */}
             <div className="dash-upcoming-card">
               <div className="dash-upcoming-header">
                 <h2 className="dash-upcoming-title">Upcoming Sessions</h2>
@@ -602,20 +477,152 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Enhanced Check-in Button */}
-            <div className="dash-checkin-card">
-              <a href="/volunteer/attendance" className="dash-checkin-button">
-                <div className="dash-checkin-content">
-                  <div className="dash-checkin-icon-wrapper">
-                    <CheckCircle2 className="dash-checkin-icon" />
-                  </div>
-                  <div className="dash-checkin-text">
-                    <span className="dash-checkin-title">Check In</span>
-                    <span className="dash-checkin-subtitle">Mark your attendance</span>
-                  </div>
-                  <ChevronRight className="dash-checkin-arrow" />
+            {/* Recent Activity */}
+            <div className="dash-activity-card">
+              <div className="dash-activity-header">
+                <h2 className="dash-activity-title">Recent Activity</h2>
+              </div>
+              <ul className="dash-activity-list">
+                {recentActivity.map((activity) => {
+                  const IconComponent = activity.icon;
+                  return (
+                    <li key={activity.id} className="dash-activity-item">
+                      <div className="dash-activity-content">
+                        <div className={`dash-activity-icon-wrapper ${activity.iconColor}`}>
+                          <IconComponent className="dash-activity-icon" />
+                        </div>
+                        <div className="dash-activity-details">
+                          <p className="dash-activity-text">{activity.text}</p>
+                          <p className="dash-activity-time">{activity.time}</p>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="dash-right-column">
+            {/* Total Hours */}
+            <div 
+              className="dash-stat-widget dash-hours-widget" 
+              style={{ background: cardColors[0]?.bg }}
+            >
+              <div className="dash-widget-header">
+                <p className="dash-widget-label">Total Hours</p>
+                <div 
+                  className="dash-widget-icon-wrapper"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${cardColors[0]?.primary}, ${cardColors[0]?.secondary})` 
+                  }}
+                >
+                  <Clock className="dash-widget-icon" />
                 </div>
-              </a>
+              </div>
+              <div className="dash-hours-progress-container dash-hours-progress-large">
+                <svg className="dash-circle-progress dash-circle-progress-large" viewBox="0 0 200 200">
+                  <defs>
+                    <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor={cardColors[0]?.primary || '#3b82f6'} />
+                      <stop offset="100%" stopColor={cardColors[0]?.secondary || '#8b5cf6'} />
+                    </linearGradient>
+                  </defs>
+                  <circle className="dash-circle-bg" cx="100" cy="100" r="90" strokeWidth="12" />
+                  <circle
+                    className={`dash-circle-value ${animateHours ? 'animate' : ''}`}
+                    cx="100"
+                    cy="100"
+                    r="90"
+                    strokeWidth="12"
+                    strokeDasharray="565.48"
+                    strokeDashoffset={hoursProgress}
+                    style={{ '--final-offset': hoursProgress }}
+                  />
+                </svg>
+                <div className="dash-hours-display">
+                  <span className="dash-hours-number dash-hours-number-large">{userData.totalHours}</span>
+                  <span className="dash-hours-label">Hours</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Level */}
+            <div 
+              className="dash-stat-widget dash-level-widget"
+              style={{ background: cardColors[2]?.bg }}
+            >
+              <div className="dash-widget-header">
+                <p className="dash-widget-label">Current Level</p>
+                <div 
+                  className="dash-widget-icon-wrapper dash-icon-amber"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${cardColors[2]?.primary}, ${cardColors[2]?.secondary})` 
+                  }}
+                >
+                  <Award className="dash-widget-icon" />
+                </div>
+              </div>
+              <div className="dash-level-content">
+              <div className={`dash-level-badge ${!currentLevel.nextLevel ? 'dash-level-badge--centered' : ''}`}>
+                  <div 
+                    className="dash-level-icon"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${cardColors[2]?.bg})`,
+                      borderColor: cardColors[2]?.primary,
+                      color: cardColors[2]?.primary
+                    }}
+                  >
+                    {currentLevel.icon}
+                  </div>
+                  <span className="dash-level-name">{currentLevel.label}</span>
+                  {currentLevel.nextLevel && (
+                    <div className="dash-next-level-mini">
+                      <span className="dash-next-level-mini-text">
+                        Next: {currentLevel.nextLevel}
+                      </span>
+                      <span className="dash-next-level-mini-hours">
+                        {currentLevel.hoursToNext} hours to go
+                      </span>
+                      <div className="dash-next-level-mini-progress">
+                        <div className="dash-next-level-mini-progress-bar">
+                          <div 
+                            className="dash-next-level-mini-progress-fill"
+                            style={{ 
+                              width: `${Math.min(((userData.totalHours % 100) / (currentLevel.hoursToNext + (userData.totalHours % 100))) * 100, 100)}%`,
+                              background: cardColors[2]?.primary
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sessions Completed */}
+            <div 
+              className="dash-stat-widget dash-sessions-widget"
+              style={{ background: cardColors[1]?.bg }}
+            >
+              <div className="dash-widget-header">
+                <p className="dash-widget-label">Sessions Completed</p>
+                <div 
+                  className="dash-widget-icon-wrapper dash-icon-purple"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${cardColors[1]?.primary}, ${cardColors[1]?.secondary})` 
+                  }}
+                >
+                  <CheckCircle2 className="dash-widget-icon" />
+                </div>
+              </div>
+              <div className="dash-sessions-content">
+                <div className="dash-sessions-display">
+                  <span className="dash-sessions-number">{userData.totalSessions}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@
   "username": "Username",
   "password": "Password",
   "login_button": "Log in",
-  "forgot_password": "Forgot password?",
+  "Back_to_home_page": "Back to home page",
   "error_fill_fields": "Please fill all the fields above",
   "error_user_not_found": "User not found",
   "error_invalid_role": "Invalid user role",

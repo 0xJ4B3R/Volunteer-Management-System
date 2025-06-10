@@ -1,6 +1,137 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './styles/Home.css';
+
+// Services Carousel Component
+const ServicesCarousel = () => {
+  const [currentService, setCurrentService] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const services = [
+    {
+      icon: "🏥",
+      title: "24-Hour Medical and Nursing Care",
+      description: "Provided by the home's skilled staff, including consultations with specialist doctors."
+    },
+    {
+      icon: "👥",
+      title: "Social Services",
+      description: "Offers support to residents and their families, maintains connections with the community and schools, and initiates special activities."
+    },
+    {
+      icon: "🎨",
+      title: "Cultural Activities",
+      description: "Animal therapy, gardening, weekly Torah portion study, music classes, exercise, ceramics, jewelry and bead making, guest artist performances, trips, and parties."
+    },
+    {
+      icon: "🌱",
+      title: "Special Projects: Growing Community",
+      description: "Strengthening connections between residents and staff through meaningful community-building initiatives."
+    },
+    {
+      icon: "🤝",
+      title: "Volunteers",
+      description: "Schools, pre-military programs, retirees, and neighbors assist with both group and individual activities."
+    },
+    {
+      icon: "🧠",
+      title: "Occupational Therapy",
+      description: "Includes a Snoezelen room (multi-sensory stimulation) and cognitive groups for enhanced well-being."
+    },
+    {
+      icon: "🎯",
+      title: "Employment and Social Activities",
+      description: "Handicrafts, music engagement, classes, computer room, music room, cultural performances, and more."
+    },
+    {
+      icon: "🏃",
+      title: "Physiotherapy",
+      description: "Personalized individual and group therapy in a well-equipped facility and an activity yard."
+    },
+    {
+      icon: "🍽️",
+      title: "Five Meals a Day",
+      description: "Supervised by a dietitian and under rabbinical supervision for optimal nutrition and kosher compliance."
+    },
+    {
+      icon: "📺",
+      title: "Cable TV Connection",
+      description: "Option to install cable television in residents' rooms for entertainment and connection."
+    },
+    {
+      icon: "🛡️",
+      title: "Cleaning and Security Services",
+      description: "Comprehensive cleaning and 24/7 security services to ensure a safe and comfortable environment."
+    },
+    {
+      icon: "👕",
+      title: "Laundry Services",
+      description: "Professional laundry services to maintain residents' clothing and linens with care."
+    },
+    {
+      icon: "💅",
+      title: "Hair Salon and Pedicure",
+      description: "On-site beauty services including hair styling and pedicure treatments for resident comfort."
+    },
+    {
+      icon: "🕍",
+      title: "Synagogue",
+      description: "On-site synagogue facilities for prayer services and religious observance."
+    },
+    {
+      icon: "💊",
+      title: "Pharmacy",
+      description: "Convenient on-site pharmacy services for medication management and prescription needs."
+    }
+  ];
+
+  useEffect(() => {
+    if (!isPaused) {
+      const interval = setInterval(() => {
+        setCurrentService((prev) => (prev + 1) % services.length);
+      }, 7000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isPaused, services.length]);
+
+  const handleDotClick = (index) => {
+    setCurrentService(index);
+  };
+
+  return (
+    <div 
+      className="services-carousel"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="service-display">
+        <div className="service-icon">
+          {services[currentService].icon}
+        </div>
+        <div className="service-content">
+          <h3>{services[currentService].title}</h3>
+          <p>{services[currentService].description}</p>
+        </div>
+      </div>
+      
+      <div className="carousel-indicators">
+        {services.map((_, index) => (
+          <button
+            key={index}
+            className={`indicator ${index === currentService ? 'active' : ''}`}
+            onClick={() => handleDotClick(index)}
+            aria-label={`View service ${index + 1}`}
+          />
+        ))}
+      </div>
+      
+      <div className="service-counter">
+        {currentService + 1} of {services.length}
+      </div>
+    </div>
+  );
+};
 
 const Homepage = () => {
   const navigate = useNavigate();
@@ -77,13 +208,6 @@ const Homepage = () => {
     e.currentTarget.style.transform = 'translateY(0) scale(1)';
   };
 
-  // Contact form handler
-  const handleContactSubmit = (e) => {
-    e.preventDefault();
-    // Add your contact form submission logic here
-    alert('Thank you for your message! We will get back to you soon.');
-  };
-
   return (
     <div className="homepage">
       {/* Header */}
@@ -92,6 +216,7 @@ const Homepage = () => {
           <a href="#" className="logo">Neveh Horim</a>
           <ul className="nav-links">
             <li><a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>Contact</a></li>
+            <li><a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')}>Services</a></li>
             <li><a href="#features" onClick={(e) => handleSmoothScroll(e, '#features')}>Features</a></li>
             <li><a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>About</a></li>
             <li><button onClick={handleLogin} className="login-btn">Login</button></li>
@@ -171,6 +296,19 @@ const Homepage = () => {
         </div>
       </section>
 
+      {/* Services Section */}
+      <section className="services" id="services">
+        <div className="container">
+          <div className="section-header fade-in">
+            <h2>Our Services</h2>
+            <p>Comprehensive care and support services designed to enhance quality of life</p>
+          </div>
+          <div className="services-widget fade-in">
+            <ServicesCarousel />
+          </div>
+        </div>
+      </section>
+
       {/* Contact Us Section */}
       <section className="contact-us" id="contact">
         <div className="container">
@@ -217,39 +355,17 @@ const Homepage = () => {
                 </div>
               </div>
             </div>
-            <div className="contact-form fade-in">
-              <form onSubmit={handleContactSubmit}>
-                <div className="form-group">
-                  <label htmlFor="name">Full Name</label>
-                  <input type="text" id="name" name="name" required />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="email">Email Address</label>
-                  <input type="email" id="email" name="email" required />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="phone">Phone Number</label>
-                  <input type="tel" id="phone" name="phone" />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="subject">Subject</label>
-                  <select id="subject" name="subject" required>
-                    <option value="">Select a subject</option>
-                    <option value="general">General Inquiry</option>
-                    <option value="volunteer">Volunteer Opportunities</option>
-                    <option value="support">Technical Support</option>
-                    <option value="partnership">Partnership</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="message">Message</label>
-                  <textarea id="message" name="message" rows="5" required></textarea>
-                </div>
-                <button type="submit" className="btn btn-primary contact-submit-btn">
-                  Send Message
-                </button>
-              </form>
+            <div className="map-container">
+              <iframe
+                src="https://maps.google.com/maps?q=Ma'ale Ze'ev Street 3, Jerusalem, Israel&output=embed"
+                width="100%"
+                height="550"
+                style={{ border: 0, borderRadius: '0.75rem' }}
+                allowFullScreen=""
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Neveh Horim Location"
+              ></iframe>
             </div>
           </div>
         </div>
@@ -260,6 +376,7 @@ const Homepage = () => {
         <div className="footer-content">
           <div className="footer-links">
             <a href="#about" onClick={(e) => handleSmoothScroll(e, '#about')}>About Us</a>
+            <a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')}>Services</a>
             <a href="#privacy">Privacy Policy</a>
             <a href="#terms">Terms of Service</a>
             <a href="#support">Support</a>

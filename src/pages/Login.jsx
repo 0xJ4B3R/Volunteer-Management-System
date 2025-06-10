@@ -292,8 +292,8 @@ export default function LoginPage() {
               <p className="error-message">{error}</p>
             )}
 
-            <a href="/forgot-password" className="forgot-password-link">
-              {t("forgot_password")}
+            <a href="/" className="forgot-password-link">
+              {t("Back_to_home_page")}
             </a>
           </form>
         </div>

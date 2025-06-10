@@ -264,8 +264,6 @@
 }
 
 .lang-button {
-  background-color: #f6ead1;
-  border: 1px solid #d8cfc0;
   padding: 0.5rem;
   border-radius: 9999px;
   cursor: pointer;
@@ -280,16 +278,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.lang-button:hover,
-.lang-button:focus {
-  background-color: #ede0c8;
-}
-
 .lang-options {
   position: absolute;
   bottom: 3.5rem;
-  background-color: #fffaf0;
-  border: 1px solid #d8cfc0;
   border-radius: 0.5rem;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   overflow: hidden;
@@ -310,11 +301,6 @@
   transition: background-color 0.2s ease;
   min-height: 44px;
   touch-action: manipulation;
-}
-
-.lang-options button:hover,
-.lang-options button:focus {
-  background-color: #f6ead1;
 }
 
 /* Default (English) - aligns to right */

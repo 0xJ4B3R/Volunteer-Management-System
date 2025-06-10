@@ -18,7 +18,7 @@ const NotFound = () => {
     <div className="not-found-container">
       <div className="not-found-content">
         {/* 404 Text */}
-        <div className="not-found-header">
+        <div className="not-found-hero">
           <h1 className="not-found-title">404</h1>
           <div className="search-icon-container">
             <Search className="search-icon" />
@@ -39,28 +39,34 @@ const NotFound = () => {
 
         {/* Actions */}
         <div className="not-found-actions">
-          <Link to="/">
-            <Button size="lg" className="w-full sm:w-auto">
-              <Home className="mr-2 h-5 w-5" />
-              Return Home
-            </Button>
+          <Link to="/" className="btn btn-primary btn-wide">
+            <Home className="btn-icon" />
+            <span>Return Home</span>
           </Link>
-          <Button 
-            size="lg" 
-            variant="outline" 
-            className="w-full sm:w-auto"
+          <button 
+            className="btn btn-secondary btn-wide"
             onClick={() => window.history.back()}
           >
-            <ArrowLeft className="mr-2 h-5 w-5" />
-            Go Back
-          </Button>
+            <ArrowLeft className="btn-icon" />
+            <span>Go Back</span>
+          </button>
         </div>
 
         {/* Help Text */}
         <p className="not-found-help-text">
-          If you believe this is an error, please contact our support team.
+          If you believe this is an error, please contact our support team at{' '}
+          <a href="mailto:mazkirut.nevehhorim@gmail.com" className="contact-link">
+            mazkirut.nevehhorim@gmail.com
+          </a>
         </p>
       </div>
+
+      {/* Footer matching homepage */}
+      <footer className="not-found-footer">
+        <div className="footer-content">
+          <p>&copy; 2025 Neveh Horim. All rights reserved. Making communities stronger, one volunteer at a time.</p>
+        </div>
+      </footer>
     </div>
   );
 };

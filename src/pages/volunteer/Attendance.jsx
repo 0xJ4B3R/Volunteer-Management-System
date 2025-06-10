@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award, FileText, CheckCircle2, XCircle, History, CalendarDays, CalendarClock } from 'lucide-react';
+import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award, FileText, CheckCircle2, XCircle, History, CalendarDays, CalendarClock, ChevronRight } from 'lucide-react';
 import { collection, getDocs, query, where, orderBy, limit, doc, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,15 @@ const Attendance = () => {
   const [userId, setUserId] = useState('');
   const { t, i18n } = useTranslation();
   const [showLangOptions, setShowLangOptions] = useState(false);
+
+  // Pagination state for history
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [allUserRecords, setAllUserRecords] = useState([]);
+  const [totalHistoryCount, setTotalHistoryCount] = useState(0);
+
+  const RECORDS_PER_PAGE = 5;
 
   // Get username from localStorage
   useEffect(() => {
@@ -266,6 +275,9 @@ const Attendance = () => {
       // Remove this session from today's sessions after confirmation
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       
+      // Refresh history to show the new attendance record
+      await fetchInitialAttendanceHistory();
+      
     } catch (error) {
       console.error('Error confirming attendance:', error);
       alert('Error confirming attendance. Please try again.');
@@ -306,6 +318,9 @@ const Attendance = () => {
       // Remove this session from today's sessions after cancellation
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       
+      // Refresh history to show the new attendance record
+      await fetchInitialAttendanceHistory();
+      
     } catch (error) {
       console.error('Error cancelling attendance:', error);
       alert('Error cancelling attendance. Please try again.');
@@ -343,6 +358,9 @@ const Attendance = () => {
               });              
               // Remove this session from today's sessions
               setTodaySessions(prev => prev.filter(s => s.id !== session.id));
+              
+              // Refresh history to show the new attendance record
+              await fetchInitialAttendanceHistory();
             }
           } catch (error) {
             console.error('Error creating automatic absent record:', error);
@@ -360,86 +378,142 @@ const Attendance = () => {
     return () => clearInterval(interval);
   }, [todaySessions, username, userId]);
 
-  // Fetch attendance history - NO INDEX REQUIRED
-  useEffect(() => {
-    const fetchAttendanceHistory = async () => {
-      if (!userId && !username) return;
+  // Fetch initial attendance history (first 5 records)
+  const fetchInitialAttendanceHistory = async () => {
+    if (!userId && !username) return;
 
-      try {
-        const attendanceRef = collection(db, 'attendance');
-        
-        // Get all attendance records and filter manually (no index required)
-        const snapshot = await getDocs(attendanceRef);
-        // Filter records for this user
-        let userRecords = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(record => {
-            return record.volunteerId === userId || 
-                   record.volunteerId === username ||
-                   record.confirmedBy === username;
-          });        
-        // Sort by confirmedAt date (most recent first)
-        userRecords.sort((a, b) => {
-          const dateA = a.confirmedAt?.toDate ? a.confirmedAt.toDate() : new Date(a.confirmedAt || 0);
-          const dateB = b.confirmedAt?.toDate ? b.confirmedAt.toDate() : new Date(b.confirmedAt || 0);
-          return dateB - dateA;
-        });
+    try {
+      const attendanceRef = collection(db, 'attendance');
+      
+      // Get all attendance records and filter manually (no index required)
+      const snapshot = await getDocs(attendanceRef);
+      // Filter records for this user
+      let userRecords = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(record => {
+          return record.volunteerId === userId || 
+                 record.volunteerId === username ||
+                 record.confirmedBy === username;
+        });        
+      
+      // Sort by confirmedAt date (most recent first)
+      userRecords.sort((a, b) => {
+        const dateA = a.confirmedAt?.toDate ? a.confirmedAt.toDate() : new Date(a.confirmedAt || 0);
+        const dateB = b.confirmedAt?.toDate ? b.confirmedAt.toDate() : new Date(b.confirmedAt || 0);
+        return dateB - dateA;
+      });
 
-        // Limit to most recent 5 records
-        let historyData = userRecords.slice(0, 5);
+      // Store all records for pagination
+      setAllUserRecords(userRecords);
+      setTotalHistoryCount(userRecords.length);
+      
+      // Set initial page data
+      const initialRecords = userRecords.slice(0, RECORDS_PER_PAGE);
+      setHasMoreHistory(userRecords.length > RECORDS_PER_PAGE);
+      setHistoryPage(0);
+      
+      // Get appointment details and enrich the data
+      const enrichedHistory = await enrichHistoryData(initialRecords);
+      setAttendanceHistory(enrichedHistory);
+      
+    } catch (error) {
+      console.error('Error fetching attendance history:', error);
+    }
+  };
 
-        // Get appointment details for each attendance record
-        const calendarRef = collection(db, 'calendar_slots');
-        const calendarSnapshot = await getDocs(calendarRef);
-        const calendarData = {};
-        
-        calendarSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          const appointmentId = data.appointmentId || doc.id;
-          calendarData[appointmentId] = {
-            ...data,
-            id: doc.id
-          };
-        });
+  // Load more history records
+  const loadMoreHistory = async () => {
+    if (historyLoading || !hasMoreHistory) return;
 
-        const enrichedHistory = historyData.map(record => {
-          const appointmentData = calendarData[record.appointmentId];
-          
-          // Handle date conversion safely
-          let recordDate;
-          if (record.confirmedAt?.toDate) {
-            recordDate = record.confirmedAt.toDate();
-          } else if (record.confirmedAt) {
-            recordDate = new Date(record.confirmedAt);
-          } else {
-            recordDate = new Date();
-          }
-          
-          return {
-            id: record.id,
-            date: recordDate.toISOString().split('T')[0],
-            title: appointmentData?.customLabel || 
-                   appointmentData?.sessionType || 
-                   appointmentData?.notes || 
-                   'Volunteer Session',
-            time: appointmentData ? 
-                  `${appointmentData.startTime} - ${appointmentData.endTime}` : 
-                  'Time not available',
-            status: record.status || 'present',
-            hours: getHoursFromTimeRange(appointmentData?.startTime, appointmentData?.endTime),
-            notes: record.notes || '',
-            appointmentId: record.appointmentId
-          };
-        });
+    setHistoryLoading(true);
+    
+    try {
+      const nextPage = historyPage + 1;
+      const startIndex = nextPage * RECORDS_PER_PAGE;
+      const endIndex = startIndex + RECORDS_PER_PAGE;
+      
+      const nextPageRecords = allUserRecords.slice(startIndex, endIndex);
+      
+      if (nextPageRecords.length > 0) {
+        // Enrich the new records
+        const enrichedNewRecords = await enrichHistoryData(nextPageRecords);
         
-        setAttendanceHistory(enrichedHistory);
+        // Append to existing history
+        setAttendanceHistory(prev => [...prev, ...enrichedNewRecords]);
+        setHistoryPage(nextPage);
         
-      } catch (error) {
-        console.error('Error fetching attendance history:', error);
+        // Check if there are more records
+        setHasMoreHistory(endIndex < allUserRecords.length);
+      } else {
+        setHasMoreHistory(false);
       }
-    };
+      
+    } catch (error) {
+      console.error('Error loading more history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
-    fetchAttendanceHistory();
+  // Helper function to enrich history data with appointment details
+  const enrichHistoryData = async (records) => {
+    try {
+      // Get appointment details for each attendance record
+      const calendarRef = collection(db, 'calendar_slots');
+      const calendarSnapshot = await getDocs(calendarRef);
+      const calendarData = {};
+      
+      calendarSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const appointmentId = data.appointmentId || doc.id;
+        calendarData[appointmentId] = {
+          ...data,
+          id: doc.id
+        };
+      });
+
+      const enrichedHistory = records.map(record => {
+        const appointmentData = calendarData[record.appointmentId];
+        
+        // Handle date conversion safely
+        let recordDate;
+        if (record.confirmedAt?.toDate) {
+          recordDate = record.confirmedAt.toDate();
+        } else if (record.confirmedAt) {
+          recordDate = new Date(record.confirmedAt);
+        } else {
+          recordDate = new Date();
+        }
+        
+        return {
+          id: record.id,
+          date: recordDate.toISOString().split('T')[0],
+          title: appointmentData?.customLabel || 
+                 appointmentData?.sessionType || 
+                 appointmentData?.notes || 
+                 'Volunteer Session',
+          time: appointmentData ? 
+                `${appointmentData.startTime} - ${appointmentData.endTime}` : 
+                'Time not available',
+          status: record.status || 'present',
+          hours: getHoursFromTimeRange(appointmentData?.startTime, appointmentData?.endTime),
+          notes: record.notes || '',
+          appointmentId: record.appointmentId
+        };
+      });
+      
+      return enrichedHistory;
+    } catch (error) {
+      console.error('Error enriching history data:', error);
+      return records;
+    }
+  };
+
+  // Fetch attendance history on component mount
+  useEffect(() => {
+    if (userId || username) {
+      fetchInitialAttendanceHistory();
+    }
   }, [userId, username]);
 
   // Helper function to calculate hours from time range
@@ -846,49 +920,86 @@ const Attendance = () => {
             {/* History List */}
             <div className="history-list">
               {attendanceHistory.length > 0 ? (
-                attendanceHistory.map((session) => (
-                  <div key={session.id} className="history-item">
-                    <div>
-                      <div className="history-item-header">
-                        <h3 className="history-item-title">{session.title}</h3>
-                        <span className={`status-badge ${getStatusClass(session.status)}`}>
-                          {getStatusText(session.status)}
-                        </span>
-                      </div>
-                      
-                      <div className="history-item-details">
-                        <div className="history-detail">
-                          <CalendarDays className="history-detail-icon" />
-                          <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}</span>
+                <>
+                  {attendanceHistory.map((session) => (
+                    <div key={session.id} className="history-item">
+                      <div>
+                        <div className="history-item-header">
+                          <h3 className="history-item-title">{session.title}</h3>
+                          <span className={`status-badge ${getStatusClass(session.status)}`}>
+                            {getStatusText(session.status)}
+                          </span>
                         </div>
-                        <div className="history-detail">
-                          <Clock className="history-detail-icon" />
-                          <span>{session.time}</span>
-                        </div>
-                      </div>
-
-                      {(session.status === 'present' || session.status === 'late') && (
-                        <div className="history-metrics">
-                          <div className="metric-item">
-                            <TrendingUp className="metric-icon" />
-                            <span className="metric-text">{t('attendance.hoursCompleted', { hours: session.hours.toFixed(1) })}</span>
+                        
+                        <div className="history-item-details">
+                          <div className="history-detail">
+                            <CalendarDays className="history-detail-icon" />
+                            <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}</span>
+                          </div>
+                          <div className="history-detail">
+                            <Clock className="history-detail-icon" />
+                            <span>{session.time}</span>
                           </div>
                         </div>
-                      )}
 
-                      {session.notes && (
-                        <p className="reason-text">
-                          <span className="reason-label">{t('attendance.notes')}:</span>
-                        </p>
-                      )}
+                        {(session.status === 'present' || session.status === 'late') && (
+                          <div className="history-metrics">
+                            <div className="metric-item">
+                              <TrendingUp className="metric-icon" />
+                              <span className="metric-text">{t('attendance.hoursCompleted', { hours: session.hours.toFixed(1) })}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {session.notes && (
+                          <p className="reason-text">
+                            <span className="reason-label">{t('attendance.notes')}:</span>
+                            {session.notes}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                  
+                  {/* Load More Button */}
+                  {hasMoreHistory && (
+                    <div className="load-more">
+                      <button 
+                        className={`load-more-btn ${historyLoading ? 'loading' : ''}`}
+                        onClick={loadMoreHistory}
+                        disabled={historyLoading}
+                      >
+                        {historyLoading ? (
+                          <>
+                            <div className="loading-spinner"></div>
+                            <span>Loading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Load More History</span>
+                            <ChevronRight className="load-more-icon" />
+                          </>
+                        )}
+                      </button>
+                      <p className="load-more-info">
+                        Showing {attendanceHistory.length} of {totalHistoryCount} records
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!hasMoreHistory && attendanceHistory.length >= RECORDS_PER_PAGE && (
+                    <div className="load-more">
+                      <p className="all-loaded-text">
+                        ✅ All history loaded ({attendanceHistory.length} records)
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="history-item">
                   <p>{t('attendance.noHistory')}</p>

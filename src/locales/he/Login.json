@@ -4,7 +4,7 @@
   "username": "שם משתמש",
   "password": "סיסמה",
   "login_button": "התחבר",
-  "forgot_password": "שכחת סיסמה?",
+  "Back_to_home_page": "חזרה לעמוד הבית",
   "error_fill_fields": "אנא מלא את כל השדות",
   "error_user_not_found": "המשתמש לא נמצא",
   "error_invalid_role": "תפקיד לא תקין",
