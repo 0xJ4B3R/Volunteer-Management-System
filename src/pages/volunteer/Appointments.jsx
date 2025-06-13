@@ -470,7 +470,7 @@ export default function Appointments() {
                     </div>
                     <div className="appointment-middle">
                       <div className="info"><Clock3 size={16} /> {formatTime(a.time)}</div>
-                      <div className="info"><MapPin size={16} /> {t("Category")}: {a.location}</div>
+                      <div className="info"><MapPin size={16} /> {t("appointments.modal.category")}: {a.location}</div>
                       {a.note && <div className="note">{t("appointments.note")}: {a.note}</div>}
                     </div>
                     <div className="appointment-right">
@@ -618,26 +618,31 @@ export default function Appointments() {
 
                     {/* Show status if available */}
                     {selected.status && (
-                      <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '0.5rem', backgroundColor: 
-                        selected.status === 'approved' ? '#d1fae5' : 
-                        selected.status === 'pending' ? '#fef3c7' : 
-                        selected.status === 'rejected' ? '#fee2e2' : '#f3f4f6',
-                        border: `1px solid ${
-                          selected.status === 'approved' ? '#10b981' : 
-                          selected.status === 'pending' ? '#f59e0b' : 
-                          selected.status === 'rejected' ? '#ef4444' : '#d1d5db'
-                        }`
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ 
-                            fontWeight: '500', 
-                            color: selected.status === 'approved' ? '#065f46' : 
-                                   selected.status === 'pending' ? '#92400e' : 
-                                   selected.status === 'rejected' ? '#991b1b' : '#374151'
+                      <div
+                        style={{
+                          marginTop: "1rem",
+                          padding: "0.75rem",
+                          borderRadius: "0.5rem",
+                          backgroundColor:
+                            selected.status === "approved" ? "#d1fae5" :
+                            selected.status === "pending"  ? "#fef3c7" :
+                            selected.status === "rejected" ? "#fee2e2" : "#f3f4f6",
+                          border: `1px solid ${
+                            selected.status === "approved" ? "#10b981" :
+                            selected.status === "pending"  ? "#f59e0b" :
+                            selected.status === "rejected" ? "#ef4444" : "#d1d5db"
+                          }`
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <span style={{
+                            fontWeight: 500,
+                            color:
+                              selected.status === "approved" ? "#065f46" :
+                              selected.status === "pending"  ? "#92400e" :
+                              selected.status === "rejected" ? "#991b1b" : "#374151"
                           }}>
-                            Status: {selected.status === 'approved' ? 'Approved ✅' : 
-                                     selected.status === 'pending' ? 'Pending ⏳' : 
-                                     selected.status === 'rejected' ? 'Rejected ❌' : selected.status}
+                            {t("appointments.statusLabel")} {t(`appointments.status.${selected.status}`)}
                           </span>
                         </div>
                       </div>

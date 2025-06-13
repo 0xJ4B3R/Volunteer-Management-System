@@ -6,7 +6,6 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 // General Pages
 import Home from '@/pages/Home';
 import Login from '@/pages/Login';
-import ForgotPassword from '@/pages/ForgotPassword';
 import NotFound from '@/pages/NotFound';
 
 // Volunteer Pages
@@ -49,7 +48,6 @@ const App = () => (
     <Routes>
       <Route path="/" element={<Home />}/>
       <Route path="/login" element={<Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Manager Routes */}
       console.log("Got Here");

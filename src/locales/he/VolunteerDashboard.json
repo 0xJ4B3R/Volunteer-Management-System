@@ -1,46 +1,91 @@
 {
-  "welcome": "ברוך הבא",
-  "volunteer": "מתנדב",
-  "thank_you": "תודה שאתה עושה שינוי בקהילה שלך.",
-  "hours_volunteered": "שעות התנדבות",
-  "upcoming_appointments": "פגישות קרובות",
-  "appointments_attended": "פגישות שהשתתפת",
-  "view_all": "הצג הכל",
-  "no_appointments": "אין לך פגישות קרובות.",
-  "browse_calendar": "עיין בלוח השנה",
-  "volunteer_session": "מפגש התנדבות",
-  "supervisor": "מדריך",
-  "details": "פרטים",
-  "my_skills": "הכישורים שלי",
-  "loading": "טוען...",
-  "error": "שגיאה",
-  "error_loading_profile": "שגיאה בטעינת הפרופיל שלך:",
-  "troubleshooting": "פתרון תקלות",
-  "check_rules": "בדוק את חוקי האבטחה של Firebase",
-  "check_login": "ודא שאתה מחובר כראוי",
-  "check_collection": "וודא שקיימת קבוצת 'volunteers'",
-  "try_again": "נסה שוב",
-  "skills":{
-    "Teaching": "הוראה",
-    "Cooking": "בישול",
-    "Childcare": "טיפול בילדים",
-    "First Aid": "עזרה ראשונה",
-    "Driving": "נהיגה",
-    "Counseling": "ייעוץ",
-    "Translation": "תרגום",
-    "Event Planning": "תכנון אירועים",
-    "Fundraising": "גיוס כספים",
-    "Playing Music": "ניגון מוסיקה",
-    "Gardening": "גינון",
-    "Cleaning": "ניקיון",
-    "IT Support": "תמיכה טכנית",
-    "Graphic Design": "עיצוב גרפי",
-    "Public Speaking": "נאום בציבור",
-    "Mentoring": "חונכות",
-    "Administration": "ניהול משרד",
-    "Writing": "כתיבה",
-    "Photography": "צילום",
-    "Social Media": "מדיה חברתית",
-    "Logistics": "לוגיסטיקה"
+  "dashboard": {
+    "title": "לוח מחוונים של מתנדב",
+    "greeting": {
+      "morning": "בוקר טוב",
+      "afternoon": "צהריים טובים",
+      "evening": "ערב טוב"
+    },
+    "checkIn": {
+      "title": "כניסה",
+      "subtitle": "רשום את ההשתתפות שלך"
+    },
+    "upcoming": {
+      "title": "מפגשים קרובים",
+      "viewAll": "הצג הכול",
+      "none": "אין מפגשים קרובים"
+    },
+    "activity": {
+      "title": "פעילות אחרונה",
+      "present": "נכחת במפגש. {{notes}}",
+      "late": "איחרת למפגש. {{notes}}",
+      "absent": "החמצת מפגש. {{notes}}",
+      "generic": "סטטוס: {{status}}. {{notes}}",
+      "cancelledByVolunteer": "המפגש בוטל על ידי המתנדב"
+    },
+    "stats": {
+      "totalHours": "סה\"כ שעות",
+      "hoursLabel": "שעות",
+      "level": "רמה נוכחית",
+      "sessionsCompleted": "מפגשים שהושלמו"
+    },
+    "nextLevel": "הרמה הבאה: {{level}}",
+    "hoursToGo": ", {{count}} שעות נותרו",
+    "levelUp": "ברכות! הגעת לרמת {{level}}!🎉",
+    "levels": {
+      "Beginner": "מתחיל",
+      "Helper": "עוזר",
+      "Contributor": "תורם",
+      "Supporter": "תומך",
+      "Advocate": "שגריר",
+      "Champion": "אלוף",
+      "Humanitarian": "הומניטרי",
+      "Lord of the deeds": "אדון המעשים"
+    },
+    "time": {
+      "recent": "לאחרונה",
+      "today": "היום",
+      "yesterday": "אתמול",
+      "daysAgo": "לפני {{count}} ימים",
+      "weekAgo": "לפני שבוע",
+      "weeksAgo": "לפני {{count}} שבועות"
+    },
+    "months": {
+      "0": "ינואר",
+      "1": "פברואר",
+      "2": "מרץ",
+      "3": "אפריל",
+      "4": "מאי",
+      "5": "יוני",
+      "6": "יולי",
+      "7": "אוגוסט",
+      "8": "ספטמבר",
+      "9": "אוקטובר",
+      "10": "נובמבר",
+      "11": "דצמבר"
+    },
+    "months_short": {
+      "0": "ינו׳",
+      "1": "פבר׳",
+      "2": "מרץ",
+      "3": "אפר׳",
+      "4": "מאי",
+      "5": "יונ׳",
+      "6": "יול׳",
+      "7": "אוג׳",
+      "8": "ספט׳",
+      "9": "אוק׳",
+      "10": "נו׳",
+      "11": "דצמ׳"
+    },
+    "days": {
+      "0": "א׳",
+      "1": "ב׳",
+      "2": "ג׳",
+      "3": "ד׳",
+      "4": "ה׳",
+      "5": "ו׳",
+      "6": "ש׳"
+    }
   }
 }

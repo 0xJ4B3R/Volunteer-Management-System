@@ -117,9 +117,11 @@ function Profile() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCurrent, setShowCurrent] = useState(false);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLangOptions, setShowLangOptions] = useState(false);
+  const [animateHours, setAnimateHours] = useState(false);
   
   // Professional input states
   const [showSkillInput, setShowSkillInput] = useState(false);
@@ -162,6 +164,25 @@ function Profile() {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "profile") {
+      if (userProfile?.totalHours != null) {
+        setShouldAnimate(false);
+      
+        const capped = Math.min(userProfile.totalHours, 200);
+        const finalOffset = 565.48 - (capped / 200) * 565.48;
+        const circleEl = document.querySelector('.profile-hours .circle-value');
+        if (circleEl) {
+          circleEl.style.setProperty('--final-offset', finalOffset);
+        }
+        
+        requestAnimationFrame(() => {
+          setShouldAnimate(true);
+        });
+      }
+    }
+  }, [activeTab]); 
 
   // Fetch data from Firebase
   useEffect(() => {
@@ -248,9 +269,19 @@ function Profile() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.totalHours) {
-      const value = Math.min(userProfile.totalHours, 100);
-      setTimeout(() => setProgress((value / 100) * 565.48), 200);
+    if (userProfile?.totalHours != null) {
+      // cap at 200, compute raw dash offset:
+      const capped = Math.min(userProfile.totalHours, 200);
+      const finalOffset = 565.48 - (capped / 200) * 565.48;
+      
+      // set the CSS var on the container or directly inline
+      const circleEl = document.querySelector('.profile-hours .circle-value');
+      if (circleEl) {
+        circleEl.style.setProperty('--final-offset', finalOffset);
+      }
+    
+      // trigger the actual class toggle _after_ mount so keyframes run
+      setTimeout(() => setShouldAnimate(true), 50);
     }
   }, [userProfile]);
 
@@ -738,9 +769,27 @@ function Profile() {
               <div className="profile-hours">
                 <div className="hours-progress-container">
                   <svg className="circle-progress" viewBox="0 0 200 200">
-                    <circle className="circle-bg" cx="100" cy="100" r="90" strokeWidth="10" />
-                    <circle className="circle-value" cx="100" cy="100" r="90" strokeWidth="10"
-                      strokeDasharray="565.48" strokeDashoffset={565.48 - progress} />
+                    {/* 1) Light-gray “track” ring underneath */}
+                    <circle
+                      className="circle-bg"
+                      cx="100"
+                      cy="100"
+                      r="90"
+                      strokeWidth="10"
+                      fill="none"
+                    />
+                  
+                    {/* 2) Animated green ring on top */}
+                    <circle
+                      className={`circle-value${shouldAnimate ? " animate" : ""}`}
+                      cx="100"
+                      cy="100"
+                      r="90"
+                      strokeWidth="10"
+                      strokeDasharray="565.48"
+                      fill="none"
+                      /* stroke is now controlled via CSS */
+                    />
                   </svg>
                   <div className="hours-display">
                     <span className="hours-number">{userProfile.totalHours}</span>

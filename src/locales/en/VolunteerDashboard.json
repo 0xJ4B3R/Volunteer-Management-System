@@ -1,46 +1,91 @@
 {
-  "welcome": "Welcome",
-  "volunteer": "Volunteer",
-  "thank_you": "Thank you for making a difference in your community.",
-  "hours_volunteered": "Hours Volunteered",
-  "upcoming_appointments": "Upcoming Appointments",
-  "appointments_attended": "Appointments Attended",
-  "view_all": "View All",
-  "no_appointments": "You don't have any upcoming appointments.",
-  "browse_calendar": "Browse Calendar",
-  "volunteer_session": "Volunteer Session",
-  "supervisor": "Supervisor",
-  "details": "Details",
-  "my_skills": "My Skills",
-  "loading": "Loading...",
-  "error": "Error",
-  "error_loading_profile": "Error loading your profile:",
-  "troubleshooting": "Troubleshooting",
-  "check_rules": "Check your Firebase security rules",
-  "check_login": "Make sure you're logged in properly",
-  "check_collection": "Verify the 'volunteers' collection exists",
-  "try_again": "Try Again",
-  "skills":{
-    "Teaching": "Teaching",
-    "Cooking": "Cooking",
-    "Childcare": "Childcare",
-    "First Aid": "First Aid",
-    "Driving": "Driving",
-    "Counseling": "Counseling",
-    "Translation": "Translation",
-    "Event Planning": "Event Planning",
-    "Fundraising": "Fundraising",
-    "Playing Music": "Playing Music",
-    "Gardening": "Gardening",
-    "Cleaning": "Cleaning",
-    "IT Support": "IT Support",
-    "Graphic Design": "Graphic Design",
-    "Public Speaking": "Public Speaking",
-    "Mentoring": "Mentoring",
-    "Administration": "Administration",
-    "Writing": "Writing",
-    "Photography": "Photography",
-    "Social Media": "Social Media",
-    "Logistics": "Logistics"
+  "dashboard": {
+    "title": "Volunteer Dashboard",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "checkIn": {
+      "title": "Check In",
+      "subtitle": "Log your session now"
+    },
+    "upcoming": {
+      "title": "Upcoming Sessions",
+      "viewAll": "View All",
+      "none": "No upcoming sessions found"
+    },
+    "activity": {
+      "title": "Recent Activity",
+      "present": "You attended a session. {{notes}}",
+      "late": "You were late to a session. {{notes}}",
+      "absent": "You missed a session. {{notes}}",
+      "generic": "Status: {{status}}. {{notes}}",
+      "cancelledByVolunteer": "You missed the session. Cancelled by volunteer"
+    },
+    "stats": {
+      "totalHours": "Total Hours",
+      "hoursLabel": "Hours",
+      "level": "Current Level",
+      "sessionsCompleted": "Sessions Completed"
+    },
+    "nextLevel": "Next: {{level}}",
+    "hoursToGo": " {{count}} hours to go",
+    "levelUp": "Congratulations! You've reached {{level}} level!🎉",
+    "levels": {
+      "Beginner": "Beginner",
+      "Helper": "Helper",
+      "Contributor": "Contributor",
+      "Supporter": "Supporter",
+      "Advocate": "Advocate",
+      "Champion": "Champion",
+      "Humanitarian": "Humanitarian",
+      "Lord of the deeds": "Lord of the deeds"
+    },
+    "time": {
+      "recent": "Recent",
+      "today": "Today",
+      "yesterday": "1 day ago",
+      "daysAgo": "{{count}} days ago",
+      "weekAgo": "1 week ago",
+      "weeksAgo": "{{count}} weeks ago"
+    },
+    "months": {
+      "0": "January",
+      "1": "February",
+      "2": "March",
+      "3": "April",
+      "4": "May",
+      "5": "June",
+      "6": "July",
+      "7": "August",
+      "8": "September",
+      "9": "October",
+      "10": "November",
+      "11": "December"
+    },
+    "months_short": {
+      "0": "Jan",
+      "1": "Feb",
+      "2": "Mar",
+      "3": "Apr",
+      "4": "May",
+      "5": "Jun",
+      "6": "Jul",
+      "7": "Aug",
+      "8": "Sep",
+      "9": "Oct",
+      "10": "Nov",
+      "11": "Dec"
+    },
+    "days": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    }
   }
 }

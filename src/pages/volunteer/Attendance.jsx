@@ -1019,7 +1019,7 @@ const Attendance = () => {
 
                         {session.notes && (
                           <p className="reason-text">
-                            <span className="reason-label">{t('attendance.notes')}:</span>
+                            <span className="reason-label">{t('attendance.notes')}: </span>
                             {session.notes}
                           </p>
                         )}

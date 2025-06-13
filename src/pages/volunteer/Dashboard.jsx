@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, TrendingUp, Award, Calendar, CheckCircle2, AlertCircle, ChevronRight, CalendarDays, Users, Activity, FileText, Star, Target, ArrowUpRight, ArrowDownRight, Hand, UserCheck, HeartHandshake, ThumbsUp, ShieldCheck, Globe, Zap, TrendingDown } from 'lucide-react';
+import { Clock, TrendingUp, Award, Calendar, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, CalendarDays, Users, Activity, FileText, Star, Target, ArrowUpRight, ArrowDownRight, Hand, UserCheck, HeartHandshake, ThumbsUp, ShieldCheck, Globe, Zap, TrendingDown } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { useTranslation } from 'react-i18next';
 import { db } from '@/lib/firebase';
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import './styles/Dashboard.css';
@@ -88,10 +89,12 @@ const Icon = ({ size = 38 }) => (
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
+  const { t, i18n } = useTranslation();
   const [animateHours, setAnimateHours] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoursProgress, setHoursProgress] = useState(0);
   const [cardColors, setCardColors] = useState([]);
+  const [showLangOptions, setShowLangOptions] = useState(false);
   const [userData, setUserData] = useState({
     name: 'Volunteer',
     totalHours: 0,
@@ -115,20 +118,20 @@ const Dashboard = () => {
 
   const getLevel = (hours) => {
     if (hours >= 0 && hours < 10)
-      return { label: "Beginner", icon: <Star size={38} />, nextLevel: "Helper", hoursToNext: 10 - hours };
+      return { label: t("dashboard.levels.Beginner"), icon: <Star size={38} />, nextLevel: t("dashboard.levels.Helper"), hoursToNext: 10 - hours };
     if (hours >= 10 && hours < 30)
-      return { label: "Helper", icon: <Hand size={38} />, nextLevel: "Contributor", hoursToNext: 30 - hours };
+      return { label: t("dashboard.levels.Helper"), icon: <Hand size={38} />, nextLevel: t("dashboard.levels.Contributor"), hoursToNext: 30 - hours };
     if (hours >= 30 && hours < 60)
-      return { label: "Contributor", icon: <UserCheck size={38} />, nextLevel: "Supporter", hoursToNext: 60 - hours };
+      return { label: t("dashboard.levels.Contributor"), icon: <UserCheck size={38} />, nextLevel: t("dashboard.levels.Supporter"), hoursToNext: 60 - hours };
     if (hours >= 60 && hours < 100)
-      return { label: "Supporter", icon: <HeartHandshake size={36} />, nextLevel: "Advocate", hoursToNext: 100 - hours };
+      return { label: t("dashboard.levels.Supporter"), icon: <HeartHandshake size={36} />, nextLevel: t("dashboard.levels.Advocate"), hoursToNext: 100 - hours };
     if (hours >= 100 && hours < 150)
-      return { label: "Advocate", icon: <ThumbsUp size={38} />, nextLevel: "Champion", hoursToNext: 150 - hours };
+      return { label: t("dashboard.levels.Advocate"), icon: <ThumbsUp size={38} />, nextLevel: t("dashboard.levels.Champion"), hoursToNext: 150 - hours };
     if (hours >= 150 && hours < 200)
-      return { label: "Champion", icon: <ShieldCheck size={38} />, nextLevel: "Humanitarian", hoursToNext: 200 - hours };
+      return { label: t("dashboard.levels.Champion"), icon: <ShieldCheck size={38} />, nextLevel: t("dashboard.levels.Humanitarian"), hoursToNext: 200 - hours };
     if (hours >= 200 && hours < 420)
-      return { label: "Humanitarian", icon: <Globe size={38} />, nextLevel: null, hoursToNext: 0 };
-    return { label: "Lord of the deeds", icon: <Icon />, nextLevel: null, hoursToNext: 0 };
+      return { label: t("dashboard.levels.Humanitarian"), icon: <Globe size={38} />, nextLevel: null, hoursToNext: 0 };
+    return { label: t("dashboard.levels.Lord of the deeds"), icon: <Icon />, nextLevel: null, hoursToNext: 0 };
   };
 
   // Shuffle array helper function
@@ -333,8 +336,6 @@ const Dashboard = () => {
         activities.push({
           id: 'level-up',
           type: 'level-up',
-          text: `🎉 Level up! You're now a ${currentLevel.label}!`,
-          time: 'Recent',
           icon: Award,
           iconColor: 'dash-icon-gold'
         });
@@ -409,6 +410,10 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
+  }, [i18n.language]);
+
+  useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
       
@@ -459,11 +464,17 @@ const Dashboard = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (userData.volunteerId || userData.totalHours > 0) {
+      fetchRecentActivity();
+    }
+  }, [i18n.language]);
+
   const getGreeting = () => {
     const hour = currentTime.getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return t('dashboard.greeting.morning');
+    if (hour < 18) return t('dashboard.greeting.afternoon');
+    return t('dashboard.greeting.evening');
   };
 
   const currentLevel = getLevel(userData.totalHours);
@@ -477,9 +488,11 @@ const Dashboard = () => {
       <div className="dash-dashboard-wrapper">
         <div className="dash-dashboard-header">
           <div className="dash-dashboard-header-top">
-            <h1 className="dash-dashboard-title">Dashboard</h1>
+            <h1 className="dash-dashboard-title">{t('dashboard.title')}</h1>
           </div>
-          <p className="dash-dashboard-greeting">{getGreeting()}, {userData.name}! 👋</p>
+          <p className="dash-dashboard-greeting">
+            {getGreeting()}, {userData.name}! 👋
+          </p>
         </div>
 
         <div className="dash-new-layout-grid">
@@ -493,10 +506,13 @@ const Dashboard = () => {
                     <CheckCircle2 className="dash-checkin-icon" />
                   </div>
                   <div className="dash-checkin-text">
-                    <span className="dash-checkin-title">Check In</span>
-                    <span className="dash-checkin-subtitle">Mark your attendance</span>
+                    <span className="dash-checkin-title">{t('dashboard.checkIn.title')}</span>
+                    <span className="dash-checkin-subtitle">{t('dashboard.checkIn.subtitle')}</span>
                   </div>
-                  <ChevronRight className="dash-checkin-arrow" />
+                  {i18n.language === 'he' 
+                    ? <ChevronLeft className="dash-checkin-arrow" /> 
+                    : <ChevronRight className="dash-checkin-arrow" />
+                  }
                 </div>
               </a>
             </div>
@@ -504,9 +520,13 @@ const Dashboard = () => {
             {/* Upcoming Sessions */}
             <div className="dash-upcoming-card">
               <div className="dash-upcoming-header">
-                <h2 className="dash-upcoming-title">Upcoming Sessions</h2>
+                <h2 className="dash-upcoming-title">{t('dashboard.upcoming.title')}</h2>
                 <a href="/volunteer/appointments" className="dash-view-all-link">
-                  View all <ChevronRight style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                  {t('dashboard.upcoming.viewAll')}&nbsp;
+                  {i18n.language === 'he'
+                    ? <ChevronLeft style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                    : <ChevronRight style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                  }
                 </a>
               </div>
               <div className="dash-upcoming-list">
@@ -527,7 +547,7 @@ const Dashboard = () => {
                   ))
                 ) : (
                   <div className="dash-upcoming-empty">
-                    <p>No upcoming sessions</p>
+                    <p>{t('dashboard.upcoming.none')}</p>
                   </div>
                 )}
               </div>
@@ -536,11 +556,43 @@ const Dashboard = () => {
             {/* Recent Activity */}
             <div className="dash-activity-card">
               <div className="dash-activity-header">
-                <h2 className="dash-activity-title">Recent Activity</h2>
+                <h2 className="dash-activity-title">{t('dashboard.activity.title')}</h2>
               </div>
               <ul className="dash-activity-list">
                 {recentActivity.map((activity) => {
                   const IconComponent = activity.icon;
+                  const { type, notes = '', count = 0 } = activity;
+                
+                  // figure out which text key + params to use
+                  const text = (() => {
+                    switch (type) {
+                      case 'level-up':
+                        return t('dashboard.levelUp', { level: getLevel(userData.totalHours).label });
+                      case 'present':
+                        return t('dashboard.activity.present', { notes });
+                      case 'late':
+                        return t('dashboard.activity.late', { notes });
+                      case 'absent':
+                        return t('dashboard.activity.absent', { notes });
+                      default:
+                        return t('dashboard.activity.generic', { status: type, notes });
+                    }
+                  })();
+                
+                  // figure out which time key + params to use
+                  const time = (() => {
+                    if (type === 'level-up') {
+                      return t('dashboard.time.recent');
+                    }
+                    if (activity.time === 'Today') {
+                      return t('dashboard.time.today');
+                    }
+                    if (activity.time === '1 day ago') {
+                      return t('dashboard.time.yesterday');
+                    }
+                    return t('dashboard.time.daysAgo', { count });
+                  })();
+                
                   return (
                     <li key={activity.id} className="dash-activity-item">
                       <div className="dash-activity-content">
@@ -548,8 +600,8 @@ const Dashboard = () => {
                           <IconComponent className="dash-activity-icon" />
                         </div>
                         <div className="dash-activity-details">
-                          <p className="dash-activity-text">{activity.text}</p>
-                          <p className="dash-activity-time">{activity.time}</p>
+                          <p className="dash-activity-text">{text}</p>
+                          <p className="dash-activity-time">{time}</p>
                         </div>
                       </div>
                     </li>
@@ -567,7 +619,7 @@ const Dashboard = () => {
               style={{ background: cardColors[0]?.bg }}
             >
               <div className="dash-widget-header">
-                <p className="dash-widget-label">Total Hours</p>
+                <p className="dash-widget-label">{t('dashboard.stats.totalHours')}</p>
                 <div 
                   className="dash-widget-icon-wrapper"
                   style={{ 
@@ -599,7 +651,7 @@ const Dashboard = () => {
                 </svg>
                 <div className="dash-hours-display">
                   <span className="dash-hours-number dash-hours-number-large">{userData.totalHours}</span>
-                  <span className="dash-hours-label">Hours</span>
+                  <span className="dash-hours-label">{t('dashboard.stats.hoursLabel')}</span>
                 </div>
               </div>
             </div>
@@ -610,7 +662,7 @@ const Dashboard = () => {
               style={{ background: cardColors[2]?.bg }}
             >
               <div className="dash-widget-header">
-                <p className="dash-widget-label">Current Level</p>
+                <p className="dash-widget-label">{t('dashboard.stats.level')}</p>
                 <div 
                   className="dash-widget-icon-wrapper dash-icon-amber"
                   style={{ 
@@ -636,10 +688,10 @@ const Dashboard = () => {
                   {currentLevel.nextLevel && (
                     <div className="dash-next-level-mini">
                       <span className="dash-next-level-mini-text">
-                        Next: {currentLevel.nextLevel}
+                          {t('dashboard.nextLevel', { level: currentLevel.nextLevel })}
                       </span>
                       <span className="dash-next-level-mini-hours">
-                        {currentLevel.hoursToNext} hours to go
+                        {t('dashboard.hoursToGo', { count: currentLevel.hoursToNext })}
                       </span>
                       <div className="dash-next-level-mini-progress">
                         <div className="dash-next-level-mini-progress-bar">
@@ -664,7 +716,7 @@ const Dashboard = () => {
               style={{ background: cardColors[1]?.bg }}
             >
               <div className="dash-widget-header">
-                <p className="dash-widget-label">Sessions Completed</p>
+                <p className="dash-widget-label">{t('dashboard.stats.sessionsCompleted')}</p>
                 <div 
                   className="dash-widget-icon-wrapper dash-icon-purple"
                   style={{ 
@@ -682,6 +734,21 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe size={35} />
+        </button>
+        {showLangOptions && (
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              English
+            </button>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              עברית
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

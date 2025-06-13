@@ -4,6 +4,12 @@
     "subtitle": "Manage and view your scheduled sessions",
     "search": "Search appointments...",
     "filter": "Filter",
+    "statusLabel": "Status:",
+    "status": {
+      "approved": "Approved ✅",
+      "pending":  "Pending ⏳",
+      "rejected": "Rejected ❌"
+    },
     "tabs": {
       "past": "Past",
       "upcoming": "Upcoming",

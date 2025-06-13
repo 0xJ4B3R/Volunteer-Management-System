@@ -4,6 +4,12 @@
     "subtitle": "נהל וצפה בפגישות שנקבעו",
     "search": "חפש פגישות...",
     "filter": "סינון",
+    "statusLabel": "סטטוס:",
+    "status": {
+      "approved": "מאושר ✅",
+      "pending":  "ממתין ⏳",
+      "rejected": "נדחה ❌"
+    },
     "tabs": {
       "past": "עברו",
       "upcoming": "קרובות",

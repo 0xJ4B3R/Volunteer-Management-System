@@ -9,9 +9,11 @@
     "Time": "Time",
     "No sessions": "No sessions",
     "Loading calendar data...": "Loading calendar data...",
-    "Submitting Request...": "Submitting Request...",
-    "Not Available": "Not Available",
+    "Submitting Request…": "Submitting Request…",
+    "Already Approved": "Already Approved",
+    "Request Rejected": "Request Rejected",
     "Request Pending": "Request Pending",
+    "Not Available": "Not Available",
     "Request to Join": "Request to Join",
     "Select session type": "Select session type",
     "Today": "Today",
@@ -52,7 +54,17 @@
         "5": "Fri",
         "6": "Sat"
     },
+    "daysShort": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
     "SessionStatus": {
+      "label": "Status:",
       "approved": "Approved",
       "pending": "Pending",
       "rejected": "Rejected",

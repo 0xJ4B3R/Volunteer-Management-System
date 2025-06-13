@@ -51,6 +51,14 @@
       "present": "נוכח",
       "absent": "נעדר",
       "late": "איחור"
+    },
+    "historyItem": {
+      "title": "{{title}}",
+      "status": {
+        "present": "נוכח",
+        "late": "מאחר",
+        "absent": "נעדר"
+      }
     }
   }
 }

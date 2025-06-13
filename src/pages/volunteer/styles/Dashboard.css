@@ -275,6 +275,7 @@
 .dash-activity-time {
   font-size: 0.8rem;
   color: #6b7280;
+  margin-right: 5px;
 }
 
 .dash-icon-blue { background: #3b82f6; }

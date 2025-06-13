@@ -51,6 +51,14 @@
       "present": "Present",
       "absent": "Absent",
       "late": "Late"
+    },
+    "historyItem": {
+      "title": "{{title}}",
+      "status": {
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent"
+      }
     }
   }
 }

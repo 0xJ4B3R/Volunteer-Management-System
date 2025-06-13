@@ -1029,8 +1029,10 @@ const VolunteerCalendar = () => {
                 </div>
                 <div className="month-grid">
                   {/* Weekday headers */}
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                    <div key={day} className="month-weekday">{day}</div>
+                  {["sun","mon","tue","wed","thu","fri","sat"].map((key) => (
+                    <div key={key} className="month-weekday">
+                      {t(`daysShort.${key}`)}
+                    </div>
                   ))}
                   {/* Days */}
                   {getMonthGrid(currentDate).map((date, idx) => {
@@ -1126,7 +1128,14 @@ const VolunteerCalendar = () => {
                                   </DialogTitle>
                                   <div className="flex items-center text-gray-500 text-sm mb-4">
                                     <span className="mr-2 font-medium">{t("Date:")}</span>
-                                    <span>{slot.date.toDateString()}</span>
+                                    <span>
+                                      {slot.date.toLocaleDateString(i18n.language, {
+                                        weekday: "short",
+                                        day:     "numeric",
+                                        month:   "short",
+                                        year:    "numeric"
+                                      })}
+                                    </span>
                                   </div>
                                 </DialogHeader>                                                    
                                 <div className="space-y-3 mb-6">
@@ -1139,15 +1148,42 @@ const VolunteerCalendar = () => {
                                   
                                   {/* Show current status if user has signed up */}
                                   {userApprovalStatus && (
-                                    <div className="mt-4 p-3 rounded-lg" style={{
-                                      backgroundColor: userApprovalStatus === "approved" ? "#d1fae5" : userApprovalStatus === "rejected" ? "#fee2e2" : "#fef3c7",
-                                      border: `1px solid ${userApprovalStatus === "approved" ? "#10b981" : userApprovalStatus === "rejected" ? "#ef4444" : "#f59e0b"}`
-                                    }}>
+                                    <div
+                                      className="mt-4 p-3 rounded-lg"
+                                      style={{
+                                        backgroundColor:
+                                          userApprovalStatus === "approved"
+                                            ? "#d1fae5"
+                                            : userApprovalStatus === "rejected"
+                                            ? "#fee2e2"
+                                            : "#fef3c7",
+                                        border: `1px solid ${
+                                          userApprovalStatus === "approved"
+                                            ? "#10b981"
+                                            : userApprovalStatus === "rejected"
+                                            ? "#ef4444"
+                                            : "#f59e0b"
+                                        }`
+                                      }}
+                                    >
                                       <div className="flex items-center gap-2">
-                                        <span className="font-medium" style={{ 
-                                          color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
-                                        }}>
-                                          Status: {userApprovalStatus === "approved" ? "Approved ✅" : userApprovalStatus === "rejected" ? "Rejected ❌" : "Pending Approval ⏳"}
+                                        <span
+                                          className="font-medium"
+                                          style={{
+                                            color:
+                                              userApprovalStatus === "approved"
+                                                ? "#065f46"
+                                                : userApprovalStatus === "rejected"
+                                                ? "#991b1b"
+                                                : "#92400e"
+                                          }}
+                                        >
+                                          {t("SessionStatus.label")}{" "}
+                                          {userApprovalStatus === "approved"
+                                            ? t("SessionStatus.approved")
+                                            : userApprovalStatus === "rejected"
+                                            ? t("SessionStatus.rejected")
+                                            : t("SessionStatus.pendingApproval")}
                                         </span>
                                       </div>
                                     </div>

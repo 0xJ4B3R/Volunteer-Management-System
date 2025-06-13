@@ -9,9 +9,11 @@
     "Time": "שעה",
     "No sessions": "אין מפגשים",
     "Loading calendar data...": "טוען נתוני לוח שנה...",
-    "Submitting Request...": "שולח בקשה...",
-    "Not Available": "לא זמין",
+    "Submitting Request…": "שולח בקשה…",
+    "Already Approved": "כבר אושר",
+    "Request Rejected": "בקשה נדחתה",
     "Request Pending": "בקשה ממתינה",
+    "Not Available": "לא זמין",
     "Request to Join": "בקשה להצטרף",
     "Select session type": "בחר סוג מפגש",
     "Today": "היום",
@@ -52,11 +54,21 @@
         "5": "ו'",
         "6": "ש'"
     },
+    "daysShort": {
+    "sun": "א׳",
+    "mon": "ב׳",
+    "tue": "ג׳",
+    "wed": "ד׳",
+    "thu": "ה׳",
+    "fri": "ו׳",
+    "sat": "ש׳"
+    },
     "SessionStatus": {
+      "label": "סטטוּס:",
       "approved": "מאושר",
       "pending": "ממתין",
       "rejected": "נדחה",
-      "none": "לא נדרש",
+      "none": "לא נשלחה בקשה",
       "pendingApproval": "ממתין לאישור ⏳",
       "approvedStatus": "מאושר ✅",
       "rejectedStatus": "נדחה ❌"
