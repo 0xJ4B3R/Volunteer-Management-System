@@ -4,7 +4,6 @@ import { Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './styles/Home.css';
 
-// Services Carousel Component
 const ServicesCarousel = () => {
   const [currentService, setCurrentService] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
