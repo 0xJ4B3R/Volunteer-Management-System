@@ -160,6 +160,16 @@
   width: 100%;
 }
 
+html[dir="rtl"] .password-toggle {
+  left: 0.75rem;   
+  right: auto;   
+}
+
+html[dir="rtl"] .password-input-wrapper .form-input {
+  padding-left: 3rem;    
+  padding-right: 0.875rem; 
+}
+
 .password-input-wrapper .form-input {
   width: 100%;
   padding-right: 3rem;
