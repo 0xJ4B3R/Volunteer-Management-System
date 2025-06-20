@@ -8,7 +8,8 @@
     "status": {
       "approved": "Approved ✅",
       "pending":  "Pending ⏳",
-      "rejected": "Rejected ❌"
+      "rejected": "Rejected ❌",
+      "Closed": "Closed"
     },
     "tabs": {
       "past": "Past",

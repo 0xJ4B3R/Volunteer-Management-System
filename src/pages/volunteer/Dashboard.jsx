@@ -656,6 +656,29 @@ const Dashboard = () => {
               </div>
             </div>
 
+            {/* Sessions Completed */}
+            <div 
+              className="dash-stat-widget dash-sessions-widget"
+              style={{ background: cardColors[1]?.bg }}
+            >
+              <div className="dash-widget-header">
+                <p className="dash-widget-label">{t('dashboard.stats.sessionsCompleted')}</p>
+                <div 
+                  className="dash-widget-icon-wrapper dash-icon-purple"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${cardColors[1]?.primary}, ${cardColors[1]?.secondary})` 
+                  }}
+                >
+                  <CheckCircle2 className="dash-widget-icon" />
+                </div>
+              </div>
+              <div className="dash-sessions-content">
+                <div className="dash-sessions-display">
+                  <span className="dash-sessions-number">{userData.totalSessions}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Current Level */}
             <div 
               className="dash-stat-widget dash-level-widget"
@@ -706,29 +729,6 @@ const Dashboard = () => {
                       </div>
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
-
-            {/* Sessions Completed */}
-            <div 
-              className="dash-stat-widget dash-sessions-widget"
-              style={{ background: cardColors[1]?.bg }}
-            >
-              <div className="dash-widget-header">
-                <p className="dash-widget-label">{t('dashboard.stats.sessionsCompleted')}</p>
-                <div 
-                  className="dash-widget-icon-wrapper dash-icon-purple"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${cardColors[1]?.primary}, ${cardColors[1]?.secondary})` 
-                  }}
-                >
-                  <CheckCircle2 className="dash-widget-icon" />
-                </div>
-              </div>
-              <div className="dash-sessions-content">
-                <div className="dash-sessions-display">
-                  <span className="dash-sessions-number">{userData.totalSessions}</span>
                 </div>
               </div>
             </div>

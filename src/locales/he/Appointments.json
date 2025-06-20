@@ -8,7 +8,8 @@
     "status": {
       "approved": "מאושר ✅",
       "pending":  "ממתין ⏳",
-      "rejected": "נדחה ❌"
+      "rejected": "נדחה ❌",
+      "Closed": "נסגר"
     },
     "tabs": {
       "past": "עברו",
