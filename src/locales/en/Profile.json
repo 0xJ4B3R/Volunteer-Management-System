@@ -1,0 +1,60 @@
+{
+  "profile": {
+    "title": "Your Profile",
+    "subtitle": "Manage your personal information and account settings",
+    "tabs": {
+      "info": "Personal Info",
+      "security": "Security"
+    },
+    "memberSince": "Member since",
+    "Hours": "Hours",
+    "username": "Username",
+    "status": "Volunteer Status",
+    "phone": "Phone",
+    "completedSessions": "Completed Sessions",
+    "skills": "Skills",
+    "addSkill": "Add Skill",
+    "languages": "Languages",
+    "addLanguage": "Add Language",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "confirmChange": "Confirm Password Change",
+    "prompt": {
+      "newSkill": "Enter a new skill"
+    },
+    "toast": {
+      "addedTitle": "Skill Added",
+      "addedDesc": "{{skill}} has been added.",
+      "removedTitle": "Skill Removed",
+      "removedDesc": "{{skill}} has been removed.",
+      "errorTitle": "Error",
+      "errorDesc": "Please check your inputs.",
+      "addSkillError": "Failed to add skill. Please try again.",
+      "removeSkillError": "Failed to remove skill. Please try again.",
+      "passwordChanged": "Password changed successfully!"
+    },
+    "errors": {
+      "fillAllFields": "Please fill in all password fields.",
+      "passwordMismatch": "New passwords do not match.",
+      "passwordTooShort": "New password must be at least 6 characters long.",
+      "passwordSame": "New password must be different from current password.",
+      "userNotFound": "User data not found.",
+      "documentNotFound": "User document not found.",
+      "noPasswordSet": "No password set for this user.",
+      "incorrectCurrent": "Current password is incorrect.",
+      "changeFailed": "Failed to change password. Please try again."
+    },
+    "badges": {
+      "Beginner": "Beginner",
+      "Helper": "Helper",
+      "Contributor": "Contributor",
+      "Supporter": "Supporter",
+      "Advocate": "Advocate",
+      "Champion": "Champion",
+      "Humanitarian": "Humanitarian",
+      "Lord of the deeds": "Lord of the deeds"
+    }
+  }
+}

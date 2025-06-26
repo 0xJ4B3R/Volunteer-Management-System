@@ -1,0 +1,13 @@
+{
+  "login_title": "Login!",
+  "login_subtitle": "Welcome! So good to have you back!",
+  "username": "Username",
+  "password": "Password",
+  "login_button": "Log in",
+  "Back_to_home_page": "Back to home page",
+  "error_fill_fields": "Please fill all the fields above",
+  "error_user_not_found": "User not found",
+  "error_invalid_role": "Invalid user role",
+  "error_wrong_credentials": "Wrong password or username",
+  "error_login_failed": "Couldn't login"
+}

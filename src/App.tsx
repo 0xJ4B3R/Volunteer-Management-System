@@ -116,7 +116,7 @@ const App = () => (
               <Route path="/test/volunteers" element={<TestVolunteers />} />
               <Route path="/test/residents" element={<TestResidents />} />
               <Route path="/test/calendar-firestore-test" element={<CalendarFirestoreTest />} />
-              
+
               {/* Catch-all 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -127,4 +127,4 @@ const App = () => (
   </Provider>
 );
 
-export default App; 
+export default App;
