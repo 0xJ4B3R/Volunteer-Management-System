@@ -414,7 +414,8 @@ const Dashboard = () => {
           text: activityText,
           time: timeAgo,
           icon: icon,
-          iconColor: iconColor
+          iconColor: iconColor,
+          confirmedAt: data.confirmedAt
         });
       });
 
