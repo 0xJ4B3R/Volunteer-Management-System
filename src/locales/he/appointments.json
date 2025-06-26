@@ -1,75 +1,109 @@
 {
-  "appointments": {
-    "title": "הפגישות שלך",
-    "subtitle": "נהל וצפה בפגישות שנקבעו",
-    "search": "חפש פגישות...",
-    "filter": "סינון",
-    "statusLabel": "סטטוס:",
+  "page": {
+    "title": "פגישות ונוכחות",
+    "description": "ניהול ומעקב אחר פגישות ונוכחות"
+  },
+  "filters": {
+    "all": "הכל",
+    "today": "היום",
+    "upcoming": "קרובות",
+    "past": "עבר",
+    "canceled": "בוטלו",
+    "specificDate": "תאריך ספציפי",
+    "pickDateRange": "בחר טווח תאריכים",
+    "clearRange": "נקה טווח"
+  },
+  "actions": {
+    "export": "ייצא",
+    "exportPdf": "ייצא כ-PDF",
+    "exportCsv": "ייצא כ-CSV",
+    "viewDetails": "צפה בפרטים",
+    "trackAttendance": "עקוב אחר נוכחות",
+    "saveChanges": "שמור שינויים",
+    "saving": "שומר...",
+    "deleteAppointment": "מחק פגישה",
+    "deleting": "מוחק..."
+  },
+  "appointment": {
     "status": {
-      "approved": "מאושר ✅",
-      "pending":  "ממתין ⏳",
-      "rejected": "נדחה ❌",
-      "Closed": "נסגר"
+      "upcoming": "בקרוב",
+      "inProgress": "בתהליך",
+      "completed": "הושלמה",
+      "canceled": "בוטלה"
     },
-    "tabs": {
-      "past": "עברו",
-      "upcoming": "קרובות",
-      "pending": "ממתינות"
+    "metadata": {
+      "volunteers": "מתנדב",
+      "volunteersPlural": "מתנדבים",
+      "residents": "דייר",
+      "residentsPlural": "דיירים",
+      "created": "נוצרה",
+      "externalGroup": "קבוצה חיצונית"
     },
-    "note": "הערה",
-    "noAppointments": "אין פגישות להצגה.",
-    "actions": {
-      "cancel": "בטל בקשה"
-    },
-    "modal": {
-      "title": "פרטי פגישה",
-      "close": "סגור",
-      "date": "תאריך",
-      "time": "שעה",
-      "location": "מיקום",
-      "category": "קטגוריה",
-      "note": "הערה"
-    },
-    "categories": {
-      "Reading": "קריאה",
-      "Games": "משחקים",
-      "Music": "מוזיקה",
-      "Art": "אמנות",
-      "Talk": "שיחה",
-      "Other": "אחר"
-    },
-    "filters": {
-      "popular": "פופולרי",
-      "indoor": "בתוך מבנה",
-      "outdoor": "בחוץ"
-    },
-    "days": {
-      "Sun": "ראשון",
-      "Mon": "שני",
-      "Tue": "שלישי",
-      "Wed": "רביעי",
-      "Thu": "חמישי",
-      "Fri": "שישי",
-      "Sat": "שבת"
-    },
-    "months": {
-      "January": "ינואר",
-      "February": "פברואר",
-      "March": "מרץ",
-      "April": "אפריל",
-      "May": "מאי",
-      "June": "יוני",
-      "July": "יולי",
-      "August": "אוגוסט",
-      "September": "ספטמבר",
-      "October": "אוקטובר",
-      "November": "נובמבר",
-      "December": "דצמבר"
-    },
-    "time": {
-      "AM": "בבוקר",
-      "PM": "אחה\"צ"
-    },
-    "room": "חדר"
+    "noAppointments": "לא נמצאו פגישות",
+    "goToCalendar": "עבור ליומן"
+  },
+  "details": {
+    "title": "פרטי פגישה",
+    "description": "צפה ונהל פרטי פגישה",
+    "sessionDetails": "פרטי מפגש",
+    "dateTime": "תאריך ושעה",
+    "participants": "משתתפים",
+    "currentStatus": "סטטוס נוכחי",
+    "notes": "הערות",
+    "notesPlaceholder": "הוסף הערות על פגישה זו...",
+    "timeline": "ציר זמן",
+    "createdOn": "נוצרה ב-",
+    "lastUpdated": "עודכן לאחרונה ב-"
+  },
+  "externalGroup": {
+    "title": "פרטי קבוצה חיצונית",
+    "groupName": "שם הקבוצה",
+    "contactPerson": "איש קשר",
+    "contactPhone": "טלפון איש קשר",
+    "purposeOfVisit": "מטרת הביקור",
+    "participants": "משתתפים",
+    "department": "מחלקה",
+    "activity": "פעילות",
+    "notes": "הערות"
+  },
+  "attendance": {
+    "title": "עקוב אחר נוכחות",
+    "description": "סמן נוכחות למשתתפים בפגישה זו",
+    "participants": "משתתפים",
+    "participantsCount": "משתתפים ({{count}})",
+    "present": "נוכח",
+    "late": "מאחר",
+    "absent": "נעדר",
+    "notMarked": "לא סומן",
+    "notesPlaceholder": "הוסף הערות על נוכחות...",
+    "loading": "טוען נתוני נוכחות...",
+    "saveChanges": "שמור שינויים",
+    "saving": "שומר...",
+    "volunteer": "מתנדב",
+    "externalGroup": "קבוצה חיצונית"
+  },
+  "delete": {
+    "title": "מחק פגישה שבוטלה",
+    "description": "פעולה זו אינה ניתנת לביטול.",
+    "confirmMessage": "האם אתה בטוח שברצונך להמשיך?",
+    "warningMessage": "זה יסיר לצמיתות את רשומת הפגישה יחד עם חריץ היומן המשויך אליה",
+    "warningMessageWithGroup": "זה יסיר לצמיתות את רשומת הפגישה יחד עם חריץ היומן המשויך אליה ורשומת הקבוצה החיצונית."
+  },
+  "messages": {
+    "appointmentUpdated": "פגישה עודכנה",
+    "appointmentUpdatedDescription": "סטטוס ופרטי הפגישה עודכנו בהצלחה.",
+    "attendanceSaved": "נוכחות נשמרה",
+    "attendanceSavedDescription": "כל רשומות הנוכחות עודכנו בהצלחה.",
+    "appointmentDeleted": "פגישה נמחקה",
+    "appointmentDeletedDescription": "הפגישה וכל הרשומות המשויכות נמחקו בהצלחה.",
+    "exportSuccess": "פגישות יוצאו",
+    "exportSuccessDescription": "פגישות יוצאו כ-{format}",
+    "invalidStatusChange": "שינוי סטטוס לא חוקי",
+    "invalidStatusChangeDescription": "שינוי סטטוס זה אינו מותר בהתבסס על זמן הפגישה.",
+    "error": "שגיאה",
+    "errorDescription": "נכשל בעדכון סטטוס הפגישה.",
+    "attendanceError": "נכשל בשמירת רשומות נוכחות. אנא נסה שוב.",
+    "deleteError": "נכשל במחיקת הפגישה. אנא נסה שוב.",
+    "saveError": "נכשל בשמירת השינויים. אנא נסה שוב."
   }
-}
+} 
