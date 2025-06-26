@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 
-interface Notification {
+export interface Notification {
   id: number;
   message: string;
   time: string;

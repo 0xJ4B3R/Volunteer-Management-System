@@ -1,3 +1,4 @@
+import CircularProgress from '@mui/material/CircularProgress';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -505,6 +506,10 @@ const HebrewReportPDF = ({ report }: { report: Report }) => {
     </Document>
   );
 };
+
+function stripTime(date: Date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
 
 const ManagerReports = () => {
   const navigate = useNavigate();
@@ -1383,7 +1388,7 @@ const ManagerReports = () => {
     if (!user.id || user.role !== "manager") {
       navigate("/login");
     }
-  }, [navigate]);
+}, [navigate]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -2047,4 +2052,4 @@ const ManagerReports = () => {
   );
 };
 
-export default ManagerReports; 
+export default ManagerReports;
