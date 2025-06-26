@@ -1,0 +1,62 @@
+{
+  "profile": {
+    "title": "הפרופיל שלך",
+    "subtitle": "נהל את פרטיך האישיים והגדרות החשבון",
+    "tabs": {
+      "info": "פרטים אישיים",
+      "security": "אבטחה"
+    },
+    "memberSince": "חבר מ",
+    "Hours": "סה\"כ שעות",
+    "username": "שם משתמש",
+    "status": "דרגת מתנדב",
+    "phone": "טלפון",
+    "completedSessions": "מפגשים שהושלמו",
+    "skills": "כישורים",
+    "addSkill": "הוסף כישורון",
+    "enterSkill":"הוסף כישרון",
+    "languages": "שפות",
+    "enterLanguage":"הוסף שפה",
+    "addLanguage": "הוסף שפה",
+    "changePassword": "שנה סיסמה",
+    "currentPassword": "סיסמה נוכחית",
+    "newPassword": "סיסמה חדשה",
+    "confirmPassword": "אימות סיסמה חדשה",
+    "confirmChange": "אישור שינוי סיסמה",
+    "prompt": {
+      "newSkill": "הזן כישור חדש"
+    },
+    "toast": {
+      "addedTitle": "כישור נוסף",
+      "addedDesc": "{{skill}} נוסף לרשימתך.",
+      "removedTitle": "כישור הוסר",
+      "removedDesc": "{{skill}} הוסר מהרשימה.",
+      "errorTitle": "שגיאה",
+      "errorDesc": "אנא בדוק את הקלט.",
+      "addSkillError": "הוספת הכישור נכשלה. נסה שוב.",
+      "removeSkillError": "הסרת הכישור נכשלה. נסה שוב.",
+      "passwordChanged": "הסיסמה שונתה בהצלחה!"
+    },
+    "errors": {
+      "fillAllFields": "אנא מלא את כל שדות הסיסמה.",
+      "passwordMismatch": "הסיסמאות החדשות אינן תואמות.",
+      "passwordTooShort": "הסיסמה החדשה חייבת להכיל לפחות 6 תווים.",
+      "passwordSame": "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית.",
+      "userNotFound": "נתוני המשתמש לא נמצאו.",
+      "documentNotFound": "מסמך המשתמש לא נמצא.",
+      "noPasswordSet": "לא הוגדרה סיסמה עבור משתמש זה.",
+      "incorrectCurrent": "הסיסמה הנוכחית שגויה.",
+      "changeFailed": "שינוי הסיסמה נכשל. נסה שוב."
+    },
+    "badges": {
+      "Beginner": "מתחיל",
+      "Helper": "עוזר",
+      "Contributor": "תורם",
+      "Supporter": "תומך",
+      "Advocate": "שגריר",
+      "Champion": "אלוף",
+      "Humanitarian": "הומניטרי",
+      "Lord of the deeds": "אדון המעשים"
+    }
+  }
+}

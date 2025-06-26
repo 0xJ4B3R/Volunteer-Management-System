@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAppSelector } from "@/hooks";
 import {
   Bell,
   Calendar,
@@ -131,6 +132,7 @@ const getSessionTypeColor = (type: string) => {
 
 const VolunteerCalendar = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -150,14 +152,12 @@ const VolunteerCalendar = () => {
 
   // Check authentication
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
-
-    if (!user.username) {
+    if (!isAuthenticated || !user) {
       navigate("/login");
     } else if (user.role !== "volunteer") {
       navigate("/manager");
     }
-  }, [navigate]);
+  }, [navigate, isAuthenticated, user]);
 
   // Handle window resize for responsive layout
   useEffect(() => {

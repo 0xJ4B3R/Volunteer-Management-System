@@ -1,212 +1,457 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  CalendarDays, 
-  Users, 
-  Bell, 
-  Calendar, 
-  UserPlus, 
-  FileText,
+import { useTranslation } from "react-i18next";
+import {
   Menu,
-  AlertCircle,
-  CheckCircle2,
+  Users,
   Clock,
-  BarChart3,
-  Activity,
   Heart,
+  UserPlus,
+  FileText,
+  AlertCircle,
+  CalendarDays,
+  CheckCircle2,
+  LayoutDashboard,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
   Target,
-  Award,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
+import { useResidents } from "@/hooks/useFirestoreResidents";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
+import { useAppointments } from "@/hooks/useFirestoreCalendar";
+import { useAttendance } from "@/hooks/useAttendance";
 import ManagerSidebar from "@/components/manager/ManagerSidebar";
-import NotificationsPanel from "@/components/manager/NotificationsPanel";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
-
-// Types
-interface Notification {
-  id: number;
-  message: string;
-  time: string;
-  type: "success" | "warning" | "info";
-  link?: string;
-}
-
-interface Session {
-  id: number;
-  date: string;
-  startTime: string;
-  endTime: string;
-  volunteers: { id: number; name: string; email: string; }[];
-  pendingVolunteers: { id: number; name: string; email: string; }[];
-  status: string;
-  isRecurring: boolean;
-  maxVolunteers: number;
-}
-
-interface DashboardStats {
-  todayStats: {
-    totalSessions: number;
-    volunteersScheduled: number;
-    unconfirmedSessions: number;
-    sessions: Session[];
-  };
-  volunteerStats: {
-    totalVolunteers: number;
-    activeVolunteers: number;
-    newVolunteers: number;
-    volunteerEngagement: number;
-  };
-  residentStats: {
-    totalResidents: number;
-    activeResidents: number;
-    newResidents: number;
-    residentCoverage: number;
-  };
-  quickStats: {
-    upcomingSessions: number;
-    pendingRequests: number;
-    recentActivity: number;
-    totalVolunteers: number;
-    totalResidents: number;
-    sessionsThisMonth: number;
-  };
-  performanceMetrics: {
-    engagementScore: number;
-    satisfactionRate: number;
-    efficiencyScore: number;
-    trends: {
-      engagement: { value: number; direction: "up" | "down" };
-      satisfaction: { value: number; direction: "up" | "down" };
-      efficiency: { value: number; direction: "up" | "down" };
-    };
-  };
-}
-
-const fetchDashboardData = async (): Promise<DashboardStats> => {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  return {
-    todayStats: {
-      totalSessions: 5,
-      volunteersScheduled: 12,
-      unconfirmedSessions: 2,
-      sessions: [
-        {
-          id: 1,
-          date: "2025-04-19",
-          startTime: "09:00",
-          endTime: "10:00",
-          volunteers: [
-            { id: 1, name: "John Doe", email: "john@example.com" }
-          ],
-          pendingVolunteers: [
-            { id: 2, name: "Jane Smith", email: "jane@example.com" }
-          ],
-          status: "confirmed",
-          isRecurring: true,
-          maxVolunteers: 3
-        },
-        {
-          id: 2,
-          date: "2025-04-19",
-          startTime: "09:00",
-          endTime: "10:00",
-          volunteers: [
-            { id: 1, name: "John Doe", email: "john@example.com" }
-          ],
-          pendingVolunteers: [
-            { id: 2, name: "Jane Smith", email: "jane@example.com" }
-          ],
-          status: "confirmed",
-          isRecurring: true,
-          maxVolunteers: 4
-        },
-        {
-          id: 3,
-          date: "2025-04-19",
-          startTime: "09:00",
-          endTime: "10:00",
-          volunteers: [
-            { id: 1, name: "John Doe", email: "john@example.com" }
-          ],
-          pendingVolunteers: [
-            { id: 2, name: "Jane Smith", email: "jane@example.com" }
-          ],
-          status: "confirmed",
-          isRecurring: true,
-          maxVolunteers: 3
-        },
-        {
-          id: 4,
-          date: "2025-04-19",
-          startTime: "09:00",
-          endTime: "10:00",
-          volunteers: [
-            { id: 1, name: "John Doe", email: "john@example.com" }
-          ],
-          pendingVolunteers: [
-            { id: 2, name: "Jane Smith", email: "jane@example.com" }
-          ],
-          status: "confirmed",
-          isRecurring: true,
-          maxVolunteers: 3
-        }
-      ]
-    },
-    volunteerStats: {
-      totalVolunteers: 50,
-      activeVolunteers: 45,
-      newVolunteers: 5,
-      volunteerEngagement: 90
-    },
-    residentStats: {
-      totalResidents: 100,
-      activeResidents: 95,
-      newResidents: 5,
-      residentCoverage: 95
-    },
-    quickStats: {
-      upcomingSessions: 10,
-      pendingRequests: 3,
-      recentActivity: 15,
-      totalVolunteers: 50,
-      totalResidents: 100,
-      sessionsThisMonth: 45
-    },
-    performanceMetrics: {
-      engagementScore: 85,
-      satisfactionRate: 92,
-      efficiencyScore: 88,
-      trends: {
-        engagement: { value: 5, direction: "up" },
-        satisfaction: { value: 2, direction: "up" },
-        efficiency: { value: 3, direction: "up" }
-      }
-    }
-  };
-};
 
 const ManagerDashboard = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('dashboard');
+  const { isRTL } = useLanguage();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  
-  // Fetch dashboard data
-  const { data: dashboardData, isLoading, error } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: fetchDashboardData,
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Real data hooks
+  const { volunteers, loading: volunteersLoading } = useVolunteers();
+  const { residents, loading: residentsLoading } = useResidents();
+  const { slots, loading: calendarLoading } = useCalendarSlots();
+  const { appointments, loading: appointmentsLoading } = useAppointments();
+  const { attendance, loading: attendanceLoading } = useAttendance();
+
+  // Compute dashboard stats
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+  const todaySessions = slots.filter(slot => slot.date === todayStr);
+  const unconfirmedSessions = todaySessions.filter(slot => slot.status !== "full").length;
+  const volunteersScheduled = todaySessions.reduce((acc, slot) => acc + (slot.approvedVolunteers?.length || 0), 0);
+  const pendingVolunteers = todaySessions.reduce((acc, slot) => acc + (slot.volunteerRequests?.filter(vr => vr.status === "pending").length || 0), 0);
+
+  // Calculate average hours by volunteers this month
+  const thisMonthSessions = slots.filter(slot => {
+    const slotDate = new Date(slot.date);
+    return slotDate.getMonth() === today.getMonth() && slotDate.getFullYear() === today.getFullYear();
   });
+
+  // Get appointments for this month's sessions
+  const thisMonthAppointments = appointments.filter(appointment => {
+    const slot = slots.find(s => s.id === appointment.calendarSlotId);
+    if (!slot) return false;
+    const slotDate = new Date(slot.date);
+    return slotDate.getMonth() === today.getMonth() && slotDate.getFullYear() === today.getFullYear();
+  });
+
+  // Calculate total hours per volunteer (not per session)
+  const volunteerHoursMap = new Map<string, number>();
+
+  thisMonthAppointments.forEach(appointment => {
+    const slot = slots.find(s => s.id === appointment.calendarSlotId);
+    if (!slot) return;
+
+    const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+    const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+    const duration = (endHour + endMinute / 60) - (startHour + startMinute / 60);
+
+    // Add hours for each volunteer in this session
+    const slotVolunteers = appointment.volunteerIds.filter(v => v.type === 'volunteer');
+    slotVolunteers.forEach(volunteer => {
+      const currentHours = volunteerHoursMap.get(volunteer.id) || 0;
+      volunteerHoursMap.set(volunteer.id, currentHours + duration);
+    });
+  });
+
+  // Calculate average
+  const totalHours = Array.from(volunteerHoursMap.values()).reduce((sum, hours) => sum + hours, 0);
+  const volunteerCount = volunteerHoursMap.size;
+  const averageHoursPerVolunteerThisMonth = volunteerCount > 0
+    ? (totalHours / volunteerCount).toFixed(1)
+    : '0';
+
+  // Remove .0 if it's a whole number
+  const displayAverage = averageHoursPerVolunteerThisMonth.endsWith('.0')
+    ? averageHoursPerVolunteerThisMonth.slice(0, -2)
+    : averageHoursPerVolunteerThisMonth;
+
+  // Note: This calculation is based on real session and appointment data.
+  // To make it even more accurate, we could:
+  // 1. Check actual attendance records to only count volunteers who showed up
+  // 2. Filter for completed vs. canceled appointments
+  // 3. Exclude external groups from volunteer counts
+
+  // Get today's appointments and their attendance
+  const todayAppointments = appointments.filter(appointment => {
+    const slot = slots.find(s => s.id === appointment.calendarSlotId);
+    return slot && slot.date === todayStr;
+  });
+
+  // Get volunteers checked in today
+  const volunteersCheckedInToday = todayAppointments.reduce((acc, appointment) => {
+    const slot = slots.find(s => s.id === appointment.calendarSlotId);
+    if (!slot) return acc;
+
+    // Get attendance records for this appointment
+    const appointmentAttendance = attendance.filter(a => a.appointmentId === appointment.id);
+
+    // Find volunteers who have attendance marked as present AND confirmed by themselves
+    const checkedInVolunteers = appointment.volunteerIds
+      .filter(v => v.type === 'volunteer')
+      .filter(v => {
+        const hasPresentAttendance = appointmentAttendance.some(a =>
+          a.volunteerId.id === v.id &&
+          a.volunteerId.type === 'volunteer' &&
+          a.status === 'present' &&
+          a.confirmedBy === 'volunteer'
+        );
+        return hasPresentAttendance;
+      })
+      .map(v => {
+        // Find the attendance record to get the confirmation time
+        const attendanceRecord = appointmentAttendance.find(a =>
+          a.volunteerId.id === v.id &&
+          a.volunteerId.type === 'volunteer' &&
+          a.status === 'present' &&
+          a.confirmedBy === 'volunteer'
+        );
+
+        return {
+          id: v.id,
+          name: volunteers.find(vol => vol.id === v.id)?.fullName || 'Unknown',
+          appointmentId: appointment.id,
+          slotTime: `${slot.startTime} - ${slot.endTime}`,
+          slotDate: slot.date,
+          confirmedAt: attendanceRecord?.confirmedAt || null
+        };
+      });
+
+    return [...acc, ...checkedInVolunteers];
+  }, [] as Array<{ id: string, name: string, appointmentId: string, slotTime: string, slotDate: string, confirmedAt: string | null }>);
+
+  // Get volunteers with missing attendance from ALL completed appointments
+  const completedAppointments = appointments.filter(appointment => {
+    const slot = slots.find(s => s.id === appointment.calendarSlotId);
+    return slot && appointment.status === 'completed';
+  });
+
+  // Get all volunteers with missing attendance - check for volunteers who have NO attendance records
+  const volunteersWithMissingAttendance = completedAppointments.reduce((acc, appointment) => {
+    const slot = slots.find(s => s.id === appointment.calendarSlotId);
+    if (!slot) return acc;
+
+    // Get all volunteers in this appointment
+    const appointmentVolunteers = appointment.volunteerIds.filter(v => v.type === 'volunteer');
+
+    // Get attendance records for this appointment
+    const appointmentAttendance = attendance.filter(a => a.appointmentId === appointment.id);
+
+    // Find volunteers who have NO attendance records at all
+    const volunteersWithoutAttendance = appointmentVolunteers
+      .filter(volunteerId => {
+        // Check if this volunteer has an attendance record for this appointment
+        const hasAttendance = appointmentAttendance.some(a =>
+          a.volunteerId.id === volunteerId.id && a.volunteerId.type === 'volunteer'
+        );
+        return !hasAttendance;
+      })
+      .map(v => ({
+        id: v.id,
+        name: volunteers.find(vol => vol.id === v.id)?.fullName || 'Unknown',
+        appointmentId: appointment.id,
+        slotTime: `${slot.startTime} - ${slot.endTime}`,
+        slotDate: slot.date
+      }));
+
+    return [...acc, ...volunteersWithoutAttendance];
+  }, [] as Array<{ id: string, name: string, appointmentId: string, slotTime: string, slotDate: string }>);
+
+  // Check if all data is loaded and processed
+  const isDataFullyLoaded = !volunteersLoading && !appointmentsLoading && !calendarLoading && !attendanceLoading;
+
+  // Get TODO items
+  const todoItems = [
+    // Volunteers with missing languages
+    ...volunteers
+      .filter(v => !v.languages || v.languages.length === 0)
+      .map(v => ({
+        type: 'missing_languages' as const,
+        title: `${v.fullName} - ${t('performanceAlerts.missingLanguages')}`,
+        description: t('performanceAlerts.missingLanguagesDescription'),
+        priority: 'high' as const,
+        volunteerId: v.id
+      })),
+    // Volunteers with missing availability
+    ...volunteers
+      .filter(v => !v.availability || Object.values(v.availability).every(slots => slots.length === 0))
+      .map(v => ({
+        type: 'missing_availability' as const,
+        title: `${v.fullName} - ${t('performanceAlerts.missingAvailability')}`,
+        description: t('performanceAlerts.missingAvailabilityDescription'),
+        priority: 'high' as const,
+        volunteerId: v.id
+      })),
+    // Residents with missing languages
+    ...residents
+      .filter(r => !r.languages || r.languages.length === 0)
+      .map(r => ({
+        type: 'missing_languages' as const,
+        title: `${r.fullName} - ${t('performanceAlerts.missingLanguagesResident')}`,
+        description: t('performanceAlerts.missingLanguagesResidentDescription'),
+        priority: 'high' as const,
+        residentId: r.id
+      })),
+    // Residents with missing availability
+    ...residents
+      .filter(r => !r.availability || Object.values(r.availability).every(slots => slots.length === 0))
+      .map(r => ({
+        type: 'missing_availability' as const,
+        title: `${r.fullName} - ${t('performanceAlerts.missingAvailabilityResident')}`,
+        description: t('performanceAlerts.missingAvailabilityResidentDescription'),
+        priority: 'high' as const,
+        residentId: r.id
+      })),
+    // Volunteers who haven't had a session for at least a month (using appointmentHistory)
+    ...volunteers
+      .filter(v => {
+        if (!v.appointmentHistory || v.appointmentHistory.length === 0) return true; // Never had a session
+        // Only consider completed sessions
+        const completedSessions = v.appointmentHistory.filter(session => session.status === 'completed');
+        if (completedSessions.length === 0) return true; // No completed sessions
+        const lastSession = completedSessions[completedSessions.length - 1];
+        const lastSessionDate = new Date(lastSession.date);
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        return lastSessionDate < oneMonthAgo;
+      })
+      .map(v => ({
+        type: 'inactive_volunteer' as const,
+        title: `${v.fullName} - ${t('performanceAlerts.inactiveVolunteer')}`,
+        description: (() => {
+          if (!v.appointmentHistory || v.appointmentHistory.length === 0) return t('performanceAlerts.noSessionsRecorded');
+          const completedSessions = v.appointmentHistory.filter(session => session.status === 'completed');
+          if (completedSessions.length === 0) return t('performanceAlerts.noCompletedSessions');
+          const lastSession = completedSessions[completedSessions.length - 1];
+          const daysSince = Math.floor((new Date().getTime() - new Date(lastSession.date).getTime()) / (1000 * 60 * 60 * 24));
+          return `${t('performanceAlerts.noCompletedSessionsFor')} ${daysSince} ${t('performanceAlerts.days')}`;
+        })(),
+        priority: 'medium' as const,
+        volunteerId: v.id
+      })),
+    // Residents who haven't had a session for at least a month (using appointmentHistory)
+    ...residents
+      .filter(r => {
+        if (!r.appointmentHistory || r.appointmentHistory.length === 0) return true; // Never had a session
+        // Only consider completed sessions
+        const completedSessions = r.appointmentHistory.filter(session => session.status === 'completed');
+        if (completedSessions.length === 0) return true; // No completed sessions
+        const lastSession = completedSessions[completedSessions.length - 1];
+        const lastSessionDate = new Date(lastSession.date);
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        return lastSessionDate < oneMonthAgo;
+      })
+      .map(r => ({
+        type: 'inactive_resident' as const,
+        title: `${r.fullName} - ${t('performanceAlerts.inactiveResident')}`,
+        description: (() => {
+          if (!r.appointmentHistory || r.appointmentHistory.length === 0) return t('performanceAlerts.noSessionsRecorded');
+          const completedSessions = r.appointmentHistory.filter(session => session.status === 'completed');
+          if (completedSessions.length === 0) return t('performanceAlerts.noCompletedSessions');
+          const lastSession = completedSessions[completedSessions.length - 1];
+          const daysSince = Math.floor((new Date().getTime() - new Date(lastSession.date).getTime()) / (1000 * 60 * 60 * 24));
+          return `${t('performanceAlerts.noCompletedSessionsFor')} ${daysSince} ${t('performanceAlerts.days')}`;
+        })(),
+        priority: 'medium' as const,
+        residentId: r.id
+      })),
+    // Sessions with low volunteer count (less than 50% capacity)
+    ...slots
+      .filter(slot => {
+        const slotDate = new Date(slot.date);
+        const now = new Date();
+
+        // Include future sessions and today's sessions that haven't started yet
+        const isFutureOrTodayNotStarted = (() => {
+          if (slotDate > now) return true; // Future dates
+          if (slotDate.toDateString() === now.toDateString()) {
+            // Today's session - check if it hasn't started yet
+            const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+            const sessionStartTime = new Date(slotDate);
+            sessionStartTime.setHours(startHour, startMinute, 0, 0);
+            return now < sessionStartTime;
+          }
+          return false; // Past sessions
+        })();
+
+        return isFutureOrTodayNotStarted &&
+          slot.approvedVolunteers.length < (slot.maxCapacity * 0.5) &&
+          slot.status !== 'canceled';
+      })
+      .map(slot => ({
+        type: 'low_capacity_session' as const,
+        title: `${t('performanceAlerts.lowCapacitySession')} - ${new Date(slot.date).toLocaleDateString()}`,
+        description: `${slot.approvedVolunteers.length}/${slot.maxCapacity} ${t('todaySessions.volunteers')} (${Math.round((slot.approvedVolunteers.length / slot.maxCapacity) * 100)}% ${t('performanceAlerts.capacity')})`,
+        priority: 'medium' as const,
+        sessionId: slot.id
+      })),
+    // Capacity planning
+    {
+      type: 'capacity_planning' as const,
+      title: t('performanceAlerts.capacityPlanning'),
+      description: (() => {
+        const fullSessionsCount = todaySessions.filter(s => s.status === 'full').length;
+        return fullSessionsCount === 1
+          ? t('performanceAlerts.capacityPlanningDescription')
+          : `${fullSessionsCount} ${t('performanceAlerts.capacityPlanningDescription_plural')}`;
+      })(),
+      priority: 'medium' as const
+    },
+    // Engagement opportunities
+    {
+      type: 'engagement_opportunity' as const,
+      title: t('performanceAlerts.lowEngagementVolunteers'),
+      description: (() => {
+        const lowEngagementCount = volunteers.filter(v => (v.totalSessions || 0) < 3).length;
+        return lowEngagementCount === 1
+          ? t('performanceAlerts.lowEngagementDescription')
+          : `${lowEngagementCount} ${t('performanceAlerts.lowEngagementDescription_plural')}`;
+      })(),
+      priority: 'medium' as const
+    },
+    // New volunteers onboarding
+    {
+      type: 'onboarding' as const,
+      title: t('performanceAlerts.newVolunteerOnboarding'),
+      description: (() => {
+        const newVolunteersCount = volunteers.filter(v => {
+          const created = new Date(v.createdAt);
+          return (new Date().getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
+        }).length;
+        return newVolunteersCount === 1
+          ? t('performanceAlerts.newVolunteerOnboardingDescription')
+          : `${newVolunteersCount} ${t('performanceAlerts.newVolunteerOnboardingDescription_plural')}`;
+      })(),
+      priority: 'medium' as const
+    },
+    // Matching optimization
+    {
+      type: 'matching_optimization' as const,
+      title: t('performanceAlerts.reviewMatchingRules'),
+      description: t('performanceAlerts.reviewMatchingRulesDescription'),
+      priority: 'low' as const
+    }
+  ];
+
+  const dashboardData = {
+    todayStats: {
+      totalSessions: todaySessions.length,
+      volunteersScheduled,
+      unconfirmedSessions,
+      sessions: todaySessions,
+    },
+    volunteerStats: {
+      totalVolunteers: volunteers.length,
+      activeVolunteers: volunteers.filter(v => v.isActive).length,
+      newVolunteers: volunteers.filter(v => {
+        const created = new Date(v.createdAt);
+        return (today.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 30;
+      }).length,
+      volunteerEngagement: Math.round(
+        (volunteers.filter(v => (v.totalSessions || 0) > 0).length / (volunteers.length || 1)) * 100
+      ),
+    },
+    residentStats: {
+      totalResidents: residents.length,
+      activeResidents: residents.filter(r => r.isActive).length,
+      newResidents: residents.filter(r => {
+        const created = new Date(r.createdAt);
+        return (today.getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 30;
+      }).length,
+      residentCoverage: Math.round(
+        (residents.filter(r => (r.totalSessions || 0) > 0).length / (residents.length || 1)) * 100
+      ),
+    },
+    quickStats: {
+      upcomingSessions: slots.filter(slot => {
+        const slotDate = new Date(slot.date);
+        return slotDate > today &&
+          slotDate.getMonth() === today.getMonth() &&
+          slotDate.getFullYear() === today.getFullYear();
+      }).length,
+      pendingRequests: slots.reduce((acc, slot) =>
+        acc + (slot.volunteerRequests?.filter(vr => vr.status === "pending").length || 0), 0
+      ),
+      totalVolunteers: volunteers.length,
+      totalResidents: residents.length,
+      sessionsThisMonth: slots.filter(slot => {
+        const slotDate = new Date(slot.date);
+        return slotDate.getMonth() === today.getMonth() && slotDate.getFullYear() === today.getFullYear();
+      }).length,
+      totalHoursThisMonth: slots.filter(slot => {
+        const slotDate = new Date(slot.date);
+        return slotDate.getMonth() === today.getMonth() && slotDate.getFullYear() === today.getFullYear();
+      }).reduce((acc, slot) => {
+        const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+        const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+        const duration = (endHour + endMinute / 60) - (startHour + startMinute / 60);
+        return acc + duration;
+      }, 0),
+    },
+    performanceMetrics: {
+      engagementScore: Math.round(
+        (volunteers.filter(v => (v.totalSessions || 0) > 0).length / (volunteers.length || 1)) * 10
+      ),
+      satisfactionRate: 90, // Placeholder, needs real calculation
+      efficiencyScore: 8, // Placeholder, needs real calculation
+      trends: {
+        engagement: { value: 0, direction: "up" },
+        satisfaction: { value: 0, direction: "up" },
+        efficiency: { value: 0, direction: "up" },
+      },
+    },
+  };
+
+  // Add useEffect for minimum loading duration
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000); // Minimum 1 second loading time
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Check authentication
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
-    
+
     if (!user.username) {
       navigate("/login");
     } else if (user.role !== "manager") {
@@ -224,7 +469,7 @@ const ManagerDashboard = () => {
 
     window.addEventListener('resize', handleResize);
     handleResize(); // Initial check
-    
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -232,426 +477,681 @@ const ManagerDashboard = () => {
     localStorage.removeItem("user");
     sessionStorage.removeItem("user");
     toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
+      title: t('statusMessages.loggedOut'),
+      description: t('statusMessages.loggedOutDescription'),
     });
     navigate("/login");
   };
 
   const handleAddVolunteer = () => {
-    navigate("/manager/volunteers/new");
+    navigate("/manager/volunteers");
+    setTimeout(() => {
+      window.postMessage({ type: "OPEN_CREATE_VOLUNTEER_DIALOG" }, window.location.origin);
+    }, 100);
   };
 
   const handleAddResident = () => {
-    navigate("/manager/residents/new");
+    navigate("/manager/residents");
+    setTimeout(() => {
+      window.postMessage({ type: "OPEN_CREATE_RESIDENT_DIALOG" }, window.location.origin);
+    }, 100);
   };
 
   const handleAddSession = () => {
-    navigate("/manager/calendar/new");
+    navigate("/manager/calendar");
+    setTimeout(() => {
+      window.postMessage({ type: "OPEN_CREATE_SESSION_DIALOG" }, window.location.origin);
+    }, 100);
   };
 
   const handleGenerateReport = () => {
-    navigate("/manager/reports/new");
+    navigate("/manager/reports");
+    setTimeout(() => {
+      window.postMessage({ type: "OPEN_GENERATE_REPORT_DIALOG" }, window.location.origin);
+    }, 100);
   };
 
-  if (isLoading) {
-    return <DashboardSkeleton />;
-  }
+  const handleViewVolunteer = (volunteerId: string) => {
+    navigate("/manager/volunteers");
+    setTimeout(() => {
+      window.postMessage({ type: "OPEN_EDIT_VOLUNTEER_DIALOG", volunteerId }, window.location.origin);
+    }, 100);
+  };
 
-  if (error) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Error Loading Dashboard</h2>
-          <p className="text-slate-600 mb-4">There was a problem loading the dashboard data.</p>
-          <Button onClick={() => window.location.reload()}>
-            Reload Page
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const handleViewResident = (residentId: string) => {
+    navigate("/manager/residents");
+    setTimeout(() => {
+      window.postMessage({ type: "OPEN_EDIT_RESIDENT_DIALOG", residentId }, window.location.origin);
+    }, 100);
+  };
+
+  const handleViewSession = (sessionId: string) => {
+    navigate("/manager/calendar");
+    setTimeout(() => {
+      // Find the session data and send it to open the edit dialog
+      const session = slots.find(s => s.id === sessionId);
+      if (session) {
+        window.postMessage({
+          type: "OPEN_EDIT_SESSION_DIALOG",
+          sessionId: sessionId,
+          session: session
+        }, window.location.origin);
+      }
+    }, 100);
+  };
+
+  const handleMarkAttendance = (appointmentId: string) => {
+    navigate("/manager/appointments");
+    setTimeout(() => {
+      window.postMessage({
+        type: "OPEN_MARK_ATTENDANCE_DIALOG",
+        appointmentId: appointmentId
+      }, window.location.origin);
+    }, 100);
+  };
+
+  // Helper function to get the correct volunteer count (copied from Calendar.tsx)
+  const getVolunteerCount = (session: any) => {
+    if (!session.approvedVolunteers || session.approvedVolunteers.length === 0) return 0;
+    const firstParticipant = session.approvedVolunteers[0];
+    if (firstParticipant && firstParticipant.type === 'external_group') {
+      return session.maxCapacity;
+    }
+
+    return session.approvedVolunteers.length;
+  };
+
+  // Helper function to get the appropriate capacity number for display
+  const getCapacityDisplay = (session: any) => {
+    if (!session.approvedVolunteers || session.approvedVolunteers.length === 0) {
+      return session.maxCapacity;
+    }
+    const firstParticipant = session.approvedVolunteers[0];
+    if (firstParticipant && firstParticipant.type === 'external_group') {
+      return session.maxCapacity;
+    }
+
+    // Check if session has passed (for today's sessions, check both date and time)
+    const sessionDate = new Date(session.date);
+    const today = new Date();
+    const isToday = sessionDate.toDateString() === today.toDateString();
+
+    if (isToday) {
+      // For today's sessions, check if the start time has passed
+      const [startHour, startMinute] = session.startTime.split(':').map(Number);
+      const sessionStartTime = new Date(sessionDate);
+      sessionStartTime.setHours(startHour, startMinute, 0, 0);
+
+      const hasStarted = today >= sessionStartTime;
+      if (hasStarted) {
+        // Session has started/passed, show actual count as capacity (x/x format)
+        return session.approvedVolunteers.length;
+      } else {
+        // Session hasn't started yet, show max capacity
+        return session.maxCapacity;
+      }
+    } else {
+      // For non-today sessions, use the original logic
+      const isPast = sessionDate < today;
+      if (isPast) {
+        return session.approvedVolunteers.length;
+      }
+      return session.maxCapacity;
+    }
+  };
+
+  // Helper function to get appropriate icon for TODO item type
+  const getTodoIcon = (type: string) => {
+    switch (type) {
+      case 'missing_languages':
+      case 'missing_availability':
+        return <AlertTriangle className="h-6 w-6 text-amber-600" />;
+      case 'inactive_volunteer':
+      case 'inactive_resident':
+        return <Clock className="h-6 w-6 text-blue-600" />;
+      case 'low_capacity_session':
+        return <Users className="h-6 w-6 text-purple-600" />;
+      case 'engagement_opportunity':
+        return <TrendingDown className="h-6 w-6 text-red-600" />;
+      case 'matching_optimization':
+        return <Target className="h-6 w-6 text-indigo-600" />;
+      case 'capacity_planning':
+        return <LayoutDashboard className="h-6 w-6 text-sky-600" />;
+      case 'onboarding':
+        return <UserPlus className="h-6 w-6 text-emerald-600" />;
+      default:
+        return <AlertTriangle className="h-6 w-6 text-slate-600" />;
+    }
+  };
+
+  // Get all sessions with pending volunteer requests (not just today's)
+  const sessionsWithPendingRequests = slots.filter(slot =>
+    slot.volunteerRequests && slot.volunteerRequests.some(vr => vr.status === "pending")
+  );
+
+  // Calculate total pending requests from all sessions
+  const totalPendingRequestsAllSessions = sessionsWithPendingRequests.reduce((acc, slot) =>
+    acc + (slot.volunteerRequests?.filter(vr => vr.status === "pending").length || 0), 0
+  );
+
+  // Get today's sessions with pending requests for the badge count
+  const todaySessionsWithPendingRequests = todaySessions.filter(slot =>
+    slot.volunteerRequests && slot.volunteerRequests.some(vr => vr.status === "pending")
+  );
+
+  const totalPendingRequests = todaySessionsWithPendingRequests.reduce((acc, slot) =>
+    acc + (slot.volunteerRequests?.filter(vr => vr.status === "pending").length || 0), 0
+  );
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
-      {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm z-10">
-        <div className="px-6 py-3 flex justify-between items-center">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Top Header - Always visible */}
+      <header className="bg-white border-b border-slate-300 shadow-sm z-10 h-[69px]">
+        <div className="px-6 h-full flex items-center justify-between">
           {/* Left section - Logo and menu */}
-          <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <div className="flex items-center space-x-4 w-[200px]">
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="lg:hidden"
-          >
+              className="lg:hidden"
+            >
               <Menu className="h-5 w-5" />
-          </Button>
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="h-6 w-6 text-primary" />
-              <h1 className="font-bold text-xl hidden sm:block">Volunteer Management System</h1>
+            </Button>
+            <div className={cn("flex items-center space-x-3", isRTL && "space-x-reverse")}>
+              <LayoutDashboard className="h-6 w-6 text-primary" />
+              <h1 className="font-bold text-xl hidden sm:block whitespace-nowrap">{t('systemTitle')}</h1>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="relative h-10 w-10"
-              >
-                <Bell className="h-6 w-6" />
-                {dashboardData?.todayStats.sessions.length > 0 && (
-                  <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-                )}
-                  </Button>
-              
-              {/* Notifications Panel */}
-              <NotificationsPanel 
-                isOpen={isNotificationsOpen} 
-                onClose={() => setIsNotificationsOpen(false)} 
-                notifications={dashboardData?.todayStats.sessions.map(session => ({
-                  id: session.id,
-                  message: `Session at ${session.startTime} - ${session.endTime}`,
-                  time: `${session.date} ${session.startTime} - ${session.endTime}`,
-                  type: "info"
-                })) || []} 
-              />
-          </div>
-          
-            {/* User Avatar */}
-            <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-base font-medium text-primary">M</span>
-            </div>
-          </div>
+          {/* Center section - Empty for balance */}
+          <div className="flex-1"></div>
+          {/* Right section - Empty for balance */}
+          <div className="w-[200px]"></div>
         </div>
       </header>
-      
-      {/* Main Content with Sidebar */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navigation */}
-        <ManagerSidebar 
-          isOpen={isSidebarOpen} 
-          onClose={() => setIsSidebarOpen(false)} 
-          isMobile={isMobile} 
-          onLogout={handleLogout}
-        />
-        
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 transition-all duration-300">
-          {/* Page Title */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Manager Dashboard</h1>
-            <p className="text-slate-600 mt-1">Monitor and manage your community activities.</p>
-          </div>
-          
-          {/* Performance Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">Engagement Score</p>
-                    <h3 className="text-2xl font-bold">{dashboardData?.performanceMetrics.engagementScore}/10</h3>
-                  </div>
-                  <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Activity className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{ width: `${dashboardData?.performanceMetrics.engagementScore * 10}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">Satisfaction Rate</p>
-                    <h3 className="text-2xl font-bold">{dashboardData?.performanceMetrics.satisfactionRate}%</h3>
-                  </div>
-                  <div className="h-12 w-12 bg-green-50 rounded-full flex items-center justify-center">
-                    <Heart className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500 rounded-full"
-                      style={{ width: `${dashboardData?.performanceMetrics.satisfactionRate}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {(!isDataFullyLoaded || isLoading) ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
+          {/* Main Content with Sidebar */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar Navigation */}
+            <ManagerSidebar
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+              isMobile={isMobile}
+              onLogout={handleLogout}
+            />
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto p-4 lg:p-8 transition-all duration-300">
+              {/* No extra margin between header and content */}
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">Efficiency Score</p>
-                    <h3 className="text-2xl font-bold">{dashboardData?.performanceMetrics.efficiencyScore}/10</h3>
-                  </div>
-                  <div className="h-12 w-12 bg-blue-50 rounded-full flex items-center justify-center">
-                    <Target className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${dashboardData?.performanceMetrics.efficiencyScore * 10}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">Overall Performance</p>
-                    <h3 className="text-2xl font-bold">
-                      {Math.round((dashboardData?.performanceMetrics.engagementScore +
-                        dashboardData?.performanceMetrics.efficiencyScore) / 2 * 10)}%
-                    </h3>
-                  </div>
-                  <div className="h-12 w-12 bg-purple-50 rounded-full flex items-center justify-center">
-                    <Award className="h-6 w-6 text-purple-600" />
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-purple-500 rounded-full"
-                      style={{
-                        width: `${Math.round((dashboardData?.performanceMetrics.engagementScore +
-                          dashboardData?.performanceMetrics.efficiencyScore) / 2 * 10)}%`
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Main Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Pending Sessions and Today's Sessions */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Pending Volunteers */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-              <div>
-                      <CardTitle>Pending Volunteers</CardTitle>
-                      <CardDescription className="mt-1">Volunteers awaiting approval</CardDescription>
-                    </div>
-                    {dashboardData?.todayStats.sessions.some(s => s.pendingVolunteers.length > 0) && (
-                      <Badge variant="secondary" className="h-6 mr-2">
-                        {dashboardData?.todayStats.sessions.reduce((acc, session) => acc + session.pendingVolunteers.length, 0)} pending
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 max-h-[184px] overflow-y-auto pr-2">
-                    {dashboardData?.todayStats.sessions
-                      .filter(session => session.pendingVolunteers.length > 0)
-                      .map((session) => (
-                        <div 
-                          key={session.id}
-                          className="flex items-center justify-between p-4 bg-amber-50/50 rounded-lg border border-amber-200/50 hover:bg-amber-50 transition-colors"
-                        >
-                          <div className="flex items-center space-x-4">
-                            <div className="h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
-                              <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                              <h4 className="font-medium text-amber-900">
-                                {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              </h4>
-                              <p className="text-sm text-amber-700">
-                                {session.startTime} - {session.endTime} • {session.pendingVolunteers.length} {session.pendingVolunteers.length === 1 ? 'volunteer' : 'volunteers'} requested
-                              </p>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="border-amber-200 text-amber-700 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800"
-                          >
-                            Review
-                          </Button>
-                        </div>
-                      ))}
-                    {(!dashboardData?.todayStats.sessions.some(s => s.pendingVolunteers.length > 0)) && (
-                      <div className="text-center py-8">
-                        <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-                        <p className="text-sm text-slate-500">No pending volunteers to review</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Today's Sessions */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
+              {/* Quick Actions Card - full width, first */}
+              <div className="mb-8">
+                <Card className="shadow-md rounded-2xl border border-slate-300 bg-white/95 hover:shadow-lg transition-shadow duration-200 w-full">
+                  <CardHeader className="pb-2 border-b border-slate-300">
                     <div>
-                      <CardTitle>Today's Sessions</CardTitle>
-                      <CardDescription className="mt-1">Overview of today's volunteer sessions</CardDescription>
+                      <CardTitle className="text-lg font-semibold">{t('quickActions.title')}</CardTitle>
+                      <CardDescription className="mt-1">{t('quickActions.description')}</CardDescription>
                     </div>
-                    {dashboardData?.todayStats.sessions.length > 0 && (
-                      <Badge variant="secondary" className="h-6 mr-2">
-                        {dashboardData?.todayStats.sessions.length} sessions
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 max-h-[184px] overflow-y-auto pr-2">
-                    {dashboardData?.todayStats.sessions
-                      .filter(session => {
-                        const today = new Date();
-                        const sessionDate = new Date(session.date);
-                        return today.toDateString() === sessionDate.toDateString();
-                      })
-                      .map((session) => (
-                        <div 
-                          key={session.id}
-                          className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                        >
-                          <div className="flex items-center space-x-4">
-                            <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                              <CalendarDays className="h-5 w-5 text-primary" />
+                  </CardHeader>
+                  <CardContent className="p-6 pt-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex items-center justify-center gap-2 rounded-lg border-blue-500 bg-blue-100 hover:bg-blue-200 hover:border-blue-600 transition-colors"
+                        onClick={handleAddVolunteer}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('quickActions.addVolunteer')}</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex items-center justify-center gap-2 rounded-lg border-pink-500 bg-pink-100 hover:bg-pink-200 hover:border-pink-600 transition-colors"
+                        onClick={handleAddResident}
+                      >
+                        <Heart className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('quickActions.addResident')}</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex items-center justify-center gap-2 rounded-lg border-green-500 bg-green-100 hover:bg-green-200 hover:border-green-600 transition-colors"
+                        onClick={handleAddSession}
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('quickActions.createSession')}</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex items-center justify-center gap-2 rounded-lg border-purple-500 bg-purple-100 hover:bg-purple-200 hover:border-purple-600 transition-colors"
+                        onClick={handleGenerateReport}
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('quickActions.generateReport')}</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-              <div>
-                              <h4 className="font-medium">
-                                {session.startTime} - {session.endTime}
-                              </h4>
-                              <p className="text-sm text-slate-500">
-                                {session.volunteers.length}/{session.maxVolunteers} {session.volunteers.length === 1 ? 'volunteer' : 'volunteers'} scheduled
-                              </p>
-                            </div>
+              {/* Main Grid Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column - Pending Sessions and Today's Sessions */}
+                <div className="lg:col-span-2 space-y-8">
+                  {/* Today's Sessions */}
+                  <Card className="shadow-md rounded-2xl border border-slate-300 bg-white/95 hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader className="pb-2 border-b border-slate-300">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-semibold">{t('todaySessions.title')}</CardTitle>
+                          <CardDescription className="mt-1">{t('todaySessions.description')}</CardDescription>
+                        </div>
+                        {dashboardData?.todayStats.sessions.length > 0 && (
+                          <Badge variant="secondary" className="h-7 px-3 mr-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-500 hover:border-blue-600 transition-colors font-medium text-sm shadow-sm">
+                            {dashboardData?.todayStats.sessions.length === 1
+                              ? t('todaySessions.sessions_one')
+                              : `${dashboardData?.todayStats.sessions.length} ${t('todaySessions.sessions')}`
+                            }
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-4">
+                      <div className={cn("space-y-4 max-h-[184px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
+                        {dashboardData?.todayStats.sessions.length > 0 ? (
+                          dashboardData?.todayStats.sessions
+                            .filter(session => {
+                              const today = new Date();
+                              const sessionDate = new Date(session.date);
+                              return today.toDateString() === sessionDate.toDateString();
+                            })
+                            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                            .map((session) => (
+                              <div
+                                key={session.id}
+                                className={`p-4 border rounded-lg cursor-pointer transition-colors mb-2 ${session.status === "full"
+                                  ? "bg-amber-100 border-amber-600 hover:bg-amber-200 hover:border-amber-700"
+                                  : session.status === "canceled"
+                                    ? "bg-red-50 border-red-500 hover:bg-red-100 hover:border-red-600"
+                                    : session.status === "open"
+                                      ? "bg-blue-50 border-blue-500 hover:bg-blue-100 hover:border-blue-600"
+                                      : "bg-white border-gray-300 hover:bg-gray-100"
+                                  }`}
+                                onClick={() => handleViewSession(session.id)}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div className="flex flex-col justify-center">
+                                    <div className="font-medium">
+                                      {session.startTime} - {session.endTime}
+                                    </div>
+                                    <div className="text-sm text-slate-500 mt-1">
+                                      {getVolunteerCount(session) === 1
+                                        ? t('todaySessions.volunteersCount', {
+                                          current: getVolunteerCount(session),
+                                          capacity: getCapacityDisplay(session)
+                                        })
+                                        : t('todaySessions.volunteersCount_plural', {
+                                          current: getVolunteerCount(session),
+                                          capacity: getCapacityDisplay(session)
+                                        })
+                                      }
+                                    </div>
+                                  </div>
+
+                                </div>
+                                {session.notes && (
+                                  <div className="text-sm text-slate-600 mt-2">
+                                    {session.notes}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                            <p className="text-sm text-slate-500">{t('todaySessions.noSessionsToday')}</p>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant={session.status === "full" ? "default" : "secondary"}>
-                              {session.status}
-                            </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Pending Volunteers */}
+                  <Card className="shadow-md rounded-2xl border border-slate-300 bg-white/95 hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader className="pb-2 border-b border-slate-300">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-semibold">{t('pendingVolunteers.title')}</CardTitle>
+                          <CardDescription className="mt-1">{t('pendingVolunteers.description')}</CardDescription>
+                        </div>
+                        {isDataFullyLoaded && totalPendingRequestsAllSessions > 0 && (
+                          <Badge variant="secondary" className="h-7 px-3 mr-2 bg-amber-100 text-amber-700 border-amber-600 hover:border-amber-700 hover:bg-amber-200 transition-colors font-medium text-sm shadow-sm">
+                            {totalPendingRequestsAllSessions === 1
+                              ? t('pendingVolunteers.pending_one')
+                              : `${totalPendingRequestsAllSessions} ${t('pendingVolunteers.pending')}`
+                            }
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-4">
+                      <div className={cn("space-y-4 max-h-[184px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
+                        {sessionsWithPendingRequests.length > 0 ? (
+                          sessionsWithPendingRequests
+                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                            .map((session) => (
+                              <div
+                                key={session.id}
+                                className="p-4 border rounded-lg bg-blue-50 hover:bg-blue-100 cursor-pointer transition-colors border-blue-500 hover:border-blue-600 mb-2"
+                                onClick={() => {
+                                  navigate("/manager/calendar");
+                                  setTimeout(() => {
+                                    window.postMessage({
+                                      type: "OPEN_PENDING_REQUESTS_DIALOG",
+                                      sessionId: session.id
+                                    }, window.location.origin);
+                                  }, 100);
+                                }}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div className="flex flex-col justify-center">
+                                    <div className="font-medium">
+                                      {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    </div>
+                                    <div className="text-sm text-slate-500 mt-1">
+                                      {session.startTime} - {session.endTime} • {getVolunteerCount(session) === 1
+                                        ? t('pendingVolunteers.volunteersCount', {
+                                          current: getVolunteerCount(session),
+                                          capacity: getCapacityDisplay(session)
+                                        })
+                                        : t('pendingVolunteers.volunteersCount_plural', {
+                                          current: getVolunteerCount(session),
+                                          capacity: getCapacityDisplay(session)
+                                        })
+                                      }
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="bg-amber-300 border-amber-600 text-amber-800 hover:bg-amber-400/75 hover:border-amber-700 hover:text-amber-800"
+                                    >
+                                      <AlertCircle className="h-4 w-4 mr-1" />
+                                      {session.volunteerRequests.filter(v => v.status === "pending").length} {t('pendingVolunteers.pending')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                            <p className="text-sm text-slate-500">{t('pendingVolunteers.noPendingVolunteers')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Column - Quick Stats and Actions */}
+                <div className="space-y-8">
+                  <Card className="shadow-md rounded-2xl border border-slate-300 bg-white/95 hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader className="pb-2 border-b border-slate-300">
+                      <div>
+                        <CardTitle className="text-lg font-semibold">{t('quickStats.title')}</CardTitle>
+                        <CardDescription className="mt-1">{t('quickStats.description')}</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-4">
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-slate-500 pb-1">{t('quickStats.totalVolunteers')}</p>
+                            <h3 className="text-2xl font-bold">{dashboardData?.quickStats.totalVolunteers}</h3>
+                          </div>
+                          <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center border border-slate-400">
+                            <Users className="h-6 w-6 text-primary" />
                           </div>
                         </div>
-                      ))}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-slate-500 pb-1">{t('quickStats.totalResidents')}</p>
+                            <h3 className="text-2xl font-bold">{dashboardData?.quickStats.totalResidents}</h3>
+                          </div>
+                          <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center border border-green-400">
+                            <Heart className="h-6 w-6 text-green-600" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-slate-500 pb-1">{t('quickStats.totalSessionsThisMonth')}</p>
+                            <h3 className="text-2xl font-bold">{dashboardData?.quickStats.sessionsThisMonth}</h3>
+                          </div>
+                          <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center border border-blue-400">
+                            <LayoutDashboard className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-slate-500 pb-1">{t('quickStats.upcomingSessionsThisMonth')}</p>
+                            <h3 className="text-2xl font-bold">{dashboardData?.quickStats.upcomingSessions}</h3>
+                          </div>
+                          <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center border border-blue-400">
+                            <CalendarDays className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-slate-500 pb-1">{t('quickStats.totalHoursThisMonth')}</p>
+                            <h3 className="text-2xl font-bold">{Math.round(dashboardData?.quickStats.totalHoursThisMonth || 0)}</h3>
+                          </div>
+                          <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center border border-purple-400">
+                            <Clock className="h-6 w-6 text-purple-600" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-slate-500 pb-1">{t('quickStats.avgHoursPerVolunteerThisMonth')}</p>
+                            <h3 className="text-2xl font-bold">{displayAverage}</h3>
+                          </div>
+                          <div className="h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center  border border-indigo-400">
+                            <TrendingUp className="h-6 w-6 text-indigo-600" />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-                </CardContent>
-              </Card>
-            </div>
 
-            {/* Right Column - Quick Stats and Actions */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <div>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription className="mt-1">Common management tasks</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleAddVolunteer}
-                    >
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Add Volunteer
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleAddResident}
-                    >
-                      <Heart className="mr-2 h-4 w-4" />
-                      Add Resident
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleAddSession}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      Create Session
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleGenerateReport}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Generate Report
-              </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* New Widgets Section - Two columns layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+                {/* Left Column - Two rectangular widgets stacked */}
+                <div className="lg:col-span-2 space-y-8">
+                  {/* Volunteers Checked In Today */}
+                  <Card className="shadow-md rounded-2xl border border-slate-300 bg-white/95 hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader className="pb-2 border-b border-slate-300">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-semibold">{t('checkedInToday.title')}</CardTitle>
+                          <CardDescription className="mt-1">{t('checkedInToday.description')}</CardDescription>
+                        </div>
+                        {isDataFullyLoaded && volunteersCheckedInToday.length > 0 && (
+                          <Badge variant="secondary" className="h-7 px-3 mr-2 bg-emerald-50 text-emerald-700 border-emerald-500 hover:border-emerald-600 hover:bg-emerald-100 transition-colors font-medium text-sm shadow-sm">
+                            {volunteersCheckedInToday.length === 1
+                              ? t('checkedInToday.checkedIn_one')
+                              : `${volunteersCheckedInToday.length} ${t('checkedInToday.checkedIn')}`
+                            }
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-4">
+                      <div className={cn("space-y-4 max-h-[184px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
+                        {volunteersCheckedInToday.length > 0 ? (
+                          volunteersCheckedInToday
+                            .sort((a, b) => new Date(a.slotDate + ' ' + a.slotTime.split(' - ')[0]).getTime() - new Date(b.slotDate + ' ' + b.slotTime.split(' - ')[0]).getTime())
+                            .map((volunteer) => (
+                              <div
+                                key={`checked-in-${volunteer.id}-${volunteer.appointmentId}`}
+                                className="p-4 border rounded-lg bg-emerald-50 hover:bg-emerald-100 border-emerald-500 hover:border-emerald-600 cursor-pointer transition-colors mb-2 flex justify-between items-center"
+                                onClick={() => handleViewVolunteer(volunteer.id)}
+                              >
+                                <div>
+                                  <div className="font-medium text-black">{volunteer.name}</div>
+                                  <div className="text-sm text-slate-500 mt-1">
+                                    {volunteer.slotTime}
+                                    {volunteer.confirmedAt && (
+                                      <span className="text-slate-500"> • {t('checkedInToday.checkedInAt')} {new Date(volunteer.confirmedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="h-9 w-9 bg-emerald-400 rounded-full flex items-center justify-center shadow ring-2 ring-emerald-100">
+                                  <CheckCircle className="h-5 w-5 text-white" />
+                                </div>
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center py-6">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                            <p className="text-sm text-slate-500">{t('checkedInToday.allAttendanceConfirmed')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <div>
-                    <CardTitle>Quick Stats</CardTitle>
-                    <CardDescription className="mt-1">Key community metrics</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                  {/* Volunteers with Missing Attendance */}
+                  <Card className="shadow-md rounded-2xl border border-slate-300 bg-white/95 hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader className="pb-2 border-b border-slate-300">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-semibold">{t('missingAttendance.title')}</CardTitle>
+                          <CardDescription className="mt-1">{t('missingAttendance.description')}</CardDescription>
+                        </div>
+                        {isDataFullyLoaded && volunteersWithMissingAttendance.length > 0 && (
+                          <Badge variant="secondary" className="h-7 px-3 mr-2 bg-red-50 text-red-700 border-red-500 hover:border-red-600 hover:bg-red-100 transition-colors font-medium text-sm shadow-sm">
+                            {volunteersWithMissingAttendance.length === 1
+                              ? t('missingAttendance.missing_one')
+                              : `${volunteersWithMissingAttendance.length} ${t('missingAttendance.missing')}`
+                            }
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-4">
+                      <div className={cn("space-y-4 max-h-[184px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
+                        {volunteersWithMissingAttendance.length > 0 ? (
+                          volunteersWithMissingAttendance
+                            .sort((a, b) => new Date(a.slotDate + ' ' + a.slotTime.split(' - ')[0]).getTime() - new Date(b.slotDate + ' ' + b.slotTime.split(' - ')[0]).getTime())
+                            .map((volunteer) => (
+                              <div
+                                key={`missing-attendance-${volunteer.id}-${volunteer.appointmentId}`}
+                                className="p-4 border rounded-lg bg-red-50 hover:bg-red-100 border-red-500 hover:border-red-600 cursor-pointer transition-colors mb-2 flex justify-between items-center"
+                                onClick={() => handleMarkAttendance(volunteer.appointmentId)}
+                              >
+                                <div>
+                                  <div className="font-medium text-black">{volunteer.name}</div>
+                                  <div className="text-sm text-slate-500 mt-1">{new Date(volunteer.slotDate).toLocaleDateString()} • {volunteer.slotTime}</div>
+                                </div>
+                                <div className="h-9 w-9 bg-red-400 rounded-full flex items-center justify-center shadow ring-2 ring-red-100">
+                                  <XCircle className="h-5 w-5 text-white" />
+                                </div>
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center py-6">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                            <p className="text-sm text-slate-500">{t('missingAttendance.allAttendanceMarked')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Column - Vertical TODO List Widget */}
+                <div className="lg:col-span-1">
+                  <Card className="shadow-md rounded-2xl border border-slate-300 bg-white/95 hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader className="pb-2 border-b border-slate-300">
                       <div>
-                        <p className="text-sm text-slate-500">Total Volunteers</p>
-                        <h3 className="text-2xl font-bold">{dashboardData?.quickStats.totalVolunteers}</h3>
+                        <CardTitle className="text-lg font-semibold">{t('performanceAlerts.title')}</CardTitle>
+                        <CardDescription className="mt-1">{t('performanceAlerts.description')}</CardDescription>
                       </div>
-                      <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
+                    </CardHeader>
+                    <CardContent className="p-6 pt-4">
+                      <div className={cn("space-y-4 max-h-[448px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
+                        {todoItems.length > 0 ? (
+                          todoItems.map((item, index) => (
+                            <div
+                              key={index}
+                              className={`p-3 border rounded-lg transition-colors cursor-pointer ${item.type === 'missing_languages' || item.type === 'missing_availability'
+                                ? 'border-red-500 bg-red-50 hover:bg-red-100 hover:border-red-600'
+                                : 'border-slate-400 bg-slate-50 hover:bg-slate-100 hover:border-slate-500'
+                                }`}
+                              onClick={() => {
+                                if (item.type === 'missing_languages' || item.type === 'missing_availability') {
+                                  if ('volunteerId' in item && item.volunteerId) {
+                                    handleViewVolunteer(item.volunteerId);
+                                  } else if ('residentId' in item && item.residentId) {
+                                    handleViewResident(item.residentId);
+                                  }
+                                } else if (item.type === 'inactive_volunteer') {
+                                  handleViewVolunteer(item.volunteerId!);
+                                } else if (item.type === 'inactive_resident') {
+                                  handleViewResident(item.residentId!);
+                                } else if (item.type === 'low_capacity_session') {
+                                  handleViewSession(item.sessionId!);
+                                } else if (item.type === 'matching_optimization') {
+                                  navigate("/manager/matching-rules");
+                                } else if (item.type === 'onboarding') {
+                                  navigate("/manager/volunteers");
+                                } else if (item.type === 'capacity_planning') {
+                                  navigate("/manager/calendar");
+                                } else if (item.type === 'engagement_opportunity') {
+                                  navigate("/manager/volunteers");
+                                }
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className={cn("flex items-center flex-1", isRTL ? "space-x-reverse space-x-4" : "space-x-4")}>
+                                  <div className="h-10 w-10 rounded-full flex items-center justify-center shadow-sm bg-slate-50 border border-slate-400 flex-shrink-0 text-center leading-none">
+                                    <div className="flex items-center justify-center w-full h-full">
+                                      {getTodoIcon(item.type)}
+                                    </div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm text-slate-800">{item.title}</p>
+                                    <p className="text-xs text-slate-600 mt-1">{item.description}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-6">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                            <p className="text-sm text-slate-500">{t('performanceAlerts.allTasksCompleted')}</p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-500">Total Residents</p>
-                        <h3 className="text-2xl font-bold">{dashboardData?.quickStats.totalResidents}</h3>
-                      </div>
-                      <div className="h-10 w-10 bg-green-50 rounded-full flex items-center justify-center">
-                        <Heart className="h-5 w-5 text-green-600" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-500">Sessions This Month</p>
-                        <h3 className="text-2xl font-bold">{dashboardData?.quickStats.sessionsThisMonth}</h3>
-                      </div>
-                      <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-blue-600" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </main>
           </div>
-        </main>
-      </div>
-      
+        </>
+      )}
       {/* Overlay for mobile when sidebar is open */}
       {isMobile && isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-10"
           onClick={() => setIsSidebarOpen(false)}
         ></div>
@@ -660,4 +1160,4 @@ const ManagerDashboard = () => {
   );
 };
 
-export default ManagerDashboard;
+export default ManagerDashboard; 

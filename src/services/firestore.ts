@@ -194,17 +194,63 @@ export interface MatchingRule {
   updatedAt: Timestamp;
 }
 
+// REPORTS
+export type ReportSubject = 'volunteer' | 'resident' | 'external_group';
+export type ReportScope = 'individual' | 'all';
+export type ReportType = 
+  | 'volunteer_individual'
+  | 'volunteer_all'
+  | 'resident_individual'
+  | 'resident_all'
+  | 'external_group_individual'
+  | 'external_group_all';
+
+export interface AppointmentEntry {
+  date: string;
+  startTime: string;
+  endTime: string;
+  hours: number;
+  status: 'present' | 'late' | 'absent' | 'canceled' | 'missing';
+}
+
+export interface SubjectReport {
+  name: string;
+  summary: {
+    totalAppointments: number;
+    totalHours: number;
+    present?: number;
+    late?: number;
+    absent?: number;
+    missing?: number;
+  };
+  appointments: AppointmentEntry[];
+}
+
 export interface Report {
-  id: string;
-  type: string;
-  filters?: object;
-  data: object[];
+  id?: string;
+  type: ReportType;
+  filters: {
+    startDate: string;
+    endDate: string;
+    subjectId?: string;
+  };
+  data: {
+    summary: {
+      totalSubjects: number;
+      totalSessions?: number; // New field for unique sessions count
+      totalAppointments: number;
+      totalHours: number;
+      present?: number;
+      late?: number;
+      absent?: number;
+      missing?: number;
+    };
+    subjects: SubjectReport[];
+  };
   generatedBy: string;
   generatedAt: Timestamp;
-  description?: string | null;
+  description: string;
   exported: boolean;
-  exportedAt?: Timestamp | null;
-  status: string;
 }
 
 // EXTERNAL GROUPS
@@ -294,21 +340,6 @@ export const defaultMatchingRules: MatchingRule[] = [
     updatedAt: Timestamp.now(),
   },
   {
-    id: "matching-preference",
-    name: "Matching Preference",
-    description: "Importance of matching volunteer and resident matching preferences (e.g., one-on-one, group activity, no preference).",
-    type: "option",
-    value: "noPreference",
-    defaultValue: "noPreference",
-    options: [
-      { value: "oneOnOne", label: "One-on-One" },
-      { value: "groupActivity", label: "Group Activity" },
-      { value: "noPreference", label: "No Preference" }
-    ],
-    impact: "medium",
-    updatedAt: Timestamp.now(),
-  },
-  {
     id: "availability-match",
     name: "Availability Match",
     description: "Importance of matching volunteer and resident availability.",
@@ -367,4 +398,4 @@ export const defaultMatchingRules: MatchingRule[] = [
     impact: "medium",
     updatedAt: Timestamp.now(),
   }
-];
+]; 

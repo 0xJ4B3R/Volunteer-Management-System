@@ -1,82 +1,194 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { 
-  Settings, 
-  Bell, 
-  Menu, 
-  LogOut,
-  Save,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle2,
-  Sliders,
+import { Timestamp } from "firebase/firestore";
+import {
+  X,
+  Eye,
+  Menu,
+  Play,
+  Plus,
   Clock,
   Users,
-  UserCog,
-  AlertCircle,
-  Info,
-  Upload,
-  Download,
-  Play,
-  Eye,
-  RotateCcw,
-  Loader2,
   Search,
+  Loader2,
+  Sliders,
+  Settings,
   ChevronUp,
+  RotateCcw,
   ChevronDown,
-  Filter,
-  Zap
+  AlertTriangle,
+  SlidersVertical
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+// UI Components
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import ManagerSidebar from "@/components/manager/ManagerSidebar";
-import NotificationsPanel from "@/components/manager/NotificationsPanel";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
-interface Notification {
-  id: number;
-  message: string;
-  time: string;
-  type: "success" | "warning" | "info" | "default";
-  link?: string;
-}
+// Custom Components & Hooks
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useResidents } from "@/hooks/useFirestoreResidents";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
+import MatchingRulesSkeleton from "@/components/skeletons/MatchingRulesSkeleton";
+import { useMatchingRules, useAddMatchingRule, useUpdateMatchingRule, useResetMatchingRules, MatchingRuleUI } from "@/hooks/useMatchingRules";
 
-interface MatchingRule {
-  id: string;
-  name: string;
-  description: string;
-  value: number | boolean | string;
-  category: "skill" | "availability" | "priority" | "override";
-  min?: number;
-  max?: number;
-  step?: number;
-  unit?: string;
-  options?: { value: string; label: string }[];
-  impact: "high" | "medium" | "low";
-}
+// Utilities & Services
+import { matchVolunteersToResidents } from "@/utils/matchingAlgorithm";
 
-interface RuleHistory {
-  id: string;
-  timestamp: string;
-  rules: MatchingRule[];
-  changedBy: string;
-  comment: string;
-}
+// Translation Utilities
+const REASON_TRANSLATIONS: Record<string, string> = {
+  "Resident has not specified any required skills.": "הדייר לא ציין כישורים נדרשים.",
+  "All required resident skills are present in the volunteer's skill set.": "כל הכישורים הנדרשים של הדייר קיימים בסט הכישורים של המתנדב.",
+  "Volunteer does not possess any of the resident's required skills.": "המתנדב לא מחזיק באף אחד מהכישורים הנדרשים של הדייר.",
+  "No hobbies specified for volunteer or resident.": "לא צוינו תחביבים למתנדב או לדייר.",
+  "Volunteer and resident share all listed hobbies.": "המתנדב והדייר חולקים את כל התחביבים המפורטים.",
+  "No shared hobbies between volunteer and resident.": "אין תחביבים משותפים בין המתנדב לדייר.",
+  "No languages specified for volunteer or resident.": "לא צוינו שפות למתנדב או לדייר.",
+  "Volunteer speaks all languages required by the resident.": "המתנדב מדבר את כל השפות הנדרשות על ידי הדייר.",
+  "Volunteer does not speak any of the resident's required languages.": "המתנדב לא מדבר אף אחת מהשפות הנדרשות של הדייר.",
+  "Resident has not specified any required availability.": "הדייר לא ציין זמינות נדרשת.",
+  "Volunteer is available for all of the resident's requested time slots.": "המתנדב זמין לכל חלונות הזמן המבוקשים של הדייר.",
+  "Volunteer is not available for any of the resident's requested time slots.": "המתנדב לא זמין לאף אחד מחלונות הזמן המבוקשים של הדייר.",
+  "Volunteer fulfills every exact time slot required by the resident.": "המתנדב ממלא כל חלון זמן מדויק נדרש על ידי הדייר.",
+  "Gender information is missing for volunteer or resident.": "מידע מגדר חסר למתנדב או לדייר.",
+  "Birth date is missing for volunteer or resident.": "תאריך לידה חסר למתנדב או לדייר.",
+  "No residents have received any visits yet.": "אין דיירים שקיבלו ביקורים עדיין."
+};
 
+const DYNAMIC_TERMS: Record<string, string> = {
+  "sunday": "ראשון",
+  "monday": "שני",
+  "tuesday": "שלישי",
+  "wednesday": "רביעי",
+  "thursday": "חמישי",
+  "friday": "שישי",
+  "saturday": "שבת",
+  "morning": "בוקר",
+  "afternoon": "צהריים",
+  "evening": "ערב",
+  "night": "לילה",
+  "male": "זכר",
+  "female": "נקבה",
+  "other": "אחר"
+};
+
+const translateDynamicTerms = (text: string): string => {
+  let translatedText = text;
+
+  // First, handle day-time combinations (e.g., "sunday morning" -> "ראשון-בוקר")
+  const dayTimePattern = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(morning|afternoon|evening|night)\b/gi;
+  translatedText = translatedText.replace(dayTimePattern, (match, day, time) => {
+    const hebrewDay = DYNAMIC_TERMS[day.toLowerCase()];
+    const hebrewTime = DYNAMIC_TERMS[time.toLowerCase()];
+    return `${hebrewDay}-${hebrewTime}`;
+  });
+
+  // Then handle individual terms
+  Object.entries(DYNAMIC_TERMS).forEach(([english, hebrew]) => {
+    const regex = new RegExp(`\\b${english}\\b`, 'gi');
+    translatedText = translatedText.replace(regex, hebrew);
+  });
+
+  return translatedText;
+};
+
+const translateReason = (reason: string): string => {
+  // Handle dynamic messages with specific patterns
+  if (reason.includes("Volunteer skills matched:")) {
+    const translated = reason.replace("Volunteer skills matched:", "כישורי מתנדב תואמים:").replace("Required but missing:", "נדרש אך חסר:");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Shared hobbies:")) {
+    const translated = reason.replace("Shared hobbies:", "תחביבים משותפים:").replace("Resident's hobbies not shared:", "תחביבי דייר לא משותפים:");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Languages in common:")) {
+    const translated = reason.replace("Languages in common:", "שפות משותפות:").replace("Resident's required languages not spoken:", "שפות נדרשות של דייר לא מדוברות:");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Matching time slots:")) {
+    const translated = reason.replace("Matching time slots:", "חלונות זמן תואמים:").replace("Unavailable for:", "לא זמין עבור:");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Volunteer does not meet the following required time slots:")) {
+    const translated = reason.replace("Volunteer does not meet the following required time slots:", "המתנדב לא עומד בחלונות הזמן הנדרשים הבאים:").replace("(All must be met for a perfect match.)", "(כל אחד חייב להתקיים להתאמה מושלמת.)");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Volunteer and resident have the same gender:")) {
+    const translated = reason.replace("Volunteer and resident have the same gender:", "למתנדב ולדייר יש אותו מגדר:");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Volunteer gender:") && reason.includes("Resident gender:")) {
+    const translated = reason.replace("Volunteer gender:", "מגדר מתנדב:").replace("Resident gender:", "מגדר דייר:");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Volunteer is") && reason.includes("years old, resident is") && reason.includes("Age difference:")) {
+    const translated = reason.replace("Volunteer is", "המתנדב בן").replace("years old, resident is", "שנים, הדייר בן").replace("years old. Age difference:", "שנים. הבדל גיל:").replace("years.", "שנים.");
+    return translateDynamicTerms(translated);
+  }
+  if (reason.includes("Resident has received") && reason.includes("visits. The most visited resident has")) {
+    const translated = reason.replace("Resident has received", "הדייר קיבל").replace("visits. The most visited resident has", "ביקורים. הדייר המבוקר ביותר קיבל").replace("visits.", "ביקורים.");
+    return translateDynamicTerms(translated);
+  }
+
+  // For static messages, translate and then apply dynamic terms translation
+  const staticTranslation = REASON_TRANSLATIONS[reason];
+  if (staticTranslation) {
+    return translateDynamicTerms(staticTranslation);
+  }
+
+  // If no translation found, still try to translate dynamic terms in the original
+  return translateDynamicTerms(reason);
+};
+
+// Constants
+const LOADER_MIN_DURATION = 500; // ms
+const MOBILE_BREAKPOINT = 768;
+const INITIAL_NEW_RULE = {
+  id: "",
+  name: "",
+  description: "",
+  type: "weight" as "weight" | "toggle" | "option",
+  value: 1 as number | boolean | string,
+  defaultValue: 1 as number | boolean | string,
+  min: 0,
+  max: 10,
+  step: 1,
+  impact: "low" as "high" | "medium" | "low",
+  options: undefined as { value: string; label: string }[] | undefined,
+};
+
+// Utility Functions
+const formatScore = (num: number): string => {
+  return Number(num).toLocaleString(undefined, { maximumFractionDigits: 2 });
+};
+
+const getScoreBadgeColor = (score: number): string => {
+  if (score < 60) return 'bg-red-500';
+  if (score < 80) return 'bg-amber-400 text-black';
+  return 'bg-green-500';
+};
+
+const getScoreBadge = (score: number): JSX.Element => {
+  const color = getScoreBadgeColor(score);
+  return (
+    <span className={`inline-block px-2 py-1 rounded text-white font-semibold text-center text-sm ${color}`}>
+      {score}
+    </span>
+  );
+};
+
+// Types and Interfaces
 interface TestMatchResult {
   volunteerId: string;
   volunteerName: string;
@@ -87,183 +199,213 @@ interface TestMatchResult {
     name: string;
     score: number;
     weight: number;
+    reason?: string;
   }[];
 }
 
-// Mock data for volunteers and residents
-const mockVolunteers = [
-  { id: "v1", name: "John Smith", skills: ["medical", "social"], availability: ["monday", "wednesday", "friday"] },
-  { id: "v2", name: "Sarah Johnson", skills: ["emergency", "medical"], availability: ["tuesday", "thursday"] },
-  { id: "v3", name: "Michael Brown", skills: ["social", "regular"], availability: ["monday", "wednesday", "saturday"] },
-  { id: "v4", name: "Emily Davis", skills: ["medical", "emergency"], availability: ["tuesday", "thursday", "sunday"] },
-  { id: "v5", name: "David Wilson", skills: ["social", "regular"], availability: ["monday", "friday", "saturday"] }
-];
+interface TestRulesTableDialogContentProps {
+  volunteers: any[];
+  residents: any[];
+  rules: any[];
+  loadingVolunteers: boolean;
+  loadingResidents: boolean;
+  loadingRules: boolean;
+}
 
-const mockResidents = [
-  { id: "r1", name: "Robert Taylor", needs: ["medical", "social"], priority: "high" },
-  { id: "r2", name: "Mary Anderson", needs: ["emergency", "medical"], priority: "medium" },
-  { id: "r3", name: "James Thomas", needs: ["social", "regular"], priority: "low" },
-  { id: "r4", name: "Patricia Jackson", needs: ["medical", "emergency"], priority: "high" },
-  { id: "r5", name: "William White", needs: ["social", "regular"], priority: "medium" }
-];
+function TestRulesTableDialogContent({ volunteers, residents, rules, loadingVolunteers, loadingResidents, loadingRules }: TestRulesTableDialogContentProps) {
+  const { t } = useTranslation('matching-rules');
+  const { isRTL } = useLanguage();
+  const [results, setResults] = useState([]);
+  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [initialLoading, setInitialLoading] = useState(true);
 
-// Default matching rules
-const defaultRules: MatchingRule[] = [
-  // Skill Weight Settings
-  { 
-    id: "skills-match", 
-    name: "Skills Match", 
-    description: "Importance of matching volunteer skills with resident needs", 
-    value: 3, 
-    category: "skill", 
-    min: 1, 
-    max: 5, 
-    step: 1,
-    impact: "high"
-  },
-  { 
-    id: "language-compatibility", 
-    name: "Language Compatibility", 
-    description: "Importance of matching languages spoken", 
-    value: 4, 
-    category: "skill", 
-    min: 1, 
-    max: 5, 
-    step: 1,
-    impact: "medium"
-  },
-  { 
-    id: "experience-level", 
-    name: "Experience Level", 
-    description: "Importance of volunteer experience with similar residents", 
-    value: 3, 
-    category: "skill", 
-    min: 1, 
-    max: 5, 
-    step: 1,
-    impact: "medium"
-  },
-  { 
-    id: "availability", 
-    name: "Availability", 
-    description: "Importance of matching volunteer availability with resident needs", 
-    value: 5, 
-    category: "skill", 
-    min: 1, 
-    max: 5, 
-    step: 1,
-    impact: "high"
-  },
-  
-  // Availability Logic
-  { 
-    id: "exact-time-match", 
-    name: "Exact Time Match", 
-    description: "Require exact time match for volunteer availability", 
-    value: false, 
-    category: "availability",
-    impact: "medium"
-  },
-  { 
-    id: "flexible-time-window", 
-    name: "Flexible Time Window", 
-    description: "Allow flexible time windows for volunteer availability", 
-    value: true, 
-    category: "availability",
-    impact: "low"
-  },
-  { 
-    id: "time-window-hours", 
-    name: "Time Window Hours", 
-    description: "Number of hours flexibility allowed for time windows", 
-    value: 1, 
-    category: "availability", 
-    min: 0, 
-    max: 4, 
-    step: 0.5,
-    unit: " hours",
-    impact: "low"
-  },
-  
-  // Resident Priority Options
-  { 
-    id: "prioritize-no-visits", 
-    name: "Prioritize No Recent Visits", 
-    description: "Prioritize residents without recent visits", 
-    value: true, 
-    category: "priority",
-    impact: "medium"
-  },
-  { 
-    id: "prioritize-special-needs", 
-    name: "Prioritize Special Needs", 
-    description: "Prioritize residents with special needs tags", 
-    value: true, 
-    category: "priority",
-    impact: "high"
-  },
-  { 
-    id: "priority-match-rule", 
-    name: "Priority Match Rule", 
-    description: "Rule for matching priority residents", 
-    value: "balanced", 
-    category: "priority", 
-    options: [
-      { value: "balanced", label: "Balanced" },
-      { value: "strict", label: "Strict" },
-      { value: "flexible", label: "Flexible" }
-    ],
-    impact: "high"
-  },
-  
-  // Manual Override Settings
-  { 
-    id: "allow-manual-override", 
-    name: "Allow Manual Override", 
-    description: "Allow managers to override AI matches", 
-    value: true, 
-    category: "override",
-    impact: "medium"
-  },
-  { 
-    id: "require-justification", 
-    name: "Require Justification", 
-    description: "Require justification for manual overrides", 
-    value: true, 
-    category: "override",
-    impact: "low"
+  // Minimum loader duration (500ms)
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (loadingVolunteers || loadingResidents || loadingRules) {
+      setInitialLoading(true);
+      return;
+    }
+    if (!volunteers.length || !residents.length || !rules.length) {
+      setResults([]);
+      setInitialLoading(false);
+      return;
+    }
+    const start = Date.now();
+    // Convert UI types to backend types
+    const convertedVolunteers = volunteers.map(v => ({ ...v, createdAt: Timestamp.fromDate(new Date(v.createdAt)) }));
+    const convertedResidents = residents.map(r => ({ ...r, createdAt: Timestamp.fromDate(new Date(r.createdAt)) }));
+    const convertedRules = rules.map(rule => ({ ...rule, updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) }));
+    // Run the matching algorithm
+    const matchResults = matchVolunteersToResidents(convertedVolunteers, convertedResidents, convertedRules);
+    setResults(matchResults.map(result => ({
+      volunteerId: result.volunteerId,
+      volunteerName: convertedVolunteers.find(v => v.id === result.volunteerId)?.fullName || result.volunteerId,
+      residentId: result.residentId,
+      residentName: convertedResidents.find(r => r.id === result.residentId)?.fullName || result.residentId,
+      score: result.score,
+      factors: result.factors,
+    })));
+    // Ensure loader shows for at least 500ms
+    const elapsed = Date.now() - start;
+    timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, Math.max(0, LOADER_MIN_DURATION - elapsed));
+    return () => { if (timer) clearTimeout(timer); };
+  }, [volunteers, residents, rules, loadingVolunteers, loadingResidents, loadingRules]);
+
+  // Sorting logic
+  const sortedResults = [...results].sort((a, b) =>
+    sortOrder === 'asc' ? a.score - b.score : b.score - a.score
+  );
+
+  // Expand/collapse logic
+  const toggleRow = (idx: number) => setExpandedRows(prev => ({ ...prev, [idx]: !prev[idx] }));
+
+  if (initialLoading) {
+    return (
+      <div className="mt-8 mb-8 p-8 flex flex-col items-center justify-center min-h-[120px]">
+        <Loader2 className="h-8 w-8 animate-spin mb-2 text-black" />
+        <span className="text-black font-medium">{t('testDialog.loading')}</span>
+      </div>
+    );
   }
-];
+
+  if (!results.length) {
+    return <div className="p-4 text-red-500">{t('testDialog.noData')}</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-medium">{t('testDialog.resultsTitle')}</h3>
+      <div className="max-h-96 overflow-auto border border-slate-300 rounded-md">
+        <table className="min-w-full border-collapse">
+          <thead className="bg-gray-50 sticky top-0 z-20">
+            <tr className="border-b border-slate-300">
+              <th className="border-r border-slate-300 px-4 py-2 text-center bg-gray-50">{t('testDialog.volunteer')}</th>
+              <th className="border-r border-slate-300 px-4 py-2 text-center bg-gray-50">{t('testDialog.resident')}</th>
+              <th
+                className={`border-r px-4 py-2 text-center cursor-pointer select-none hover:bg-blue-100 transition bg-gray-50 ${isRTL ? 'border-l' : ''} border-slate-300`}
+                onClick={() => setSortOrder(order => order === 'asc' ? 'desc' : 'asc')}
+              >
+                {t('testDialog.score')}
+                <span className="mr-1 align-middle">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+              </th>
+              <th className="px-4 py-2 text-center bg-gray-50">{t('testDialog.details')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedResults.map((result, idx) => (
+              <React.Fragment key={idx}>
+                <tr className={`bg-white hover:bg-blue-50 transition ${idx !== sortedResults.length - 1 ? 'border-b border-slate-300' : ''}`}>
+                  <td className="border-r border-slate-300 px-4 py-2 text-center align-middle">{result.volunteerName}</td>
+                  <td className="border-r border-slate-300 px-4 py-2 text-center align-middle">{result.residentName}</td>
+                  <td className={`border-r px-4 py-2 font-bold text-center align-middle ${isRTL ? 'border-l' : ''} border-slate-300`}>{getScoreBadge(result.score)}</td>
+                  <td className="px-4 py-2 text-center align-middle">
+                    <button
+                      className="text-blue-600 underline text-sm focus:outline-none"
+                      onClick={() => toggleRow(idx)}
+                    >
+                      {expandedRows[idx] ? t('testDialog.hideFactors') : t('testDialog.showFactors')}
+                    </button>
+                  </td>
+                </tr>
+                {expandedRows[idx] && (
+                  <tr className={`bg-white ${idx !== sortedResults.length - 1 ? 'border-b border-slate-300' : ''}`}>
+                    <td colSpan={4} className="px-4 py-2">
+                      <div className="relative max-w-3xl mx-auto my-4">
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-50/80 to-white/90 z-0" style={{ filter: 'blur(2px)' }} />
+                        <div className="relative z-10 bg-white border-2 border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center transition-transform duration-200 scale-100 animate-fade-in">
+                          <div className="flex items-center mb-2 text-gray-700 font-semibold text-sm border-b border-slate-300 pb-1 w-full">
+                            <div className="w-1/5 text-center px-2 min-w-[80px] truncate">{t('testDialog.factor')}</div>
+                            <div className="w-1/5 text-center px-2 min-w-[60px] truncate">{t('testDialog.score')}</div>
+                            <div className="w-1/5 text-center px-2 min-w-[60px] truncate">{t('testDialog.weight')}</div>
+                            <div className="w-2/5 text-center px-2 min-w-[120px] truncate">{t('testDialog.reason')}</div>
+                          </div>
+                          {result.factors
+                            .slice()
+                            .sort((a, b) => b.weight - a.weight || b.score - a.score)
+                            .map((f, i) => (
+                              <div key={i} className="flex items-center py-2 border-b last:border-b-0 border-slate-300 w-full justify-center">
+                                <div className="w-1/5 font-medium text-gray-900 text-center">
+                                  {t(`testDialog.factorNames.${f.name}` as any, { defaultValue: f.name })}
+                                </div>
+                                <div className="w-1/5 text-center">
+                                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${f.score >= 80 ? 'bg-green-100 text-green-800' : f.score >= 60 ? 'bg-amber-100 text-amber-900' : 'bg-red-100 text-red-800'}`}>{formatScore(f.score)}</span>
+                                </div>
+                                <div className="w-1/5 text-center">
+                                  <span className="inline-block px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-semibold">{f.weight}</span>
+                                </div>
+                                <div className="w-2/5 text-center text-xs text-gray-700">
+                                  {translateReason(f.reason || '')}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 const ManagerMatchingRules = () => {
+  const { t } = useTranslation('matching-rules');
+  const { isRTL } = useLanguage();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [rules, setRules] = useState<MatchingRule[]>(defaultRules);
-  const [isLoading, setIsLoading] = useState(false);
+  const isMobile = window.innerWidth < 768;
+  const { rules, loading } = useMatchingRules();
+  const { addMatchingRule, loading: adding } = useAddMatchingRule();
+  const { updateMatchingRule } = useUpdateMatchingRule();
+  const { resetMatchingRules } = useResetMatchingRules();
+  const [isResetLoading, setIsResetLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [ruleHistory, setRuleHistory] = useState<RuleHistory[]>([]);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importData, setImportData] = useState("");
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [previewMode, setPreviewMode] = useState<"volunteer" | "resident" | null>(null);
+  const [previewMode, setPreviewMode] = useState<"volunteer" | "resident">("volunteer");
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [selectedResident, setSelectedResident] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<TestMatchResult[]>([]);
-  const [showTestResults, setShowTestResults] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [showAllRules, setShowAllRules] = useState(false);
+  const [newRule, setNewRule] = useState<typeof INITIAL_NEW_RULE>(INITIAL_NEW_RULE);
+  const [addingMode, setAddingMode] = useState(false);
+  const [editedValues, setEditedValues] = useState<Record<string, any>>({});
+  const [hasChanges, setHasChanges] = useState(false);
+  const [savingChanges, setSavingChanges] = useState(false);
+  const { volunteers, loading: loadingVolunteers } = useVolunteers();
+  const { residents, loading: loadingResidents } = useResidents();
+  // Expanded rows for preview dialog
+  const [expandedRowsPreview, setExpandedRowsPreview] = useState<Record<number, boolean>>({});
+  // Sort order for preview dialog
+  const [sortOrderPreview, setSortOrderPreview] = useState<'asc' | 'desc'>('desc');
+  // Loading state for preview dialog
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Reset preview dialog state when closed
+  useEffect(() => {
+    if (!previewDialogOpen) {
+      setSelectedVolunteer(null);
+      setSelectedResident(null);
+      setShowPreview(false);
+      setTestResults([]);
+      setExpandedRowsPreview({});
+      setPreviewLoading(false);
+    }
+  }, [previewDialogOpen]);
 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= MOBILE_BREAKPOINT) {
         setIsSidebarOpen(true);
       } else {
         setIsSidebarOpen(false);
@@ -280,7 +422,7 @@ const ManagerMatchingRules = () => {
     // For development/testing purposes, we'll bypass the authentication check
     // This allows the page to be accessed without redirecting to login
     return;
-    
+
     // Original authentication code (commented out)
     /*
     const userData = localStorage.getItem("userData");
@@ -301,748 +443,478 @@ const ManagerMatchingRules = () => {
     */
   }, [navigate]);
 
-  const handleRuleChange = (ruleId: string, value: number | boolean | string) => {
-    setRules(prevRules => 
-      prevRules.map(rule => 
-        rule.id === ruleId ? { ...rule, value } : rule
-      )
-    );
-    setHasChanges(true);
-  };
-
-  const handleSaveChanges = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Add to history
-      const newHistoryItem: RuleHistory = {
-        id: `h${ruleHistory.length + 1}`,
-        timestamp: new Date().toISOString(),
-        rules: [...rules],
-        changedBy: "Current User", // Replace with actual user name
-        comment: "Rules updated"
-      };
-      
-      setRuleHistory(prev => [newHistoryItem, ...prev]);
-      setHasChanges(false);
-      
-      // Add notification
-      setNotifications(prev => [{
-        id: Date.now(),
-        message: "Matching rules updated successfully",
-        time: "Just now",
-        type: "success"
-      }, ...prev]);
-      
-      toast({
-        title: "Success",
-        description: "Matching rules have been updated",
-        variant: "default"
+  const handleValueChange = (rule: MatchingRuleUI, value: any) => {
+    if (value === rule.value) {
+      // If the new value matches the original, remove it from editedValues
+      setEditedValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[rule.id];
+        return newValues;
       });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update matching rules",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+      setHasChanges(Object.keys(editedValues).length > 1); // Check if there are any other changes
+    } else {
+      // If the value is different, update editedValues
+      setEditedValues(prev => ({ ...prev, [rule.id]: value }));
+      setHasChanges(true);
     }
   };
 
-  const handleResetToDefaults = async () => {
-    setIsLoading(true);
+  const handleSaveChanges = async () => {
+    setSavingChanges(true);
+    const updatePromises = Object.entries(editedValues).map(([id, value]) =>
+      updateMatchingRule(id, { value })
+    );
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setRules(defaultRules);
+      await Promise.all(updatePromises);
+      toast({ title: t('toasts.saveSuccess') });
+      setEditedValues({});
       setHasChanges(false);
+    } catch {
+      toast({ title: t('toasts.saveError'), variant: "destructive" });
+    }
+    setSavingChanges(false);
+  };
+
+  const handleResetToDefaults = async () => {
+    setIsResetLoading(true);
+    try {
+      await resetMatchingRules();
+      toast({ title: t('toasts.resetSuccess') });
       setIsResetDialogOpen(false);
-      
-      // Add to history
-      const newHistoryItem: RuleHistory = {
-        id: `h${ruleHistory.length + 1}`,
-        timestamp: new Date().toISOString(),
-        rules: defaultRules,
-        changedBy: "Current User", // Replace with actual user name
-        comment: "Reset to defaults"
-      };
-      
-      setRuleHistory(prev => [newHistoryItem, ...prev]);
-      
-      // Add notification
-      setNotifications(prev => [{
-        id: Date.now(),
-        message: "Matching rules reset to defaults",
-        time: "Just now",
-        type: "info"
-      }, ...prev]);
-      
-      toast({
-        title: "Success",
-        description: "Matching rules have been reset to defaults",
-        variant: "default"
-      });
+      setEditedValues({});
+      setHasChanges(false);
     } catch (error) {
       toast({
-        title: "Error",
+        title: t('toasts.resetError'),
         description: "Failed to reset matching rules",
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsResetLoading(false);
     }
   };
 
-  const handleImportRules = async () => {
-    try {
-      const importedRules = JSON.parse(importData);
-      // Validate imported rules
-      if (!Array.isArray(importedRules) || !importedRules.every(rule => 
-        typeof rule === "object" && 
-        "id" in rule && 
-        "category" in rule && 
-        "name" in rule && 
-        "value" in rule
-      )) {
-        throw new Error("Invalid rules format");
+  // Preview logic: run matching for selected volunteer or resident
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    let isActive = true;
+    const start = Date.now();
+
+    const finish = (results: any[], show: boolean) => {
+      const elapsed = Date.now() - start;
+      const delay = Math.max(0, LOADER_MIN_DURATION - elapsed);
+      timer = setTimeout(() => {
+        if (!isActive) return;
+        setTestResults(results);
+        setShowPreview(show);
+        setPreviewLoading(false);
+      }, delay);
+    };
+
+    if (!previewDialogOpen) {
+      finish([], false);
+      return () => { isActive = false; if (timer) clearTimeout(timer); };
+    }
+    // Only show loader if a selection is made
+    const shouldLoad = (previewMode === "volunteer" && selectedVolunteer) || (previewMode === "resident" && selectedResident);
+    if (shouldLoad) {
+      setPreviewLoading(true);
+    } else {
+      setPreviewLoading(false);
+    }
+    if (previewMode === "volunteer" && selectedVolunteer) {
+      const volunteer = volunteers.find(v => v.id === selectedVolunteer);
+      if (!volunteer || !residents.length || !rules.length) {
+        finish([], false);
+        return () => { isActive = false; if (timer) clearTimeout(timer); };
       }
-      
-      setRules(importedRules);
-      setImportDialogOpen(false);
-      setImportData("");
-      setHasChanges(true);
-      
-      // Add to history
-      const newHistoryItem: RuleHistory = {
-        id: `h${ruleHistory.length + 1}`,
-        timestamp: new Date().toISOString(),
-        rules: importedRules,
-        changedBy: "Current User", // Replace with actual user name
-        comment: "Rules imported"
-      };
-      
-      setRuleHistory(prev => [newHistoryItem, ...prev]);
-      
-      // Add notification
-      setNotifications(prev => [{
-        id: Date.now(),
-        message: "Matching rules imported successfully",
-        time: "Just now",
-        type: "success"
-      }, ...prev]);
-      
-      toast({
-        title: "Success",
-        description: "Matching rules have been imported",
-        variant: "default"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to import matching rules. Please check the format.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleExportRules = () => {
-    const rulesJson = JSON.stringify(rules, null, 2);
-    const blob = new Blob([rulesJson], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `matching-rules-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setExportDialogOpen(false);
-  };
-
-  const handleTestMatching = async () => {
-    setIsLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Generate mock test results
-      const results: TestMatchResult[] = mockVolunteers.flatMap(volunteer => 
-        mockResidents.map(resident => ({
-          volunteerId: volunteer.id,
-          volunteerName: volunteer.name,
+      const convertedVolunteer = { ...volunteer, createdAt: Timestamp.fromDate(new Date(volunteer.createdAt)) };
+      const convertedResidents = residents.map(r => ({ ...r, createdAt: Timestamp.fromDate(new Date(r.createdAt)) }));
+      const convertedRules = rules.map(rule => ({ ...rule, updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) }));
+      const results = convertedResidents.map(resident => {
+        const matchResult = matchVolunteersToResidents([convertedVolunteer], [resident], convertedRules)[0];
+        return {
+          volunteerId: convertedVolunteer.id,
+          volunteerName: convertedVolunteer.fullName,
           residentId: resident.id,
-          residentName: resident.name,
-          score: Math.floor(Math.random() * 40) + 60, // Random score between 60-100
-          factors: [
-            { name: "Skills Match", score: Math.floor(Math.random() * 40) + 60, weight: 0.4 },
-            { name: "Availability", score: Math.floor(Math.random() * 40) + 60, weight: 0.3 },
-            { name: "Priority", score: Math.floor(Math.random() * 40) + 60, weight: 0.3 }
-          ]
-        }))
-      );
-      
-      setTestResults(results);
-      setShowTestResults(true);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to test matching rules",
-        variant: "destructive"
+          residentName: resident.fullName,
+          score: matchResult?.score ?? 0,
+          factors: matchResult?.factors ?? [],
+        };
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePreviewMatching = async () => {
-    if ((previewMode === "volunteer" && !selectedVolunteer) || 
-        (previewMode === "resident" && !selectedResident)) {
-      toast({
-        title: "Error",
-        description: "Please select a volunteer or resident",
-        variant: "destructive"
+      finish(results, true);
+    } else if (previewMode === "resident" && selectedResident) {
+      const resident = residents.find(r => r.id === selectedResident);
+      if (!resident || !volunteers.length || !rules.length) {
+        finish([], false);
+        return () => { isActive = false; if (timer) clearTimeout(timer); };
+      }
+      const convertedResident = { ...resident, createdAt: Timestamp.fromDate(new Date(resident.createdAt)) };
+      const convertedVolunteers = volunteers.map(v => ({ ...v, createdAt: Timestamp.fromDate(new Date(v.createdAt)) }));
+      const convertedRules = rules.map(rule => ({ ...rule, updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) }));
+      const results = convertedVolunteers.map(volunteer => {
+        const matchResult = matchVolunteersToResidents([volunteer], [convertedResident], convertedRules)[0];
+        return {
+          volunteerId: volunteer.id,
+          volunteerName: volunteer.fullName,
+          residentId: convertedResident.id,
+          residentName: convertedResident.fullName,
+          score: matchResult?.score ?? 0,
+          factors: matchResult?.factors ?? [],
+        };
       });
-      return;
+      finish(results, true);
+    } else {
+      finish([], false);
     }
-    
-    setIsLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Generate mock preview results
-      const results: TestMatchResult[] = previewMode === "volunteer"
-        ? mockResidents.map(resident => ({
-            volunteerId: selectedVolunteer!,
-            volunteerName: mockVolunteers.find(v => v.id === selectedVolunteer)!.name,
-            residentId: resident.id,
-            residentName: resident.name,
-            score: Math.floor(Math.random() * 40) + 60,
-            factors: [
-              { name: "Skills Match", score: Math.floor(Math.random() * 40) + 60, weight: 0.4 },
-              { name: "Availability", score: Math.floor(Math.random() * 40) + 60, weight: 0.3 },
-              { name: "Priority", score: Math.floor(Math.random() * 40) + 60, weight: 0.3 }
-            ]
-          }))
-        : mockVolunteers.map(volunteer => ({
-            volunteerId: volunteer.id,
-            volunteerName: volunteer.name,
-            residentId: selectedResident!,
-            residentName: mockResidents.find(r => r.id === selectedResident)!.name,
-            score: Math.floor(Math.random() * 40) + 60,
-            factors: [
-              { name: "Skills Match", score: Math.floor(Math.random() * 40) + 60, weight: 0.4 },
-              { name: "Availability", score: Math.floor(Math.random() * 40) + 60, weight: 0.3 },
-              { name: "Priority", score: Math.floor(Math.random() * 40) + 60, weight: 0.3 }
-            ]
-          }));
-      
-      setTestResults(results);
-      setShowPreview(true);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to preview matching",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    return () => { isActive = false; if (timer) clearTimeout(timer); };
+  }, [previewMode, selectedVolunteer, selectedResident, previewDialogOpen, volunteers, residents, rules]);
 
   const handleLogout = () => {
     localStorage.removeItem("userData");
     navigate("/login");
   };
 
-  const filteredRules = rules.filter(rule => 
-    rule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rule.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Get important rules (high impact or key settings)
-  const importantRules = filteredRules.filter(rule => 
-    rule.impact === "high" || 
-    rule.id === "skills-match" || 
-    rule.id === "availability" || 
-    rule.id === "prioritize-special-needs" ||
-    rule.id === "priority-match-rule"
+  const importantRules = rules.filter(rule =>
+    rule.impact === "high" ||
+    rule.id === "availability-match" ||
+    rule.id === "language-match"
   );
 
   // Get remaining rules
-  const remainingRules = filteredRules.filter(rule => 
+  const remainingRules = rules.filter(rule =>
     !importantRules.some(importantRule => importantRule.id === rule.id)
   );
 
-  const getRuleValueDisplay = (rule: MatchingRule) => {
-    if (typeof rule.value === "boolean") {
-      return rule.value ? "Enabled" : "Disabled";
+  const handleAddRule = () => {
+    if (!newRule.id || !newRule.name) {
+      toast({ title: t('toasts.idNameRequired'), variant: "destructive" });
+      return;
     }
-    if (typeof rule.value === "number") {
-      return `${rule.value}${rule.unit || ""}`;
-    }
-    return rule.value;
+    addMatchingRule({ ...newRule, updatedAt: Timestamp.fromDate(new Date()) })
+      .then(() => {
+        toast({ title: t('toasts.addSuccess'), description: newRule.name });
+        setNewRule(INITIAL_NEW_RULE);
+        setAddingMode(false);
+      })
+      .catch(() => toast({ title: t('toasts.addError'), variant: "destructive" }));
   };
 
-  const getImpactColor = (impact: "high" | "medium" | "low") => {
-    switch (impact) {
-      case "high":
-        return "text-red-500";
-      case "medium":
-        return "text-yellow-500";
-      case "low":
-        return "text-green-500";
+  const ruleTypeInput = (rule: MatchingRuleUI, onChange: (value: any) => void) => {
+    if (rule.type === "toggle") {
+      return (
+        <div className="flex items-center h-8">
+          <Select value={String(rule.value)} onValueChange={(value) => onChange(value === 'true')}>
+            <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={isRTL ? 'rtl' : 'ltr'}>
+              <SelectValue placeholder={t('previewDialog.selectValue')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">{t('addRule.enabled')}</SelectItem>
+              <SelectItem value="false">{t('addRule.disabled')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
     }
+    if (rule.type === "weight" && typeof rule.value === "number") {
+      return (
+        <div className={`flex items-center gap-8 w-full h-8 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          {isRTL && <span className="w-8 text-right">{rule.value}</span>}
+          <Slider
+            value={[rule.value]}
+            min={rule.min ?? 0}
+            max={rule.max ?? 10}
+            step={rule.step ?? 1}
+            onValueChange={([v]) => onChange(v)}
+            className="w-full flex-1"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          />
+          {!isRTL && <span className="w-8 text-right">{rule.value}</span>}
+        </div>
+      );
+    }
+    if (rule.type === "option" && rule.options) {
+      return (
+        <div className="flex items-center h-8">
+          <Select value={String(rule.value)} onValueChange={onChange}>
+            <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={isRTL ? 'rtl' : 'ltr'}>
+              <SelectValue placeholder={t('previewDialog.selectValue')} />
+            </SelectTrigger>
+            <SelectContent>
+              {rule.options.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    return <span>-</span>;
   };
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm z-10">
-        <div className="px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+      <header className="bg-white border-b border-slate-300 shadow-sm z-10 h-[69px]">
+        <div className="px-6 h-full flex items-center justify-between">
+          {/* Left section - Logo and menu */}
+          <div className="flex items-center space-x-4 w-[200px]">
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="lg:hidden"
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex items-center space-x-2">
-              <Settings className="h-6 w-6 text-primary" />
-              <h1 className="font-bold text-xl hidden sm:block">Volunteer Management System</h1>
+            <div className={cn(
+              "flex items-center space-x-3",
+              isRTL && "space-x-reverse"
+            )}>
+              <SlidersVertical className="h-6 w-6 text-primary" />
+              <h1 className="font-bold text-xl hidden sm:block whitespace-nowrap">{t('pageTitle')}</h1>
             </div>
           </div>
-          
-          {/* Search Bar - Hidden on Mobile */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <Input 
-                placeholder="Search rules..." 
-                className="pl-9 bg-slate-50 border-slate-200"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {/* Quick Actions */}
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="hidden sm:flex"
-              onClick={handleTestMatching}
-            >
-              <Zap className="h-5 w-5" />
-            </Button>
-            
-            {/* Notifications */}
-            <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="relative"
-              >
-                <Bell className="h-5 w-5" />
-                {notifications.length > 0 && (
-                  <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-                )}
-              </Button>
-              
-              {/* Notifications Panel */}
-              <NotificationsPanel 
-                isOpen={isNotificationsOpen} 
-                onClose={() => setIsNotificationsOpen(false)} 
-                notifications={notifications} 
-              />
-            </div>
-            
-            {/* User Avatar */}
-            <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-primary">M</span>
-            </div>
-          </div>
+          {/* Center section - Empty for balance */}
+          <div className="flex-1"></div>
+          {/* Right section - Empty for balance */}
+          <div className="w-[200px]"></div>
         </div>
       </header>
-      
+
       {/* Main Content with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Navigation */}
-        <ManagerSidebar 
-          isOpen={isSidebarOpen} 
-          onClose={() => setIsSidebarOpen(false)} 
-          isMobile={isMobile} 
+        <ManagerSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          isMobile={isMobile}
           onLogout={handleLogout}
         />
-        
+
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 transition-all duration-300">
-          {/* Mobile Search */}
-          {isMobile && (
-            <div className="mb-6 space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                <Input 
-                  placeholder="Search rules..." 
-                  className="pl-9 bg-white"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-          
-          {/* Page Title */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Matching Rules</h1>
-            <p className="text-slate-600 mt-1">Configure and test AI matching rules for volunteer-resident pairing.</p>
-          </div>
-
-          {/* Introduction Card */}
-          <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2 text-blue-600" />
-                AI Matching Rules Configuration
-              </CardTitle>
-              <CardDescription className="text-base">
-                Configure how the system matches volunteers with residents based on skills, availability, and other factors.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-start p-3 bg-white rounded-md shadow-sm">
-                  <div className="bg-blue-100 p-2 rounded-full mr-3">
-                    <Sliders className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Skill Weights</h3>
-                    <p className="text-sm text-gray-500">Adjust importance of different matching factors</p>
-                  </div>
-                </div>
-                <div className="flex items-start p-3 bg-white rounded-md shadow-sm">
-                  <div className="bg-blue-100 p-2 rounded-full mr-3">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Availability Logic</h3>
-                    <p className="text-sm text-gray-500">Configure time matching preferences</p>
-                  </div>
-                </div>
-                <div className="flex items-start p-3 bg-white rounded-md shadow-sm">
-                  <div className="bg-blue-100 p-2 rounded-full mr-3">
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Priority Settings</h3>
-                    <p className="text-sm text-gray-500">Set rules for prioritizing residents</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Search and Actions */}
-          <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white p-4 rounded-lg shadow-sm">
-            <div className="relative w-full sm:w-96">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search rules..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-full"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                onClick={() => setImportDialogOpen(true)}
-                className="flex items-center"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Import
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setExportDialogOpen(true)}
-                className="flex items-center"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setTestDialogOpen(true)}
-                className="flex items-center"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Test Rules
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPreviewDialogOpen(true)}
-                className="flex items-center"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsResetDialogOpen(true)}
-                className="flex items-center"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset
-              </Button>
-              <Button
-                onClick={handleSaveChanges}
-                disabled={!hasChanges || isLoading}
-                className="flex items-center bg-blue-600 hover:bg-blue-700"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Important Rules Section */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Essential Rules</h2>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                {importantRules.length} rules
-              </Badge>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {importantRules.map((rule) => (
-                <Card key={rule.id} className="relative hover:shadow-md transition-shadow duration-200">
-                  <CardHeader className="pb-2">
-                    <div>
-                      <CardTitle className="text-lg">{rule.name}</CardTitle>
-                      <CardDescription>{rule.description}</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-2">
-                    {typeof rule.value === "boolean" ? (
-                      <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-md">
-                        <Switch
-                          checked={rule.value}
-                          onCheckedChange={(checked) => handleRuleChange(rule.id, checked)}
-                        />
-                        <Label className="font-medium">{rule.value ? "Enabled" : "Disabled"}</Label>
+          {loading ? (
+            <MatchingRulesSkeleton />
+          ) : (
+            <>
+              {/* Introduction Card */}
+              <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-slate-300">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Settings className="h-6 w-6 mr-2 text-blue-600" />
+                    {t('header.title')}
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    {t('header.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-start p-3 bg-white rounded-md shadow-sm border border-slate-300">
+                      <div className="bg-blue-100 border border-blue-300 p-2 rounded-full mr-3">
+                        <Sliders className="h-6 w-6 text-blue-600" />
                       </div>
-                    ) : typeof rule.value === "number" ? (
-                      <div className="space-y-3 p-3 bg-gray-50 rounded-md">
-                        <div className="flex items-center justify-between">
-                          <Label className="font-medium">Value</Label>
-                          <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            {rule.value}{rule.unit}
-                          </span>
-                        </div>
-                        <Slider
-                          value={[rule.value]}
-                          min={rule.min || 0}
-                          max={rule.max || 100}
-                          step={rule.step || 1}
-                          onValueChange={([value]) => handleRuleChange(rule.id, value)}
-                          className="py-2"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>{rule.min || 0}{rule.unit}</span>
-                          <span>{rule.max || 100}{rule.unit}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-3 bg-gray-50 rounded-md">
-                        <Select
-                          value={rule.value}
-                          onValueChange={(value) => handleRuleChange(rule.id, value)}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select value" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {rule.options?.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter className="text-sm text-gray-500 flex justify-between items-center pt-0">
-                    <span>Last updated: {new Date().toLocaleDateString()}</span>
-                    {hasChanges && (
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                        Modified
-                      </Badge>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Advanced Rules Section */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <h2 className="text-xl font-semibold text-gray-900">Advanced Rules</h2>
-                <Badge variant="outline" className="ml-2 bg-gray-100 text-gray-700 border-gray-200">
-                  {remainingRules.length} rules
-                </Badge>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAllRules(!showAllRules)}
-                className="flex items-center"
-              >
-                {showAllRules ? (
-                  <>
-                    <ChevronUp className="h-4 w-4 mr-1" />
-                    Show Less
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    Show All
-                  </>
-                )}
-              </Button>
-            </div>
-            
-            {showAllRules && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {remainingRules.map((rule) => (
-                  <Card key={rule.id} className="relative hover:shadow-md transition-shadow duration-200">
-                    <CardHeader className="pb-2">
                       <div>
-                        <CardTitle className="text-lg">{rule.name}</CardTitle>
-                        <CardDescription>{rule.description}</CardDescription>
+                        <h3 className="font-medium">{t('categories.skills.title')}</h3>
+                        <p className="text-sm text-gray-500">{t('categories.skills.description')}</p>
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-2">
-                      {typeof rule.value === "boolean" ? (
-                        <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-md">
-                          <Switch
-                            checked={rule.value}
-                            onCheckedChange={(checked) => handleRuleChange(rule.id, checked)}
-                          />
-                          <Label className="font-medium">{rule.value ? "Enabled" : "Disabled"}</Label>
-                        </div>
-                      ) : typeof rule.value === "number" ? (
-                        <div className="space-y-3 p-3 bg-gray-50 rounded-md">
-                          <div className="flex items-center justify-between">
-                            <Label className="font-medium">Value</Label>
-                            <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              {rule.value}{rule.unit}
-                            </span>
-                          </div>
-                          <Slider
-                            value={[rule.value]}
-                            min={rule.min || 0}
-                            max={rule.max || 100}
-                            step={rule.step || 1}
-                            onValueChange={([value]) => handleRuleChange(rule.id, value)}
-                            className="py-2"
-                          />
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>{rule.min || 0}{rule.unit}</span>
-                            <span>{rule.max || 100}{rule.unit}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-3 bg-gray-50 rounded-md">
-                          <Select
-                            value={rule.value}
-                            onValueChange={(value) => handleRuleChange(rule.id, value)}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select value" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {rule.options?.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter className="text-sm text-gray-500 flex justify-between items-center pt-0">
-                      <span>Last updated: {new Date().toLocaleDateString()}</span>
-                      {hasChanges && (
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                          Modified
-                        </Badge>
-                      )}
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            )}
-            
-            {!showAllRules && remainingRules.length > 0 && (
-              <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-                <div className="flex flex-col items-center">
-                  <Settings className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Configuration</h3>
-                  <p className="text-gray-500 mb-4 max-w-md">
-                    Additional matching rules are available for fine-tuning the volunteer-resident matching algorithm.
-                  </p>
+                    </div>
+                    <div className="flex items-start p-3 bg-white rounded-md shadow-sm border border-slate-300">
+                      <div className="bg-blue-100 border border-blue-300 p-2 rounded-full mr-3">
+                        <Clock className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{t('categories.availability.title')}</h3>
+                        <p className="text-sm text-gray-500">{t('categories.availability.description')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start p-3 bg-white rounded-md shadow-sm border border-slate-300">
+                      <div className="bg-blue-100 border border-blue-300 p-2 rounded-full mr-3">
+                        <Users className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{t('categories.priority.title')}</h3>
+                        <p className="text-sm text-gray-500">{t('categories.priority.description')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Search and Actions */}
+              <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-slate-300">
+                <div className="flex-1"></div>
+                <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                   <Button
                     variant="outline"
-                    onClick={() => setShowAllRules(true)}
-                    className="flex items-center"
+                    onClick={() => setTestDialogOpen(true)}
+                    className="flex items-center border border-slate-300"
                   >
-                    <ChevronDown className="h-4 w-4 mr-2" />
-                    Show Advanced Rules
+                    <Play className="h-4 w-4 mr-1" />
+                    {t('actions.test')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPreviewDialogOpen(true)}
+                    className="flex items-center border border-slate-300"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    {t('actions.preview')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsResetDialogOpen(true)}
+                    className="flex items-center border border-slate-300"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    {t('actions.reset')}
+                  </Button>
+                  {hasChanges && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditedValues({});
+                        setHasChanges(false);
+                      }}
+                      className="flex items-center border border-slate-300"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      {t('actions.dismiss')}
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleSaveChanges}
+                    disabled={!hasChanges || savingChanges}
+                    className="flex items-center bg-blue-600 hover:bg-blue-700"
+                  >
+                    {savingChanges ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin text-black" />
+                        {t('actions.saving')}
+                      </>
+                    ) : (
+                      t('actions.save')
+                    )}
                   </Button>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* No Results */}
-          {filteredRules.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No rules found</h3>
-              <p className="text-gray-500 mb-4">
-                Try adjusting your search query or filters
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => setSearchQuery("")}
-                className="flex items-center mx-auto"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Clear Search
-              </Button>
-            </div>
+              {/* Important Rules Section */}
+              <div className="mb-8">
+                <div className="flex items-center gap-x-2 mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">{t('rules.essentialTitle')}</h2>
+                  <Badge variant="outline" className="border px-2 py-1 text-s transition-colors bg-blue-100 border-blue-500 text-blue-800 hover:bg-blue-200 hover:border-blue-600 align-middle relative top-[2px]">
+                    {t('rules.ruleCount', { count: importantRules.length })}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {importantRules.map((rule) => (
+                    <div key={rule.id} className="relative p-6 rounded-lg shadow-sm border border-slate-300 hover:shadow-md transition-shadow duration-200 bg-white flex flex-col h-full">
+                      <div className="flex-grow mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">{t(`ruleNames.${rule.id}`, rule.name)}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{t(`ruleDescriptions.${rule.id}`, rule.description)}</p>
+                      </div>
+                      <div className="mb-4">
+                        {/* Rule Input */}
+                        <div className="py-3">
+                          {ruleTypeInput(
+                            { ...rule, value: editedValues[rule.id] !== undefined ? editedValues[rule.id] : rule.value },
+                            value => handleValueChange(rule, value)
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-gray-500 border-t border-slate-200 pt-4 min-h-[3rem]">
+                        <span>{t('rules.lastUpdated', { date: new Date().toLocaleDateString() })}</span>
+                        {editedValues[rule.id] !== undefined && editedValues[rule.id] !== rule.value && (
+                          <span className="px-2 py-1 rounded text-sm border bg-amber-100 border-amber-400 text-amber-800 hover:bg-amber-200">{t('rules.modified')}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advanced Rules Section */}
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <h2 className="text-xl font-semibold text-gray-900">{t('rules.advancedTitle')}</h2>
+                    <Badge variant="outline" className="ml-2 border px-2 py-1 text-s transition-colors bg-blue-100 border-blue-500 text-blue-800 hover:bg-blue-200 hover:border-blue-600 align-middle relative top-[2px]">
+                      {t('rules.ruleCount', { count: remainingRules.length })}
+                    </Badge>
+                  </div>
+                  {showAllRules && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center border border-slate-300"
+                      onClick={() => setShowAllRules(false)}
+                    >
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                      {t('rules.showLess')}
+                    </Button>
+                  )}
+                </div>
+
+                {showAllRules && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {remainingRules.map((rule) => (
+                      <div key={rule.id} className="relative p-6 rounded-lg shadow-sm border border-slate-300 hover:shadow-md transition-shadow duration-200 bg-white flex flex-col h-full">
+                        <div className="flex-grow mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">{t(`ruleNames.${rule.id}`, rule.name)}</h3>
+                          <p className="text-sm text-gray-600 mt-1">{t(`ruleDescriptions.${rule.id}`, rule.description)}</p>
+                        </div>
+                        <div className="mb-4">
+                          {/* Rule Input */}
+                          <div className="py-3">
+                            {ruleTypeInput(
+                              { ...rule, value: editedValues[rule.id] !== undefined ? editedValues[rule.id] : rule.value },
+                              value => handleValueChange(rule, value)
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center text-sm text-gray-500 border-t border-slate-200 pt-4 min-h-[3rem]">
+                          <span>{t('rules.lastUpdated', { date: new Date().toLocaleDateString() })}</span>
+                          {editedValues[rule.id] !== undefined && editedValues[rule.id] !== rule.value && (
+                            <span className="px-2 py-1 rounded text-sm border bg-amber-100 border-amber-400 text-amber-800 hover:bg-amber-200">{t('rules.modified')}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!showAllRules && remainingRules.length > 0 && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm text-center border border-slate-300">
+                    <div className="flex flex-col items-center">
+                      <Settings className="h-12 w-12 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('rules.advancedConfig.title')}</h3>
+                      <p className="text-gray-500 mb-4 max-w-md">
+                        {t('rules.advancedConfig.description')}
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAllRules(true)}
+                        className="flex items-center border border-slate-300"
+                      >
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        {t('rules.showAdvanced')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* No Results */}
+              {rules.length === 0 && (
+                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                  <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('rules.noRules')}</h3>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
@@ -1062,380 +934,290 @@ const ManagerMatchingRules = () => {
         </div>
       )}
 
-      {/* Import Dialog */}
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Upload className="h-5 w-5 mr-2 text-blue-600" />
-              Import Matching Rules
-            </DialogTitle>
-            <DialogDescription>
-              Paste your JSON configuration below to import matching rules.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h4 className="text-sm font-medium mb-2">JSON Format Example:</h4>
-              <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-32">
-                {`[
-  {
-    "id": "skills-match",
-    "name": "Skills Match",
-    "description": "Importance of matching volunteer skills",
-    "value": 3,
-    "category": "skill",
-    "min": 1,
-    "max": 5,
-    "step": 1,
-    "impact": "high"
-  }
-]`}
-              </pre>
-            </div>
-            <Textarea
-              value={importData}
-              onChange={(e) => setImportData(e.target.value)}
-              placeholder="Paste JSON here..."
-              className="h-64 font-mono"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleImportRules} className="bg-blue-600 hover:bg-blue-700">
-              Import
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Export Dialog */}
-      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Download className="h-5 w-5 mr-2 text-blue-600" />
-              Export Matching Rules
-            </DialogTitle>
-            <DialogDescription>
-              Export your current matching rules configuration as JSON.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              value={JSON.stringify(rules, null, 2)}
-              readOnly
-              className="h-64 font-mono"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleExportRules} className="bg-blue-600 hover:bg-blue-700">
-              Download
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Test Dialog */}
       <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl" dir={isRTL ? 'rtl' : 'ltr'}>
+          <DialogHeader className="border-b border-slate-300 pb-3" dir={isRTL ? 'rtl' : 'ltr'}>
             <DialogTitle className="flex items-center">
-              <Play className="h-5 w-5 mr-2 text-blue-600" />
-              Test Matching Rules
+              <Play className="h-5 w-5 mr-3 text-blue-600" />
+              {t('testDialog.title')}
             </DialogTitle>
             <DialogDescription>
-              Test your matching rules against the current volunteer and resident data.
+              {t('testDialog.description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
-              <div className="flex items-start">
-                <Info className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-blue-800">About Testing</h4>
-                  <p className="text-sm text-blue-700">
-                    This test will simulate matching all volunteers with all residents using your current rules.
-                    The results will show match scores and the factors that contributed to each match.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <Button
-              onClick={handleTestMatching}
-              disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Testing...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Run Test
-                </>
-              )}
-            </Button>
-          </div>
-          {showTestResults && (
-            <div className="space-y-4">
-              <h3 className="font-medium">Test Results</h3>
-              <div className="max-h-96 overflow-auto border rounded-md">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left p-3 font-medium">Volunteer</th>
-                      <th className="text-left p-3 font-medium">Resident</th>
-                      <th className="text-left p-3 font-medium">Score</th>
-                      <th className="text-left p-3 font-medium">Factors</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {testResults.map((result, index) => (
-                      <tr key={index} className="border-t hover:bg-gray-50">
-                        <td className="p-3">{result.volunteerName}</td>
-                        <td className="p-3">{result.residentName}</td>
-                        <td className="p-3">
-                          <Badge
-                            variant={
-                              result.score >= 80 ? "default" :
-                              result.score >= 60 ? "secondary" :
-                              "destructive"
-                            }
-                            className="text-sm"
-                          >
-                            {result.score}%
-                          </Badge>
-                        </td>
-                        <td className="p-3">
-                          <div className="space-y-2">
-                            {result.factors.map((factor, i) => (
-                              <div key={i} className="flex items-center gap-2">
-                                <span className="text-sm font-medium min-w-[100px]">{factor.name}:</span>
-                                <Progress value={factor.score} className="w-24" />
-                                <span className="text-sm font-medium min-w-[40px] text-right">({factor.score}%)</span>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTestDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
+          <TestRulesTableDialogContent
+            volunteers={volunteers}
+            residents={residents}
+            rules={rules}
+            loadingVolunteers={loadingVolunteers}
+            loadingResidents={loadingResidents}
+            loadingRules={loading}
+          />
+          <DialogFooter className="border-t border-slate-300 pt-5 flex justify-center items-center" />
         </DialogContent>
       </Dialog>
 
       {/* Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl" dir={isRTL ? 'rtl' : 'ltr'}>
+          <DialogHeader className="border-b border-slate-300 pb-3" dir={isRTL ? 'rtl' : 'ltr'}>
             <DialogTitle className="flex items-center">
-              <Eye className="h-5 w-5 mr-2 text-blue-600" />
-              Preview Matching
+              <Eye className="h-5 w-5 mr-3 text-blue-600" />
+              {t('previewDialog.title')}
             </DialogTitle>
             <DialogDescription>
-              Preview how volunteers and residents would be matched with current rules.
+              {t('previewDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
-              <div className="flex items-start">
-                <Info className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-blue-800">About Preview</h4>
-                  <p className="text-sm text-blue-700">
-                    Select a volunteer or resident to see how they would be matched with all residents or volunteers.
-                    This helps you understand the impact of your matching rules on specific cases.
-                  </p>
-                </div>
-              </div>
-            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="mb-2 block font-medium">Preview Mode</Label>
+                <Label className="mb-2 block font-medium">{t('previewDialog.mode')}</Label>
                 <Select
                   value={previewMode}
                   onValueChange={(value: "volunteer" | "resident") => setPreviewMode(value)}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select mode" />
+                  <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectValue placeholder={t('previewDialog.selectMode')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="volunteer">By Volunteer</SelectItem>
-                    <SelectItem value="resident">By Resident</SelectItem>
+                    <SelectItem value="volunteer">{t('previewDialog.byVolunteer')}</SelectItem>
+                    <SelectItem value="resident">{t('previewDialog.byResident')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label className="mb-2 block font-medium">
-                  {previewMode === "volunteer" ? "Select Volunteer" : "Select Resident"}
+                  {previewMode === "volunteer" ? t('previewDialog.selectVolunteer') : t('previewDialog.selectResident')}
                 </Label>
                 <Select
                   value={previewMode === "volunteer" ? selectedVolunteer : selectedResident}
-                  onValueChange={(value) => 
-                    previewMode === "volunteer" 
+                  onValueChange={(value) =>
+                    previewMode === "volunteer"
                       ? setSelectedVolunteer(value)
                       : setSelectedResident(value)
                   }
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={`Select ${previewMode}`} />
+                  <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectValue placeholder={t('previewDialog.selectPlaceholder', { previewMode })} />
                   </SelectTrigger>
                   <SelectContent>
                     {previewMode === "volunteer"
-                      ? mockVolunteers.map((volunteer) => (
-                          <SelectItem key={volunteer.id} value={volunteer.id}>
-                            {volunteer.name}
-                          </SelectItem>
-                        ))
-                      : mockResidents.map((resident) => (
-                          <SelectItem key={resident.id} value={resident.id}>
-                            {resident.name}
-                          </SelectItem>
-                        ))}
+                      ? volunteers.map((volunteer) => (
+                        <SelectItem key={volunteer.id} value={volunteer.id}>
+                          {volunteer.fullName}
+                        </SelectItem>
+                      ))
+                      : residents.map((resident) => (
+                        <SelectItem key={resident.id} value={resident.id}>
+                          {resident.fullName}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <Button
-              onClick={handlePreviewMatching}
-              disabled={isLoading || (previewMode === "volunteer" && !selectedVolunteer) || 
-                       (previewMode === "resident" && !selectedResident)}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating Preview...
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Generate Preview
-                </>
+            {previewLoading ? (
+              <div className="mt-8 mb-8 p-8 flex flex-col items-center justify-center min-h-[120px]">
+                <Loader2 className="h-8 w-8 animate-spin mb-2 text-black" />
+                <span className="text-black font-medium">{t('previewDialog.loading')}</span>
+              </div>
+            ) :
+              (!showPreview || testResults.length === 0) && (
+                <div className="mt-8 mb-8 p-8 bg-slate-50 border border-slate-300 rounded-lg text-center text-slate-500 text-base min-h-[120px] flex items-center justify-center">
+                  {previewMode === 'volunteer'
+                    ? t('previewDialog.promptVolunteer')
+                    : t('previewDialog.promptResident')}
+                </div>
               )}
-            </Button>
           </div>
-          {showPreview && (
+          {showPreview && !previewLoading && (
             <div className="space-y-4">
-              <h3 className="font-medium">Preview Results</h3>
-              <div className="max-h-96 overflow-auto border rounded-md">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left p-3 font-medium">
-                        {previewMode === "volunteer" ? "Resident" : "Volunteer"}
+              <h3 className="font-medium">{t('previewDialog.resultsTitle')}</h3>
+              <div className="max-h-96 overflow-auto border border-slate-300 rounded-md">
+                <table className="min-w-full border-collapse">
+                  <thead className="sticky top-0 z-20">
+                    <tr className="bg-gray-50">
+                      <th className="border-b border-r border-slate-300 px-4 py-2 text-center">{previewMode === "volunteer" ? t('testDialog.resident') : t('testDialog.volunteer')}</th>
+                      <th
+                        className={`border-b border-r px-4 py-2 text-center cursor-pointer select-none hover:bg-blue-100 transition ${isRTL ? 'border-l' : ''} border-slate-300`}
+                        onClick={() => setSortOrderPreview(order => order === 'asc' ? 'desc' : 'asc')}
+                      >
+                        {t('testDialog.score')}
+                        <span className="mr-1 align-middle">{sortOrderPreview === 'asc' ? '▲' : '▼'}</span>
                       </th>
-                      <th className="text-left p-3 font-medium">Score</th>
-                      <th className="text-left p-3 font-medium">Factors</th>
+                      <th className="border-b border-slate-300 px-4 py-2 text-center">{t('testDialog.details')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {testResults.map((result, index) => (
-                      <tr key={index} className="border-t hover:bg-gray-50">
-                        <td className="p-3">
-                          {previewMode === "volunteer" ? result.residentName : result.volunteerName}
-                        </td>
-                        <td className="p-3">
-                          <Badge
-                            variant={
-                              result.score >= 80 ? "default" :
-                              result.score >= 60 ? "secondary" :
-                              "destructive"
-                            }
-                            className="text-sm"
-                          >
-                            {result.score}%
-                          </Badge>
-                        </td>
-                        <td className="p-3">
-                          <div className="space-y-2">
-                            {result.factors.map((factor, i) => (
-                              <div key={i} className="flex items-center gap-2">
-                                <span className="text-sm font-medium min-w-[100px]">{factor.name}:</span>
-                                <Progress value={factor.score} className="w-24" />
-                                <span className="text-sm font-medium min-w-[40px] text-right">({factor.score}%)</span>
+                    {[...testResults].sort((a, b) =>
+                      sortOrderPreview === 'asc' ? a.score - b.score : b.score - a.score
+                    ).map((result, idx, sortedResults) => (
+                      <React.Fragment key={idx}>
+                        <tr className={`bg-white hover:bg-blue-50 transition ${idx !== sortedResults.length - 1 ? 'border-b border-slate-300' : ''}`}>
+                          <td className="border-r border-slate-300 px-4 py-2 text-center align-middle">{previewMode === "volunteer" ? result.residentName : result.volunteerName}</td>
+                          <td className={`border-r px-4 py-2 font-bold text-center align-middle ${isRTL ? 'border-l' : ''} border-slate-300`}>
+                            <span className={`inline-block px-2 py-1 rounded text-white font-semibold text-center text-sm ${result.score < 60 ? 'bg-red-500' : result.score < 80 ? 'bg-amber-400 text-black' : 'bg-green-500'}`}>{result.score}</span>
+                          </td>
+                          <td className="px-4 py-2 text-center align-middle">
+                            <button
+                              className="text-blue-600 underline text-sm focus:outline-none"
+                              onClick={() => setExpandedRowsPreview(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                            >
+                              {expandedRowsPreview[idx] ? t('testDialog.hideFactors') : t('testDialog.showFactors')}
+                            </button>
+                          </td>
+                        </tr>
+                        {expandedRowsPreview[idx] && (
+                          <tr className={`bg-white ${idx !== sortedResults.length - 1 ? 'border-b border-slate-300' : ''}`}>
+                            <td colSpan={3} className="px-4 py-2">
+                              <div className="relative max-w-3xl mx-auto my-4">
+                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-50/80 to-white/90 z-0" style={{ filter: 'blur(2px)' }} />
+                                <div className="relative z-10 bg-white border-2 border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center transition-transform duration-200 scale-100 animate-fade-in">
+                                  <div className="flex items-center mb-2 text-gray-700 font-semibold text-sm border-b border-slate-300 pb-1 w-full">
+                                    <div className="w-1/5 text-center px-2 min-w-[80px] truncate">{t('testDialog.factor')}</div>
+                                    <div className="w-1/5 text-center px-2 min-w-[60px] truncate">{t('testDialog.score')}</div>
+                                    <div className="w-1/5 text-center px-2 min-w-[60px] truncate">{t('testDialog.weight')}</div>
+                                    <div className="w-2/5 text-center px-2 min-w-[120px] truncate">{t('testDialog.reason')}</div>
+                                  </div>
+                                  {result.factors
+                                    .slice()
+                                    .sort((a, b) => b.weight - a.weight || b.score - a.score)
+                                    .map((f, i) => (
+                                      <div key={i} className="flex items-center py-2 border-b last:border-b-0 border-slate-300 w-full justify-center">
+                                        <div className="w-1/5 font-medium text-gray-900 text-center">
+                                          {t(`testDialog.factorNames.${f.name}` as any, { defaultValue: f.name })}
+                                        </div>
+                                        <div className="w-1/5 text-center">
+                                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${f.score >= 80 ? 'bg-green-100 text-green-800' : f.score >= 60 ? 'bg-amber-100 text-amber-900' : 'bg-red-100 text-red-800'}`}>{Number(f.score).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="w-1/5 text-center">
+                                          <span className="inline-block px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-semibold">{f.weight}</span>
+                                        </div>
+                                        <div className="w-2/5 text-center text-xs text-gray-700">
+                                          {translateReason(f.reason || '')}
+                                        </div>
+                                      </div>
+                                    ))}
+                                </div>
                               </div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
+          <DialogFooter className="border-t border-slate-300 pt-5 flex justify-center items-center" />
         </DialogContent>
       </Dialog>
 
       {/* Reset Dialog */}
       <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <RotateCcw className="h-5 w-5 mr-2 text-yellow-600" />
-              Reset to Defaults
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to reset all matching rules to their default values? This action cannot be undone.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[400px]" dir={isRTL ? 'rtl' : 'ltr'}>
+          <DialogHeader dir={isRTL ? 'rtl' : 'ltr'}>
+            <DialogTitle>{t('resetDialog.title')}</DialogTitle>
+            <DialogDescription>{t('resetDialog.description')}</DialogDescription>
           </DialogHeader>
-          <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-            <div className="flex items-start">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-yellow-800">Warning</h4>
-                <p className="text-sm text-yellow-700">
-                  Resetting to defaults will discard all your custom settings. This will affect how the AI matches volunteers to residents.
-                </p>
-              </div>
+          <div className="py-4 px-2">
+            <div className="flex flex-col items-center text-center">
+              <AlertTriangle className="h-10 w-10 text-red-500 mb-2" />
+              <span className="text-red-600 font-semibold text-base mb-2">
+                {t('resetDialog.confirmTitle')}
+              </span>
+              <span className="text-slate-600 text-sm">
+                {t('resetDialog.confirmMessage')}
+              </span>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleResetToDefaults}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Resetting...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Reset to Defaults
-                </>
-              )}
-            </Button>
+            <div className="w-full flex justify-center">
+              <Button
+                variant="destructive"
+                onClick={handleResetToDefaults}
+                disabled={isResetLoading}
+                className="w-[200px] transition-all duration-200 mx-auto"
+              >
+                {isResetLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    {t('resetDialog.resettingButton')}
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    {t('resetDialog.resetButton')}
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Rule Dialog */}
+      {addingMode && (
+        <Card className="mb-6 max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle>{t('addRule.title')}</CardTitle>
+            <CardDescription>{t('addRule.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input placeholder={t('addRule.id')} value={newRule.id} onChange={e => setNewRule(r => ({ ...r, id: e.target.value }))} />
+            <Input placeholder={t('addRule.name')} value={newRule.name} onChange={e => setNewRule(r => ({ ...r, name: e.target.value }))} />
+            <Input placeholder={t('addRule.ruleDescription')} value={newRule.description} onChange={e => setNewRule(r => ({ ...r, description: e.target.value }))} />
+            <Select value={newRule.type} onValueChange={type => setNewRule(r => ({ ...r, type: type as any }))}>
+              <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={isRTL ? 'rtl' : 'ltr'}>
+                <SelectValue placeholder={t('addRule.type')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weight">{t('addRule.types.weight')}</SelectItem>
+                <SelectItem value="toggle">{t('addRule.types.toggle')}</SelectItem>
+                <SelectItem value="option">{t('addRule.types.option')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={newRule.impact} onValueChange={impact => setNewRule(r => ({ ...r, impact: impact as any }))}>
+              <SelectTrigger className="w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={isRTL ? 'rtl' : 'ltr'}>
+                <SelectValue placeholder={t('addRule.impact')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="high">{t('addRule.impacts.high')}</SelectItem>
+                <SelectItem value="medium">{t('addRule.impacts.medium')}</SelectItem>
+                <SelectItem value="low">{t('addRule.impacts.low')}</SelectItem>
+              </SelectContent>
+            </Select>
+            {/* Value input depends on type */}
+            {newRule.type === "toggle" ? (
+              <Switch checked={!!newRule.value} onCheckedChange={v => setNewRule(r => ({ ...r, value: v as boolean, defaultValue: v as boolean }))} />
+            ) : newRule.type === "weight" ? (
+              <div className={`flex items-center gap-4 w-full h-8 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                {isRTL && <span className="w-8 text-right">{newRule.value}</span>}
+                <Slider
+                  value={[Number(newRule.value)]}
+                  min={newRule.min ?? 0}
+                  max={newRule.max ?? 10}
+                  step={newRule.step ?? 1}
+                  onValueChange={([v]) => setNewRule(r => ({ ...r, value: v as number, defaultValue: v as number }))}
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                />
+                {!isRTL && <span className="w-8 text-right">{newRule.value}</span>}
+              </div>
+            ) : newRule.type === "option" ? (
+              <Input placeholder="Option value" value={String(newRule.value)} onChange={e => setNewRule(r => ({ ...r, value: e.target.value, defaultValue: e.target.value }))} />
+            ) : null}
+          </CardContent>
+          <CardFooter className="flex gap-2 justify-end">
+            <Button onClick={handleAddRule} disabled={adding}>
+              {adding ? <Loader2 className="h-4 animate-spin" /> : <Plus className="h-4 w-4" />} {t('addRule.addButton')}
+            </Button>
+            <Button variant="outline" onClick={() => setAddingMode(false)} className="ml-2">{t('addRule.cancelButton')}</Button>
+          </CardFooter>
+        </Card>
+      )}
     </div>
   );
 };
