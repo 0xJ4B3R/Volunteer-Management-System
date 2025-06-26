@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -7,9 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Loader2, User, Lock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { useAppDispatch, useAppSelector } from "@/hooks";
-import { loginStart, loginSuccess, loginFailure } from "@/store/slices/authSlice";
-import { authService } from "@/services/api/auth";
 import { loginSchema, type LoginFormData } from "@/utils/validation";
 import {
   Form,
@@ -20,12 +16,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const LoginForm = () => {
+interface LoginFormProps {
+  onLogin: (username: string, password: string) => Promise<{ error?: string; success?: boolean }>;
+  loading: boolean;
+}
+
+const LoginForm = ({ onLogin, loading }: LoginFormProps) => {
   const [showPassword, setShowPassword] = useState(false);
-  
-  const dispatch = useAppDispatch();
-  const { isLoading } = useAppSelector((state) => state.auth);
-  const navigate = useNavigate();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -37,30 +34,24 @@ const LoginForm = () => {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    dispatch(loginStart());
-    
     try {
-      const response = await authService.login({
-        username: data.username,
-        password: data.password,
-      });
+      const result = await onLogin(data.username, data.password);
       
-      dispatch(loginSuccess({ user: response.user, token: response.token }));
-      
+      if (result.error) {
+        toast({
+          title: "Login failed",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Login successful",
-        description: `Welcome back, ${response.user.username}!`,
+        description: "Welcome back!",
       });
-      
-      // Redirect based on role
-      if (response.user.role === 'manager') {
-        navigate("/manager");
-      } else {
-        navigate("/volunteer");
-      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Invalid username or password";
-      dispatch(loginFailure(errorMessage));
       toast({
         title: "Login failed",
         description: errorMessage,
@@ -85,7 +76,7 @@ const LoginForm = () => {
                     {...field}
                     className="pl-9"
                     placeholder="Enter your username"
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
               </FormControl>
@@ -108,7 +99,7 @@ const LoginForm = () => {
                     type={showPassword ? "text" : "password"}
                     className="pl-9 pr-9"
                     placeholder="Enter your password"
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -139,7 +130,7 @@ const LoginForm = () => {
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  disabled={isLoading}
+                  disabled={loading}
                 />
               </FormControl>
               <FormLabel className="!mt-0 text-sm font-normal">Remember me</FormLabel>
@@ -150,9 +141,9 @@ const LoginForm = () => {
         <Button
           type="submit"
           className="w-full"
-          disabled={isLoading}
+          disabled={loading}
         >
-          {isLoading ? (
+          {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Signing in...
