@@ -1,0 +1,89 @@
+{
+  "title": "דוחות",
+  "search": {
+    "placeholder": "חיפוש דוחות, שמות משתתפים...",
+    "noResults": "לא נמצאו דוחות התואמים לקריטריונים שלך. נסה לשנות את המסננים.",
+    "noReportsAvailable": "אין דוחות זמינים עבור קטגוריה זו. צור דוח חדש כדי להתחיל."
+  },
+  "stats": {
+    "totalReports": "סה\"כ דוחות",
+    "readyToExport": "מוכן לייצוא",
+    "exported": "יוצא"
+  },
+  "tabs": {
+    "allReports": "כל הדוחות",
+    "volunteerReports": "דוחות מתנדבים",
+    "residentReports": "דוחות דיירים",
+    "externalGroupReports": "דוחות קבוצות חיצוניות"
+  },
+  "filters": {
+    "status": "סטטוס",
+    "allStatus": "כל הסטטוסים",
+    "exported": "יוצא",
+    "readyToExport": "מוכן לייצוא",
+    "dateRange": "טווח תאריכים",
+    "allTime": "כל הזמן",
+    "last7Days": "7 ימים אחרונים",
+    "last30Days": "30 ימים אחרונים",
+    "last90Days": "90 ימים אחרונים"
+  },
+  "actions": {
+    "generateReport": "צור דוח",
+    "download": "הורד",
+    "print": "הדפס",
+    "generating": "יוצר...",
+    "loading": "טוען..."
+  },
+  "status": {
+    "exported": "יוצא",
+    "readyToExport": "מוכן לייצוא"
+  },
+  "empty": {
+    "title": "לא נמצאו דוחות",
+    "description": "לא נמצאו דוחות התואמים לקריטריונים שלך. נסה לשנות את המסננים.",
+    "noReportsDescription": "אין דוחות זמינים עבור קטגוריה זו. צור דוח חדש כדי להתחיל."
+  },
+  "reportTypes": {
+    "volunteerIndividual": "דוח מתנדב אישי",
+    "volunteerAll": "דוח כל המתנדבים",
+    "residentIndividual": "דוח דייר אישי",
+    "residentAll": "דוח כל הדיירים",
+    "externalGroupIndividual": "דוח קבוצה חיצונית אישית",
+    "externalGroupAll": "דוח כל הקבוצות החיצוניות"
+  },
+  "generateDialog": {
+    "title": "יצירת דוח חדש",
+    "description": "בחר את הקריטריונים להלן כדי ליצור דוח פעילות חדש.",
+    "participantSelection": "בחירת משתתף",
+    "participantType": "סוג משתתף",
+    "selectParticipantType": "בחר סוג משתתף",
+    "reportScope": "היקף הדוח",
+    "selectScope": "בחר היקף",
+    "selectParticipant": "בחר {{type}}",
+    "noParticipantsAvailable": "אין {{type}} זמינים לבחירה.",
+    "timeRange": "טווח תאריכים",
+    "startDate": "תאריך התחלה",
+    "endDate": "תאריך סיום",
+    "selectDate": "בחר תאריך",
+    "generateButton": "צור דוח",
+    "participants": {
+      "volunteer": "מתנדב",
+      "resident": "דייר",
+      "externalGroup": "קבוצה חיצונית"
+    },
+    "scope": {
+      "all": "הכל",
+      "individual": "אישי"
+    }
+  },
+  "viewDialog": {
+    "generatedOn": "נוצר ב-{{date}}",
+    "reportData": "נתוני הדוח"
+  },
+  "messages": {
+    "errorLoading": "שגיאה בטעינת הדוחות",
+    "reportGenerated": "הדוח נוצר בהצלחה",
+    "reportDownloaded": "הדוח הורד בהצלחה",
+    "reportPrinted": "הדוח נשלח למדפסת"
+  }
+} 

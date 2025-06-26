@@ -1,0 +1,98 @@
+{
+  "pageTitle": "Manager Dashboard",
+  "systemTitle": "Volunteer Management System",
+  "quickActions": {
+    "title": "Quick Actions",
+    "description": "Common management tasks",
+    "addVolunteer": "Add Volunteer",
+    "addResident": "Add Resident", 
+    "createSession": "Create Session",
+    "generateReport": "Generate Report"
+  },
+  "todaySessions": {
+    "title": "Today's Sessions",
+    "description": "Overview of today's volunteer sessions",
+    "sessions": "sessions",
+    "sessions_one": "session",
+    "volunteers": "volunteers",
+    "volunteersCount": "{{current}}/{{capacity}} filled",
+    "volunteersCount_plural": "{{current}}/{{capacity}} filled",
+    "noSessionsToday": "No sessions today"
+  },
+  "pendingVolunteers": {
+    "title": "Pending Volunteers",
+    "description": "Volunteers awaiting approval",
+    "pending": "pending",
+    "pending_one": "pending",
+    "noPendingVolunteers": "No pending volunteers to review",
+    "filled": "filled",
+    "volunteersCount": "{{current}}/{{capacity}} filled",
+    "volunteersCount_plural": "{{current}}/{{capacity}} filled"
+  },
+  "quickStats": {
+    "title": "Quick Stats",
+    "description": "Key community metrics",
+    "totalVolunteers": "Total Volunteers",
+    "totalResidents": "Total Residents",
+    "totalSessionsThisMonth": "Total Sessions This Month",
+    "upcomingSessionsThisMonth": "Upcoming Sessions This Month",
+    "totalHoursThisMonth": "Total Hours This Month",
+    "avgHoursPerVolunteerThisMonth": "Avg. Hours Per Volunteer This Month"
+  },
+  "checkedInToday": {
+    "title": "Checked In Today",
+    "description": "Volunteers who attended today's sessions",
+    "checkedIn": "checked in",
+    "checkedIn_one": "checked in",
+    "checkedInAt": "Checked in at",
+    "allAttendanceConfirmed": "All attendance manually confirmed"
+  },
+  "missingAttendance": {
+    "title": "Missing Attendance",
+    "description": "Volunteers who attended but have no attendance records",
+    "missing": "missing",
+    "missing_one": "missing",
+    "allAttendanceMarked": "All attendance marked"
+  },
+  "performanceAlerts": {
+    "title": "Performance Alerts",
+    "description": "Areas requiring performance improvement",
+    "allTasksCompleted": "All tasks completed!",
+    "missingLanguages": "Missing Languages",
+    "missingLanguagesDescription": "Volunteer has no languages specified",
+    "missingAvailability": "Missing Availability",
+    "missingAvailabilityDescription": "Volunteer has no availability specified",
+    "missingLanguagesResident": "Missing Languages",
+    "missingLanguagesResidentDescription": "Resident has no languages specified",
+    "missingAvailabilityResident": "Missing Availability", 
+    "missingAvailabilityResidentDescription": "Resident has no availability specified",
+    "inactiveVolunteer": "Inactive (No sessions for 1+ month)",
+    "inactiveResident": "Inactive (No sessions for 1+ month)",
+    "noSessionsRecorded": "No sessions recorded",
+    "noCompletedSessions": "No completed sessions",
+    "noCompletedSessionsFor": "No completed sessions for",
+    "days": "days",
+    "lowCapacitySession": "Low Capacity Session",
+    "capacity": "capacity",
+    "capacityPlanning": "Capacity Planning",
+    "capacityPlanningDescription": "session at full capacity today",
+    "capacityPlanningDescription_plural": "sessions at full capacity today",
+    "lowEngagementVolunteers": "Low Engagement Volunteers",
+    "lowEngagementDescription": "volunteer has less than 3 sessions",
+    "lowEngagementDescription_plural": "volunteers have less than 3 sessions",
+    "newVolunteerOnboarding": "New Volunteer Onboarding", 
+    "newVolunteerOnboardingDescription": "volunteer joined in the last 7 days",
+    "newVolunteerOnboardingDescription_plural": "volunteers joined in the last 7 days",
+    "reviewMatchingRules": "Review Matching Rules",
+    "reviewMatchingRulesDescription": "Consider updating matching algorithm weights based on recent feedback"
+  },
+  "statusMessages": {
+    "loggedOut": "Logged out",
+    "loggedOutDescription": "You have been successfully logged out."
+  },
+  "priorities": {
+    "high": "High",
+    "medium": "Medium", 
+    "low": "Low"
+  }
+} 
