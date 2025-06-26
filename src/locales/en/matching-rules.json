@@ -1,0 +1,193 @@
+{
+  "pageTitle": "Matching Rules",
+  "sidebarTitle": "Matching Rules",
+  "header": {
+    "title": "AI Matching Rules Configuration",
+    "description": "Configure how the system matches volunteers with residents based on skills, availability, and other factors."
+  },
+  "categories": {
+    "skills": {
+      "title": "Skill Weights",
+      "description": "Adjust importance of different matching factors"
+    },
+    "availability": {
+      "title": "Availability Logic",
+      "description": "Configure time matching preferences"
+    },
+    "priority": {
+      "title": "Priority Settings",
+      "description": "Set rules for prioritizing residents"
+    }
+  },
+  "actions": {
+    "test": "Test Rules",
+    "preview": "Preview",
+    "reset": "Reset To Default",
+    "dismiss": "Dismiss Changes",
+    "save": "Save Changes",
+    "saving": "Saving..."
+  },
+  "rules": {
+    "essentialTitle": "Essential Rules",
+    "advancedTitle": "Advanced Rules",
+    "ruleCount": "{{count}} rules",
+    "lastUpdated": "Last updated: {{date}}",
+    "modified": "Modified",
+    "showLess": "Show Less",
+    "showAdvanced": "Show Advanced Rules",
+    "noRules": "No rules found",
+    "advancedConfig": {
+      "title": "Advanced Configuration",
+      "description": "Additional matching rules are available for fine-tuning the volunteer-resident matching algorithm."
+    }
+  },
+  "ruleNames": {
+    "skills-match": "Skills Match",
+    "hobbies-match": "Hobbies Match",
+    "language-match": "Language Match",
+    "availability-match": "Availability Match",
+    "require-exact-availability": "Require Exact Availability",
+    "gender-match": "Gender Match",
+    "age-proximity": "Age Proximity",
+    "prioritize-least-visits": "Prioritize Least Visits"
+  },
+  "ruleDescriptions": {
+    "skills-match": "Importance of matching volunteer skills with resident needs.",
+    "hobbies-match": "Importance of matching hobbies/interests.",
+    "language-match": "Importance of matching languages spoken by volunteer and resident.",
+    "availability-match": "Importance of matching volunteer and resident availability.",
+    "require-exact-availability": "Require exact time match for volunteer availability.",
+    "gender-match": "Should gender be considered in matching?",
+    "age-proximity": "Importance of age similarity between volunteer and resident.",
+    "prioritize-least-visits": "Give higher priority to residents who have had the fewest visits recently."
+  },
+  "testDialog": {
+    "title": "Test Matching Rules",
+    "description": "Test your matching rules against the current volunteer and resident data.",
+    "loading": "Loading test data...",
+    "noData": "No data available. Please add volunteers, residents, and rules in the system.",
+    "resultsTitle": "Test Results",
+    "volunteer": "Volunteer",
+    "resident": "Resident",
+    "score": "Score",
+    "details": "Details",
+    "hideFactors": "Hide Factors",
+    "showFactors": "Show Factors",
+    "factor": "Factor",
+    "weight": "Weight",
+    "reason": "Reason",
+    "factorNames": {
+      "Skills match": "Skills Match",
+      "Hobbies match": "Hobbies Match",
+      "Language match": "Language Match",
+      "Availability match": "Availability Match",
+      "Exact availability": "Exact Availability",
+      "Gender match": "Gender Match",
+      "Age proximity": "Age Proximity",
+      "Least visits": "Least Visits",
+      "Least visits (disabled)": "Least Visits (Disabled)"
+    },
+    "reasons": {
+      "Resident has not specified any required skills.": "Resident has not specified any required skills.",
+      "All required resident skills are present in the volunteer's skill set.": "All required resident skills are present in the volunteer's skill set.",
+      "Volunteer does not possess any of the resident's required skills.": "Volunteer does not possess any of the resident's required skills.",
+      "Volunteer skills matched: [${matched}]. Required but missing: [${missing}].": "Volunteer skills matched: [${matched}]. Required but missing: [${missing}].",
+      "No hobbies specified for volunteer or resident.": "No hobbies specified for volunteer or resident.",
+      "Volunteer and resident share all listed hobbies.": "Volunteer and resident share all listed hobbies.",
+      "No shared hobbies between volunteer and resident.": "No shared hobbies between volunteer and resident.",
+      "Shared hobbies: [${matched}]. Resident's hobbies not shared: [${missing}].": "Shared hobbies: [${matched}]. Resident's hobbies not shared: [${missing}].",
+      "No languages specified for volunteer or resident.": "No languages specified for volunteer or resident.",
+      "Volunteer speaks all languages required by the resident.": "Volunteer speaks all languages required by the resident.",
+      "Volunteer does not speak any of the resident's required languages.": "Volunteer does not speak any of the resident's required languages.",
+      "Languages in common: [${matched}]. Resident's required languages not spoken: [${missing}].": "Languages in common: [${matched}]. Resident's required languages not spoken: [${missing}].",
+      "Resident has not specified any required availability.": "Resident has not specified any required availability.",
+      "Volunteer is available for all of the resident's requested time slots.": "Volunteer is available for all of the resident's requested time slots.",
+      "Volunteer is not available for any of the resident's requested time slots.": "Volunteer is not available for any of the resident's requested time slots.",
+      "Matching time slots: [${matchedSlots}]. Unavailable for: [${missingSlots}].": "Matching time slots: [${matchedSlots}]. Unavailable for: [${missingSlots}].",
+      "Volunteer fulfills every exact time slot required by the resident.": "Volunteer fulfills every exact time slot required by the resident.",
+      "Volunteer does not meet the following required time slots: [${missingSlots}]. (All must be met for a perfect match.)": "Volunteer does not meet the following required time slots: [${missingSlots}]. (All must be met for a perfect match.)",
+      "Gender information is missing for volunteer or resident.": "Gender information is missing for volunteer or resident.",
+      "Volunteer and resident have the same gender: [${v.gender}].": "Volunteer and resident have the same gender: [${v.gender}].",
+      "Volunteer gender: [${v.gender}]. Resident gender: [${r.gender}].": "Volunteer gender: [${v.gender}]. Resident gender: [${r.gender}].",
+      "Birth date is missing for volunteer or resident.": "Birth date is missing for volunteer or resident.",
+      "Volunteer is ${a} years old, resident is ${b} years old. Age difference: ${Math.abs(a - b)} years.": "Volunteer is ${a} years old, resident is ${b} years old. Age difference: ${Math.abs(a - b)} years.",
+      "No residents have received any visits yet.": "No residents have received any visits yet.",
+      "Resident has received ${sessions} visits. The most visited resident has ${ctx.maxSessions} visits.": "Resident has received ${sessions} visits. The most visited resident has ${ctx.maxSessions} visits."
+    },
+    "dynamicTerms": {
+      "sunday": "Sunday",
+      "monday": "Monday", 
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "night": "Night",
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    }
+  },
+  "previewDialog": {
+    "title": "Preview Matching",
+    "description": "Preview how volunteers and residents would be matched with current rules.",
+    "mode": "Preview Mode",
+    "byVolunteer": "By Volunteer",
+    "byResident": "By Resident",
+    "selectVolunteer": "Select Volunteer",
+    "selectResident": "Select Resident",
+    "selectMode": "Select mode",
+    "selectValue": "Select value",
+    "selectPlaceholder": "Select {{previewMode}}",
+    "loading": "Loading preview...",
+    "promptVolunteer": "Select a volunteer to preview matching results.",
+    "promptResident": "Select a resident to preview matching results.",
+    "resultsTitle": "Preview Results"
+  },
+  "resetDialog": {
+    "title": "Reset Matching Rules",
+    "description": "This action cannot be undone.",
+    "confirmTitle": "Are you sure you want to reset all matching rules to their default values?",
+    "confirmMessage": "This will permanently discard all your custom settings and affect how the AI matches volunteers to residents.",
+    "resetButton": "Reset to Default",
+    "resettingButton": "Resetting..."
+  },
+  "addRule": {
+    "title": "Add New Rule",
+    "description": "Fill in the details and click Add.",
+    "id": "ID",
+    "name": "Name",
+    "ruleDescription": "Description",
+    "type": "Type",
+    "impact": "Impact",
+    "addButton": "Add Rule",
+    "cancelButton": "Cancel",
+    "types": {
+      "weight": "Weight",
+      "toggle": "Toggle",
+      "option": "Option"
+    },
+    "impacts": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "toasts": {
+    "saveSuccess": "Changes saved",
+    "saveError": "Error saving changes",
+    "resetSuccess": "Rules reset to default",
+    "resetError": "Failed to reset matching rules",
+    "testError": "Failed to test matching rules",
+    "idNameRequired": "ID and Name required",
+    "addSuccess": "Rule added",
+    "addError": "Error adding rule",
+    "deleteSuccess": "Rule deleted",
+    "deleteError": "Error deleting rule"
+  }
+} 

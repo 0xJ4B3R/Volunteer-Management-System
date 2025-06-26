@@ -31,9 +31,10 @@ import Reports from "@/pages/manager/Reports";
 import Settings from "@/pages/manager/Settings";
 
 // Test Pages
-import TestVolunteers from './pages/test/TestVolunteers';
-import TestResidents from './pages/test/TestResidents';
 import CalendarFirestoreTest from './pages/test/CalendarFirestoreTest';
+import TestVolunteerRequests from './pages/test/TestVolunteerRequests';
+import MatchingAlgorithmTest from "@/pages/test/MatchingAlgorithmTest";
+import HebrewPDFTest from "@/components/test/HebrewPDFTest";
 
 const queryClient = new QueryClient();
 
@@ -51,7 +52,12 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true
+            }}
+          >
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -113,8 +119,6 @@ const App = () => (
               />
 
               {/* Test Routes */}
-              <Route path="/test/volunteers" element={<TestVolunteers />} />
-              <Route path="/test/residents" element={<TestResidents />} />
               <Route path="/test/calendar-firestore-test" element={<CalendarFirestoreTest />} />
 
               {/* Catch-all 404 */}

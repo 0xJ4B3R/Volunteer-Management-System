@@ -1,0 +1,89 @@
+{
+  "title": "Reports",
+  "search": {
+    "placeholder": "Search reports, participant names...",
+    "noResults": "No reports match your search criteria. Try adjusting your filters.",
+    "noReportsAvailable": "No reports available for this category. Generate a new report to get started."
+  },
+  "stats": {
+    "totalReports": "Total Reports",
+    "readyToExport": "Ready to Export",
+    "exported": "Exported"
+  },
+  "tabs": {
+    "allReports": "All Reports",
+    "volunteerReports": "Volunteer Reports",
+    "residentReports": "Resident Reports",
+    "externalGroupReports": "External Group Reports"
+  },
+  "filters": {
+    "status": "Status",
+    "allStatus": "All Status",
+    "exported": "Exported",
+    "readyToExport": "Ready to Export",
+    "dateRange": "Date Range",
+    "allTime": "All Time",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "last90Days": "Last 90 Days"
+  },
+  "actions": {
+    "generateReport": "Generate Report",
+    "download": "Download",
+    "print": "Print",
+    "generating": "Generating...",
+    "loading": "Loading..."
+  },
+  "status": {
+    "exported": "Exported",
+    "readyToExport": "Ready to Export"
+  },
+  "empty": {
+    "title": "No reports found",
+    "description": "No reports match your search criteria. Try adjusting your filters.",
+    "noReportsDescription": "No reports available for this category. Generate a new report to get started."
+  },
+  "reportTypes": {
+    "volunteerIndividual": "Individual Volunteer Report",
+    "volunteerAll": "All Volunteers Report",
+    "residentIndividual": "Individual Resident Report", 
+    "residentAll": "All Residents Report",
+    "externalGroupIndividual": "Individual External Group Report",
+    "externalGroupAll": "All External Groups Report"
+  },
+  "generateDialog": {
+    "title": "Generate New Report",
+    "description": "Select the criteria below to generate a new activity report.",
+    "participantSelection": "Participant Selection",
+    "participantType": "Participant Type",
+    "selectParticipantType": "Select a participant type",
+    "reportScope": "Report Scope",
+    "selectScope": "Select a scope",
+    "selectParticipant": "Select a {{type}}",
+    "noParticipantsAvailable": "No {{type}} available for selection.",
+    "timeRange": "Time Range",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "selectDate": "Select a date",
+    "generateButton": "Generate Report",
+    "participants": {
+      "volunteer": "Volunteer",
+      "resident": "Resident",
+      "externalGroup": "External Group"
+    },
+    "scope": {
+      "all": "All",
+      "individual": "Individual"
+    }
+  },
+  "viewDialog": {
+    "generatedOn": "Generated on {{date}}",
+    "reportData": "Report Data"
+  },
+  "messages": {
+    "errorLoading": "Error loading reports",
+    "reportGenerated": "Report generated successfully",
+    "reportDownloaded": "Report downloaded successfully", 
+    "reportPrinted": "Report sent to printer"
+  }
+} 
