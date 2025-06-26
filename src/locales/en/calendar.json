@@ -1,344 +1,76 @@
 {
-  "page": {
-    "title": "Calendar Management",
-    "description": "Manage calendar sessions and appointments"
-  },
-  "views": {
-    "month": "Month",
-    "week": "Week",
-    "day": "Day"
-  },
-  "navigation": {
-    "today": "Today",
-    "previous": "Previous",
-    "next": "Next",
-    "backToCalendar": "Back to Calendar"
-  },
-  "filters": {
-    "statusFilter": "Status filter",
-    "allSessions": "All Sessions",
-    "open": "Open",
-    "full": "Full",
-    "cancelled": "Cancelled"
-  },
-  "actions": {
-    "newSession": "New Session",
-    "pending": "Pending"
-  },
-  "pendingRequests": {
-    "title": "Pending Volunteer Requests",
-    "description": "{{count}} session{{count !== 1 ? 's' : ''}} with pending requests",
-    "noRequests": "No pending volunteer requests at this time.",
-    "pendingCount": "{{count}} pending request{{count !== 1 ? 's' : ''}}",
-    "approve": "Approve",
-    "reject": "Reject"
-  },
-  "daySessions": {
-    "title": "Sessions for {{date}}",
-    "description_one": "{{count}} session scheduled",
-    "description_other": "{{count}} sessions scheduled",
-    "noSessions": "No sessions scheduled for this day.",
-    "createNew": "Create New Session",
-    "createAnother": "Create Another Session"
-  },
-  "calendar": {
-    "weekDays": {
+    "Filter": "Filter",
+    "Week": "Week",
+    "Month": "Month",
+    "Available slots only": "Available slots only",
+    "All Session Types": "All Session Types",
+    "Sign Up for:": "Sign Up for:",
+    "Date": "Date",
+    "Time": "Time",
+    "No sessions": "No sessions",
+    "Loading calendar data...": "Loading calendar data...",
+    "Submitting Request…": "Submitting Request…",
+    "Already Approved": "Already Approved",
+    "Request Rejected": "Request Rejected",
+    "Request Pending": "Request Pending",
+    "Not Available": "Not Available",
+    "Request to Join": "Request to Join",
+    "Select session type": "Select session type",
+    "Today": "Today",
+    "months": {
+        "0": "January",
+        "1": "February",
+        "2": "March",
+        "3": "April",
+        "4": "May",
+        "5": "June",
+        "6": "July",
+        "7": "August",
+        "8": "September",
+        "9": "October",
+        "10": "November",
+        "11": "December"
+    },
+    "months_short": {
+      "0": "Jan",
+      "1": "Feb",
+      "2": "Mar",
+      "3": "Apr",
+      "4": "May",
+      "5": "Jun",
+      "6": "Jul",
+      "7": "Aug",
+      "8": "Sep",
+      "9": "Oct",
+      "10": "Nov",
+      "11": "Dec"
+    },
+    "days": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+    },
+    "daysShort": {
       "sun": "Sun",
       "mon": "Mon",
       "tue": "Tue",
       "wed": "Wed",
       "thu": "Thu",
       "fri": "Fri",
-      "sat": "Sat",
-      "sunday": "Sunday",
-      "monday": "Monday",
-      "tuesday": "Tuesday",
-      "wednesday": "Wednesday",
-      "thursday": "Thursday",
-      "friday": "Friday",
-      "saturday": "Saturday"
+      "sat": "Sat"
     },
-    "months": {
-      "january": "January",
-      "february": "February",
-      "march": "March",
-      "april": "April",
-      "may": "May",
-      "june": "June",
-      "july": "July",
-      "august": "August",
-      "september": "September",
-      "october": "October",
-      "november": "November",
-      "december": "December"
-    },
-    "monthsShort": {
-      "jan": "Jan",
-      "feb": "Feb",
-      "mar": "Mar",
-      "apr": "Apr",
-      "may": "May",
-      "jun": "Jun",
-      "jul": "Jul",
-      "aug": "Aug",
-      "sep": "Sep",
-      "oct": "Oct",
-      "nov": "Nov",
-      "dec": "Dec"
-    },
-      "sessionCount": "{{count}} session",
-  "sessionCount_plural": "{{count}} sessions",
-    "moreSessions": "+{{count}} more",
-    "noSessions": "No sessions scheduled for this day.",
-    "filled": "{{current}}/{{capacity}} filled"
-  },
-  "session": {
-    "status": {
-      "open": "open",
-      "full": "full",
-      "canceled": "canceled"
-    },
-    "types": {
-      "custom": "custom"
-    },
-    "timing": {
-      "past": "past",
-      "ongoing": "ongoing",
-      "future": "future"
+    "SessionStatus": {
+      "label": "Status:",
+      "approved": "Approved",
+      "pending": "Pending",
+      "rejected": "Rejected",
+      "none": "Not Requested",
+      "pendingApproval": "Pending Approval ⏳",
+      "approvedStatus": "Approved ✅",
+      "rejectedStatus": "Rejected ❌"
     }
-  },
-  "dialogs": {
-    "createSession": {
-      "title": "Create New Session",
-      "description": "Schedule a new volunteer session. Fill in the details below."
-    },
-    "editSession": {
-      "title": "Edit Session",
-      "description": "Update the session details below."
-    },
-    "deleteSession": {
-      "title": "Delete Session",
-      "description": "This action cannot be undone.",
-      "confirmMessage": "Are you sure you want to delete this session?",
-      "warningMessage": "This will permanently remove the session and all associated records."
-    },
-    "deleteRecurringSessions": {
-      "title": "Delete Recurring Sessions",
-      "description": "This will delete all future recurring sessions in this series.",
-      "confirmMessage": "Are you sure you want to delete all future recurring sessions?",
-      "warningMessage": "This action cannot be undone."
-    },
-    "pendingRequests": {
-      "title": "Pending Volunteer Requests",
-      "description": "Review and manage volunteer requests for this session"
-    },
-    "rejectRequest": {
-      "title": "Reject Volunteer Request",
-      "description": "Please provide a reason for rejecting this request"
-    }
-  },
-  "deleteSession": {
-    "title": "Delete Session",
-    "description": "This action cannot be undone.",
-    "confirm": "Are you sure you want to delete this session?",
-    "warning": "This will permanently remove the {{type}} and all associated records.",
-    "delete": "Delete Session",
-    "deleting": "Deleting...",
-    "session": "session",
-    "externalGroup": "external group session"
-  },
-  "deleteRecurringSessions": {
-    "title": "Delete Future Recurring Sessions",
-    "description": "This will delete all future recurring sessions in this series.",
-    "confirm": "Are you sure you want to delete all future recurring sessions?",
-    "warning": "This action cannot be undone.",
-    "deleteAll": "Delete All Future Sessions",
-    "deleting": "Deleting..."
-  },
-  "rejectReason": {
-    "title": "Reject Volunteer Request",
-    "description": "Please provide a reason for rejecting this request.",
-    "placeholder": "Enter reason for rejection...",
-    "confirm": "Confirm Rejection",
-    "rejecting": "Rejecting..."
-  },
-  "forms": {
-    "sessionDetails": {
-      "title": "Session Details",
-      "date": "Date",
-      "startTime": "Start Time",
-      "endTime": "End Time",
-      "maxCapacity": "Max Capacity",
-      "notes": "Notes",
-      "notesPlaceholder": "Add notes about this session...",
-      "period": "Period",
-      "periods": {
-        "morning": "Morning",
-        "afternoon": "Afternoon",
-        "evening": "Evening"
-      },
-      "isCustom": "Custom Session",
-      "customSession": "Custom Session",
-      "customLabel": "Custom Label",
-      "customSessionDescription": "Enable to create a session with custom time and label",
-      "customSessionPlaceholder": "Add a label for this custom session",
-      "status": "Status"
-    },
-    "sessionType": {
-      "title": "Session Type"
-    },
-    "participants": {
-      "title": "Participants"
-    },
-    "volunteers": {
-      "title": "Volunteers",
-      "available": "Available",
-      "current": "Current",
-      "searchPlaceholder": "Search volunteers...",
-      "noVolunteers": "No volunteers available",
-      "selectVolunteers": "Select volunteers for this session"
-    },
-    "residents": {
-      "title": "Residents",
-      "available": "Available",
-      "current": "Current",
-      "searchPlaceholder": "Search residents...",
-      "noResidents": "No residents available",
-      "selectResidents": "Select residents for this session"
-    },
-    "externalGroup": {
-      "title": "One Time External Group",
-      "description": "Enable for external group visits",
-      "groupName": "Group Name",
-      "groupNamePlaceholder": "Enter group name",
-      "contactPerson": "Contact Person",
-      "contactPersonPlaceholder": "Enter contact person name",
-      "contactPhone": "Contact Phone",
-      "contactPhonePlaceholder": "Enter contact phone number",
-      "purposeOfVisit": "Purpose of Visit",
-      "purposeOfVisitPlaceholder": "Enter purpose of visit",
-      "numberOfParticipants": "Number of Participants",
-      "department": "Department",
-      "departmentPlaceholder": "Enter department",
-      "activity": "Activity",
-      "activityPlaceholder": "Enter activity description",
-      "notes": "Notes",
-      "notesPlaceholder": "Add notes about the external group..."
-    },
-    "notes": {
-      "title": "Notes",
-      "placeholder": "Add any additional information about the session..."
-    },
-    "recurring": {
-      "title": "Recurring Sessions",
-      "description": "Enable to create a series of sessions with the same settings",
-      "frequency": "Frequency",
-      "interval": "Interval",
-      "endDate": "End Date",
-      "endDateDescription": "Must be within three months from start date",
-      "daysOfWeek": "Days of Week",
-      "frequencies": {
-        "daily": "Daily",
-        "weekly": "Weekly",
-        "monthly": "Monthly"
-      },
-      "units": {
-        "days": "days",
-        "weeks": "weeks",
-        "months": "months"
-      },
-      "days": {
-        "sunday": "Sunday",
-        "monday": "Monday",
-        "tuesday": "Tuesday",
-        "wednesday": "Wednesday",
-        "thursday": "Thursday",
-        "friday": "Friday",
-        "saturday": "Saturday"
-      }
-    }
-  },
-  "createSession": {
-    "create": "Create Session",
-    "creating": "Creating..."
-  },
-  "editSession": {
-    "saveChanges": "Save Changes",
-    "saving": "Saving..."
-  },
-  "buttons": {
-    "create": "Create Session",
-    "creating": "Creating...",
-    "save": "Save Changes",
-    "saving": "Saving...",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "deleting": "Deleting...",
-    "confirm": "Confirm",
-    "confirmRejection": "Confirm Rejection",
-    "rejecting": "Rejecting...",
-    "approve": "Approve",
-    "approving": "Approving...",
-    "reject": "Reject",
-    "close": "Close",
-    "add": "Add",
-    "remove": "Remove"
-  },
-  "sessionDetails": {
-    "title": "Session Details",
-    "date": "Date: {{date}}",
-    "time": "Time: {{start}} - {{end}}",
-    "volunteers": "Volunteers: {{current}}/{{capacity}}"
-  },
-  "badges": {
-    "custom": "custom",
-    "pending": "pending",
-    "pendingRequest": "pending request",
-    "pendingRequests": "pending requests",
-    "more": "more",
-    "sessions": "sessions",
-    "session": "session"
-  },
-  "messages": {
-
-    "sessionCreated": "Session Created",
-    "sessionCreatedDescription": "Session has been created successfully.",
-    "sessionUpdated": "Session Updated",
-    "sessionUpdatedDescription": "Session details have been updated successfully.",
-    "sessionDeleted": "Session Deleted",
-    "sessionDeletedDescription": "Session has been deleted successfully.",
-    "recurringSessionsDeleted": "Recurring Sessions Deleted",
-    "recurringSessionsDeletedDescription": "All future recurring sessions have been deleted successfully.",
-    "pastSessionRestored": "Past Session Restored",
-    "pastSessionRestoredDescription": "Session stats and attendance records have been restored for all participants.",
-    "volunteerRequestApproved": "Request Approved",
-    "volunteerRequestApprovedDescription": "Volunteer request has been approved successfully.",
-    "volunteerRequestRejected": "Request Rejected",
-    "volunteerRequestRejectedDescription": "Volunteer request has been rejected successfully.",
-    "missingInformation": "Missing information",
-    "missingInformationDescription": "Please fill in all required fields.",
-    "missingVolunteer": "Missing volunteer",
-    "missingVolunteerDescription": "Past sessions must have at least one assigned volunteer.",
-    "missingResident": "Missing resident",
-    "missingResidentDescription": "Past sessions must have at least one assigned resident.",
-    "missingMaxCapacity": "Missing information",
-    "missingMaxCapacityDescription": "Please fill in max capacity for regular sessions.",
-    "missingExternalGroupInfo": "Missing external group information",
-    "missingExternalGroupInfoDescription": "Please fill in all required fields for the external group.",
-    "invalidTimeRange": "Invalid time range",
-    "invalidTimeRangeDescription": "End time must be after start time.",
-    "missingTime": "Missing time",
-    "missingTimeDescription": "Please provide both start and end time for the custom session.",
-    "invalidCustomTimeRange": "Invalid time range",
-    "invalidCustomTimeRangeDescription": "End time must be after start time for custom sessions.",
-    "tooManyVolunteers": "Too many volunteers",
-    "tooManyVolunteersDescription": "The number of selected volunteers exceeds the maximum capacity.",
-    "error": "Error",
-    "errorDescription": "An error occurred",
-    "createError": "Failed to create session. Please try again.",
-    "updateError": "Failed to update session. Please try again.",
-    "deleteError": "Failed to delete session. Please try again.",
-    "externalGroupError": "Failed to create external group",
-    "calendarSlotError": "Failed to create calendar slot"
-  }
-} 
+}

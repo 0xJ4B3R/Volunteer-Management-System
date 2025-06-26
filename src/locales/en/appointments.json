@@ -1,109 +1,75 @@
 {
-  "page": {
-    "title": "Appointments & Attendance",
-    "description": "Manage and track appointments and attendance"
-  },
-  "filters": {
-    "all": "All",
-    "today": "Today",
-    "upcoming": "Upcoming",
-    "past": "Past",
-    "canceled": "Canceled",
-    "specificDate": "Specific Date",
-    "pickDateRange": "Pick a date range",
-    "clearRange": "Clear Range"
-  },
-  "actions": {
-    "export": "Export",
-    "exportPdf": "Export as PDF",
-    "exportCsv": "Export as CSV",
-    "viewDetails": "View Details",
-    "trackAttendance": "Track Attendance",
-    "saveChanges": "Save Changes",
-    "saving": "Saving...",
-    "deleteAppointment": "Delete Appointment",
-    "deleting": "Deleting..."
-  },
-  "appointment": {
+  "appointments": {
+    "title": "Your Appointments",
+    "subtitle": "Manage and view your scheduled sessions",
+    "search": "Search appointments...",
+    "filter": "Filter",
+    "statusLabel": "Status:",
     "status": {
+      "approved": "Approved ✅",
+      "pending":  "Pending ⏳",
+      "rejected": "Rejected ❌",
+      "Closed": "Closed"
+    },
+    "tabs": {
+      "past": "Past",
       "upcoming": "Upcoming",
-      "inProgress": "In Progress",
-      "completed": "Completed",
-      "canceled": "Canceled"
+      "pending": "Pending"
     },
-    "metadata": {
-      "volunteers": "volunteer",
-      "volunteersPlural": "volunteers",
-      "residents": "resident",
-      "residentsPlural": "residents",
-      "created": "Created",
-      "externalGroup": "External Group"
+    "note": "Note",
+    "noAppointments": "You don’t have any appointments to show.",
+    "actions": {
+      "cancel": "Cancel Request"
     },
-    "noAppointments": "No appointments found",
-    "goToCalendar": "Go to Calendar"
-  },
-  "details": {
-    "title": "Appointment Details",
-    "description": "View and manage appointment details",
-    "sessionDetails": "Session Details",
-    "dateTime": "Date & Time",
-    "participants": "Participants",
-    "currentStatus": "Current Status",
-    "notes": "Notes",
-    "notesPlaceholder": "Add notes about this appointment...",
-    "timeline": "Timeline",
-    "createdOn": "Created on",
-    "lastUpdated": "Last updated on"
-  },
-  "externalGroup": {
-    "title": "External Group Details",
-    "groupName": "Group Name",
-    "contactPerson": "Contact Person",
-    "contactPhone": "Contact Phone",
-    "purposeOfVisit": "Purpose of Visit",
-    "participants": "Participants",
-    "department": "Department",
-    "activity": "Activity",
-    "notes": "Notes"
-  },
-  "attendance": {
-    "title": "Track Attendance",
-    "description": "Mark attendance for participants in this appointment",
-    "participants": "Participants",
-    "participantsCount": "Participants ({{count}})",
-    "present": "Present",
-    "late": "Late",
-    "absent": "Absent",
-    "notMarked": "Not Marked",
-    "notesPlaceholder": "Add notes about attendance...",
-    "loading": "Loading attendance data...",
-    "saveChanges": "Save Changes",
-    "saving": "Saving...",
-    "volunteer": "Volunteer",
-    "externalGroup": "External Group"
-  },
-  "delete": {
-    "title": "Delete Canceled Appointment",
-    "description": "This action cannot be undone.",
-    "confirmMessage": "Are you sure you want to continue?",
-    "warningMessage": "This will permanently remove the appointment record along with its associated calendar slot",
-    "warningMessageWithGroup": "This will permanently remove the appointment record along with its associated calendar slot and external group record."
-  },
-  "messages": {
-    "appointmentUpdated": "Appointment Updated",
-    "appointmentUpdatedDescription": "Appointment status and details updated successfully.",
-    "attendanceSaved": "Attendance Saved",
-    "attendanceSavedDescription": "All attendance records have been updated successfully.",
-    "appointmentDeleted": "Appointment Deleted",
-    "appointmentDeletedDescription": "The appointment and all associated records have been deleted successfully.",
-    "exportSuccess": "Appointments Exported",
-    "exportSuccessDescription": "Appointments exported as {format}",
-    "invalidStatusChange": "Invalid Status Change",
-    "invalidStatusChangeDescription": "This status change is not allowed based on the appointment's time.",
-    "error": "Error",
-    "errorDescription": "Failed to update appointment status.",
-    "attendanceError": "Failed to save attendance records. Please try again.",
-    "deleteError": "Failed to delete appointment. Please try again.",
-    "saveError": "Failed to save changes. Please try again."
+    "modal": {
+      "title": "Appointment Details",
+      "close": "Close",
+      "date": "Date",
+      "time": "Time",
+      "location": "Location",
+      "category": "Category",
+      "note": "Note"
+    },
+    "categories": {
+      "Reading": "Reading",
+      "Games": "Games",
+      "Music": "Music",
+      "Art": "Art",
+      "Talk": "Conversation",
+      "Other": "Other"
+    },
+    "filters": {
+      "popular": "Popular",
+      "indoor": "Indoor",
+      "outdoor": "Outdoor"
+    },
+    "days": {
+      "Sun": "Sunday",
+      "Mon": "Monday",
+      "Tue": "Tuesday",
+      "Wed": "Wednesday",
+      "Thu": "Thursday",
+      "Fri": "Friday",
+      "Sat": "Saturday"
+    },
+    "months": {
+      "January": "January",
+      "February": "February",
+      "March": "March",
+      "April": "April",
+      "May": "May",
+      "June": "June",
+      "July": "July",
+      "August": "August",
+      "September": "September",
+      "October": "October",
+      "November": "November",
+      "December": "December"
+    },
+    "time": {
+      "AM": "AM",
+      "PM": "PM"
+    },
+    "room": "Room"
   }
-} 
+}
