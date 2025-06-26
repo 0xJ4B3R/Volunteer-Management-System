@@ -24,10 +24,10 @@
       "cancelledByVolunteer": "המפגש בוטל על ידי המתנדב"
     },
     "stats": {
-      "totalHours": "סה\"כ שעות",
+      "totalHours": "סה\"כ שעות מתחילת התנדבות",
       "hoursLabel": "שעות",
       "level": "רמה נוכחית",
-      "sessionsCompleted": "מפגשים שהושלמו"
+      "sessionsCompleted": "מפגשים שהושלמו מתחילת התנדבות"
     },
     "nextLevel": "הרמה הבאה: {{level}}",
     "hoursToGo": ", {{count}} שעות נותרו",

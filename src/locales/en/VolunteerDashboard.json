@@ -24,10 +24,10 @@
       "cancelledByVolunteer": "You missed the session. Cancelled by volunteer"
     },
     "stats": {
-      "totalHours": "Total Hours",
+      "totalHours": "Total Hours since account creation",
       "hoursLabel": "Hours",
       "level": "Current Level",
-      "sessionsCompleted": "Sessions Completed"
+      "sessionsCompleted": "Sessions Completed since account creation" 
     },
     "nextLevel": "Next: {{level}}",
     "hoursToGo": " {{count}} hours to go",

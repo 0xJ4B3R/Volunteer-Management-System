@@ -7,10 +7,10 @@
   import HomeEN from './locales/en/Home.json';
   import VolunteerDashboardEN from './locales/en/VolunteerDashboard.json';
   import sidebarEN from './locales/en/Sidebar.json';
-  import CalendarEN from './locales/en/Calendar.json';
-  import ProfileEN from './locales/en/Profile.json';
-  import AppointmentsEN from './locales/en/Appointments.json';
-  import AttendanceEN from './locales/en/Attendance.json';
+  import CalendarEN from './locales/en/VolunteerCalendar.json';
+  import ProfileEN from './locales/en/VolunteerProfile.json';
+  import AppointmentsEN from './locales/en/VolunteerAppointments.json';
+  import AttendanceEN from './locales/en/VolunteerAttendance.json';
   import NotFoundEN from './locales/en/NotFound.json';
   
   //HE TRANSLATIONS:
@@ -18,10 +18,10 @@
   import HomeHE from './locales/he/Home.json';
   import VolunteerDashboardHE from './locales/he/VolunteerDashboard.json';
   import sidebarHE from './locales/he/Sidebar.json';
-  import CalendarHE from './locales/he/Calendar.json';
-  import ProfileHE from './locales/he/Profile.json';
-  import AppointmentsHE from './locales/he/Appointments.json';
-  import AttendanceHE from './locales/he/Attendance.json';
+  import CalendarHE from './locales/he/VolunteerCalendar.json';
+  import ProfileHE from './locales/he/VolunteerProfile.json';
+  import AppointmentsHE from './locales/he/VolunteerAppointments.json';
+  import AttendanceHE from './locales/he/VolunteerAttendance.json';
   import NotFoundHE from './locales/he/NotFound.json';
 
   const resources = {
