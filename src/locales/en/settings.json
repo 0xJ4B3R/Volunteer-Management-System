@@ -1,0 +1,31 @@
+{
+  "title": "Settings",
+  "languageSettings": {
+    "title": "Language Settings",
+    "description": "Choose your preferred language for the interface",
+    "interfaceLanguage": "Interface Language",
+    "changeEffect": "Changes will take effect after saving",
+    "updating": "Updating Language...",
+    "save": "Save Language Settings"
+  },
+  "passwordSettings": {
+    "title": "Change Password",
+    "description": "Update your password to keep your account secure",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "currentPasswordPlaceholder": "Enter your current password",
+    "newPasswordPlaceholder": "Enter your new password",
+    "confirmPasswordPlaceholder": "Confirm your new password",
+    "passwordRequirement": "Password should be at least 8 characters long",
+    "updating": "Updating Password...",
+    "update": "Update Password",
+    "securityTips": {
+      "title": "Password Security Tips",
+      "tip1": "Use at least 8 characters with a mix of letters, numbers, and symbols",
+      "tip2": "Avoid using personal information or common words",
+      "tip3": "Don't reuse passwords from other accounts",
+      "tip4": "Consider using a password manager for better security"
+    }
+  }
+} 

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -9,11 +9,65 @@ import {
 import { Separator } from "@/components/ui/separator";
 import LoginForm from "@/components/login/LoginForm";
 import { Heart, Users } from "lucide-react";
+import { useUsers } from "@/hooks/useFirestoreUsers";
+import { setUser } from "@/utils/auth";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "@/store/slices/authSlice";
+import { useState } from "react";
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { users } = useUsers();
+  const dispatch = useDispatch();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleLogin = async (username: string, password: string) => {
+    setIsLoggingIn(true);
+    try {
+      const user = users.find(u => u.username === username);
+      
+      if (!user) {
+        return { error: "Invalid username or password" };
+      }
+
+      // In production, this should use proper password hashing
+      if (user.passwordHash !== password) {
+        return { error: "Invalid username or password" };
+      }
+
+      if (!user.isActive) {
+        return { error: "This account has been deactivated" };
+      }
+
+      // Create user object
+      const userData = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.username // Using username as email for now
+      };
+
+      // Store user info in localStorage
+      setUser(userData, true);
+
+      // Update Redux state
+      dispatch(loginSuccess({ user: userData, token: 'mock-token' }));
+
+      // Redirect based on role
+      if (user.role === 'manager') {
+        navigate('/manager/volunteers');
+      } else {
+        navigate('/volunteer');
+      }
+
+      return { success: true };
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4 py-12 sm:px-6 lg:px-8">
-
       {/* Header */}
       <div className="w-full max-w-md text-center space-y-6 mb-8">
         <div className="flex justify-center items-center space-x-2">
@@ -38,7 +92,7 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LoginForm />
+            <LoginForm onLogin={handleLogin} loading={isLoggingIn} />
           </CardContent>
         </Card>
 

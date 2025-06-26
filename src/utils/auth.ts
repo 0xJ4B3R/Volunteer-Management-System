@@ -40,4 +40,4 @@ export const removeUser = (): void => {
 export const clearAuth = (): void => {
   removeToken();
   removeUser();
-}; 
+};
