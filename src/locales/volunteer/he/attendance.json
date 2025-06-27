@@ -1,0 +1,69 @@
+{
+  "attendance": {
+    "title": "נוכחות",
+    "subtitle": "נהל את נוכחותך בפגישות והצג היסטוריה",
+    "tabs": {
+      "today": "היום",
+      "history": "היסטוריה"
+    },
+    "todaysSessions": "פגישות היום",
+    "pleaseConfirm": "אנא אשר את נוכחותך לפגישה זו.",
+    "time": "זמן",
+    "date": "תאריך",
+    "sessionType": "סוג הפגישה",
+    "description": "תיאור",
+    "status": "סטטוס",
+    "onTime": "בזמן",
+    "graceActive": "תקופת חסד פעילה",
+    "late": "אישור איחור",
+    "ended": "הפגישה הסתיימה",
+    "minuteLeft": "דקה נותרה בתקופת החסד",
+    "minutesLeft": "{{count}} דקות נותרו בתקופת החסד",
+    "sessionTiming": "תזמון הפגישה",
+    "sessionEnded": "הפגישה הסתיימה",
+    "autoMarkedAbsent": "הפגישה הסתיימה ואתה סומנת כנעדר אוטומטית.",
+    "confirmTitle": "אנא אשר את נוכחותך",
+    "confirmMessage": "נוכחותך צריכה להיות מאושרת לפגישה זו.",
+    "confirm": "אשר נוכחות",
+    "confirmLate": "אשר (איחור)",
+    "confirmGrace": "אשר (תקופת חסד)",
+    "unableToAttend": "לא יכול להגיע",
+    "noSessions": "אין פגישות היום",
+    "noSessionsDesc": "אין לך פגישות מאושרות לקביעה להיום.",
+    "noSessionsTitle": "לא נמצאו פגישות",
+    "noSessionsMessage": "בדוק בלוח השנה לראות את הפגישות הקרובות או צור קשר עם הקואורדינטור.",
+    "thisMonth": "סיכום החודש",
+    "sessions": "פגישות",
+    "hours": "שעות",
+    "attendanceRate": "אחוז נוכחות",
+    "noHistory": "לא נמצאה היסטוריית נוכחות.",
+    "hoursCompleted": "{{hours}} שעות הושלמו",
+    "notes": "הערות",
+    "sessionLabel": "פגישה",
+    "timeUnavailable": "זמן לא זמין",
+    "defaultSessionTitle": "פגישת התנדבות",
+    "loadMoreHistory": "טען עוד היסטוריה",
+    "showingRecords": "מציג {{count}} מתוך {{total}} רשומות",
+    "allHistoryLoaded": "כל ההיסטוריה נטענה ({{count}} רשומות)",
+    "loading": "טוען...",
+    "sessionNumber": "פגישה {{number}}",
+    "statuses": {
+      "not_confirmed": "לא אושר",
+      "confirmed": "אושר",
+      "cancelled": "בוטל",
+      "auto-absent": "נעדר אוטומטית",
+      "grace-period": "תקופת חסד",
+      "present": "נוכח",
+      "absent": "נעדר",
+      "late": "איחור"
+    },
+    "historyItem": {
+      "title": "{{title}}",
+      "status": {
+        "present": "נוכח",
+        "late": "איחור",
+        "absent": "נעדר"
+      }
+    }
+  }
+}

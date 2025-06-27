@@ -1,0 +1,14 @@
+{
+  "login_title": "Sign In",
+  "login_subtitle": "Welcome to the Volunteer Management System. Please enter your credentials to access your account.",
+  "username": "Username",
+  "password": "Password",
+  "login_button": "Sign In",
+  "Back_to_home_page": "Return to Homepage",
+  "error_fill_fields": "Please complete all required fields to proceed.",
+  "error_user_not_found": "The specified username does not exist in our system.",
+  "error_user_inactive": "Your account has been deactivated. Please contact the administrator for assistance.",
+  "error_invalid_role": "Your account does not have the appropriate permissions to access this system.",
+  "error_wrong_credentials": "The username or password entered is incorrect. Please verify your credentials and try again.",
+  "error_login_failed": "Authentication failed. Please try again or contact support if the issue persists."
+}
