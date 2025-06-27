@@ -1,51 +1,28 @@
-import { Calendar, CalendarDays, Filter, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, CalendarDays, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, arrayUnion, Timestamp } from 'firebase/firestore';
-import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
 import { Layout } from '@/components/volunteer/Layout';
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Calendar.css";
-import app from "@/lib/firebase";
 
-// Utility: Get color for session type
-const getSessionTypeColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "reading": return "bg-[#3b82f6] text-white";
-    case "games": return "bg-[#ec4899] text-white";
-    case "music": return "bg-[#f59e0b] text-white";
-    case "art": return "bg-[#10b981] text-white";
-    case "crafts": return "bg-[#8b5cf6] text-white";
-    case "exercise": return "bg-[#ef4444] text-white";
-    case "therapy": return "bg-[#6366f1] text-white";
-    case "social": return "bg-[#14b8a6] text-white";
-    case "session": return "bg-[#6b7280] text-white";
-    default: return "bg-[#6b7280] text-white";
-  }
+// Import proper Firestore hooks and types
+import { useCalendarSlots, useUpdateCalendarSlot } from "@/hooks/useFirestoreCalendar";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import { Timestamp, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+// Utility: Get default color for sessions
+const getSessionColor = () => {
+  return "bg-[#6b7280] text-white";
 };
 
-// Utility: Get border color for session type
-const getSessionTypeBorderColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "reading": return "#2563eb";
-    case "games": return "#db2777";
-    case "music": return "#d97706";
-    case "art": return "#059669";
-    case "crafts": return "#7c3aed";
-    case "exercise": return "#dc2626";
-    case "therapy": return "#4f46e5";
-    case "social": return "#0d9488";
-    case "session": return "#4b5563";
-    default: return "#4b5563";
-  }
+// Utility: Get default border color for sessions
+const getSessionBorderColor = () => {
+  return "#4b5563";
 };
 
 // Utility: Only allow sign up for today or future events
@@ -127,40 +104,33 @@ const positionSlotsByTime = (slotsForDay) => {
   return positionedSlots;
 };
 
-// Function to group slots by time and create stacked groups
-const groupSlotsByTime = (slotsForDay) => {
-  const sortedSlots = sortSlotsByTime(slotsForDay);
-  const groups = {};
-  
-  sortedSlots.forEach(slot => {
-    const key = slot.startTime;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(slot);
-  });
-  
-  return Object.entries(groups)
-    .sort(([timeA], [timeB]) => {
-      const aMinutes = timeToMinutes(timeA);
-      const bMinutes = timeToMinutes(timeB);
-      return aMinutes - bMinutes;
-    })
-    .map(([_, slots]) => slots);
-};
-
 // Utility: Check user approval status for a slot
-const getUserApprovalStatus = (slot, currentUser) => {
-  if (!currentUser || !slot.volunteers) return null;
+const getUserApprovalStatus = (slot, currentUser, pendingRequests = new Set(), volunteers = []) => {
+  if (!currentUser) return null;
   
-  const userVolunteer = slot.volunteers.find(v => 
-    v.username === currentUser.username || 
-    v.id === currentUser.uid || 
-    v.id === currentUser.id
+  // Check if we have a local pending request first
+  if (pendingRequests.has(slot.id)) {
+    return "pending";
+  }
+  
+  if (!slot.volunteerRequests) return null;
+  
+  // Find the volunteer record that corresponds to this user
+  const volunteer = volunteers.find(v => 
+    v.userId === currentUser.id || 
+    v.userId === currentUser.uid || 
+    v.id === currentUser.id ||
+    v.id === currentUser.uid
   );
   
-  return userVolunteer ? userVolunteer.status : null;
+  if (!volunteer) return null;
+  
+  const userRequest = slot.volunteerRequests.find(vr => 
+    vr.volunteerId === volunteer.id
+  );
+  
+  return userRequest ? userRequest.status : null;
 };
-
-const db = getFirestore(app);
 
 const VolunteerCalendar = () => {
   const navigate = useNavigate();
@@ -179,13 +149,16 @@ const VolunteerCalendar = () => {
     return today;
   });
 
-  const [calendarSlots, setCalendarSlots] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Use proper Firestore hooks
+  const { slots: calendarSlots, loading: isLoading, error } = useCalendarSlots();
+  const { updateCalendarSlot } = useUpdateCalendarSlot();
+  const { volunteers } = useVolunteers();
+  
   const [viewMode, setViewMode] = useState("week");
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
-  const [selectedSessionType, setSelectedSessionType] = useState("all");
   const [signupLoading, setSignupLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [pendingRequests, setPendingRequests] = useState(new Set()); // Track locally submitted requests
 
   // Check authentication
   useEffect(() => {
@@ -203,56 +176,40 @@ const VolunteerCalendar = () => {
     }
   }, [navigate]);
 
-  // Fetch slots from Firestore
+  // Clean up pending requests when real-time data updates
   useEffect(() => {
-    setIsLoading(true);
-    
-    const fetchSlots = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "calendar_slots"));
-        
-        const slots = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          
-          let dateObj = null;
-          if (data.date) {
-            if (data.date.toDate) {
-              dateObj = data.date.toDate();
-            } else {
-              dateObj = new Date(data.date);
+    if (calendarSlots.length > 0 && currentUser && volunteers.length > 0) {
+      const updatedPendingRequests = new Set();
+      
+      // Find the volunteer record that corresponds to this user
+      const volunteer = volunteers.find(v => 
+        v.userId === currentUser.id || 
+        v.userId === currentUser.uid || 
+        v.id === currentUser.id ||
+        v.id === currentUser.uid
+      );
+      
+      if (volunteer) {
+        pendingRequests.forEach(slotId => {
+          const slot = calendarSlots.find(s => s.id === slotId);
+          if (slot) {
+            const hasRealRequest = slot.volunteerRequests?.some(vr => 
+              vr.volunteerId === volunteer.id
+            );
+            
+            // Keep in pending if no real request found yet
+            if (!hasRealRequest) {
+              updatedPendingRequests.add(slotId);
             }
           }
-          
-          // Set default type to "Session" if no customLabel or type is provided
-          const sessionType = data.customLabel || data.type || "Session";
-          
-          return {
-            id: doc.id,
-            appointmentId: data.appointmentId || null,
-            customLabel: data.customLabel || 'Session',
-            type: sessionType,
-            isCustom: data.isCustom || false,
-            startTime: data.startTime || '9:00 AM',
-            endTime: data.endTime || '10:00 AM',
-            available: data.isOpen || false,
-            isOpen: data.isOpen || false,
-            date: dateObj,
-            volunteers: data.volunteers || [],
-            volunteerRequests: data.volunteerRequests || [],
-            maxVolunteers: data.maxCapacity || 1
-          };
         });
         
-        setCalendarSlots(slots);
-      } catch (err) {
-        console.error("Error fetching slots:", err);
-      } finally {
-        setIsLoading(false);
+        if (updatedPendingRequests.size !== pendingRequests.size) {
+          setPendingRequests(updatedPendingRequests);
+        }
       }
-    };
-    
-    fetchSlots();
-  }, []);
+    }
+  }, [calendarSlots, currentUser, pendingRequests, volunteers]);
 
   // Navigation functions
   const navigatePrevious = () => {
@@ -288,100 +245,65 @@ const VolunteerCalendar = () => {
       return;
     }
 
-    if (!slot.available || !isEventAvailable(slot.date)) {
+    if (!slot.isOpen || !isEventAvailable(new Date(slot.date))) {
+      console.warn("Cannot sign up: slot is not open or not available");
       return;
     }
 
-    // Check if user is already approved or rejected
-    const userStatus = getUserApprovalStatus(slot, currentUser);
-    if (userStatus === "approved") {
-      return;
-    }
-    if (userStatus === "rejected") {
-      return;
+    // Check if user is already signed up
+    const userStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
+    if (userStatus) {
+      console.warn("User already has a request with status:", userStatus);
+      return; // User already has a request
     }
 
     setSignupLoading(true);
 
     try {
+      console.log("Attempting to sign up user:", currentUser.username, "for slot:", slot.id);
+      console.log("Current user object:", currentUser);
+      console.log("User ID fields - id:", currentUser.id, "uid:", currentUser.uid, "username:", currentUser.username);
+      
+      // Find the volunteer record that corresponds to this user
+      const volunteer = volunteers.find(v => 
+        v.userId === currentUser.id || 
+        v.userId === currentUser.uid || 
+        v.id === currentUser.id ||
+        v.id === currentUser.uid
+      );
+      
+      if (!volunteer) {
+        console.error("Could not find volunteer record for user:", currentUser);
+        throw new Error("Volunteer record not found. Please contact support.");
+      }
+      
+      console.log("Found volunteer record:", volunteer);
+      
+      // Use direct Firebase update with arrayUnion (matching TestVolunteerRequests pattern)
       const slotRef = doc(db, "calendar_slots", slot.id);
-      const slotDoc = await getDoc(slotRef);
-      
-      if (!slotDoc.exists()) {
-        throw new Error("Session not found");
-      }
-      
-      const slotData = slotDoc.data();
-      const volunteers = slotData.volunteers || [];
-      const volunteerRequests = slotData.volunteerRequests || [];
-      
-      if (volunteers.some(v => v.id === currentUser.uid || v.username === currentUser.username)) {
-        setSignupLoading(false);
-        return;
-      }
-      
-      if (volunteerRequests && volunteerRequests.includes(currentUser.uid)) {
-        setSignupLoading(false);
-        return;
-      }
-      
-      const approvedVolunteersCount = volunteers.filter(v => v.status !== "pending").length;
-      
-      if (approvedVolunteersCount >= (slotData.maxVolunteers || 1)) {
-        setSignupLoading(false);
-        return;
-      }
       
       await updateDoc(slotRef, {
-        volunteerRequests: arrayUnion(currentUser.uid || currentUser.id || currentUser.username)
-      });
-      
-      await updateDoc(slotRef, {
-        volunteers: arrayUnion({
-          id: currentUser.uid || currentUser.id || "",
-          username: currentUser.username,
+        volunteerRequests: arrayUnion({
+          volunteerId: volunteer.id,
           status: "pending",
-          signupTime: Timestamp.now()
+          requestedAt: Timestamp.now(),
+          approvedAt: null,
+          rejectedAt: null,
+          rejectedReason: null,
+          matchScore: null,
+          assignedBy: "ai"
         })
       });
       
-      // Refresh calendar data
-      const querySnapshot = await getDocs(collection(db, "calendar_slots"));
-      const updatedSlots = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        
-        let dateObj = null;
-        if (data.date) {
-          if (data.date.toDate) {
-            dateObj = data.date.toDate();
-          } else {
-            dateObj = new Date(data.date);
-          }
-        }
-        
-        const sessionType = data.customLabel || data.type || "Session";
-        
-        return {
-          id: doc.id,
-          appointmentId: data.appointmentId || null,
-          customLabel: data.customLabel || 'Session',
-          type: sessionType,
-          isCustom: data.isCustom || false,
-          startTime: data.startTime || '9:00 AM',
-          endTime: data.endTime || '10:00 AM',
-          available: data.isOpen || false,
-          isOpen: data.isOpen || false,
-          date: dateObj,
-          volunteers: data.volunteers || [],
-          volunteerRequests: data.volunteerRequests || [],
-          maxVolunteers: data.maxVolunteers || 1
-        };
-      });
+      // Add to local pending requests for immediate UI feedback
+      setPendingRequests(prev => new Set([...prev, slot.id]));
       
-      setCalendarSlots(updatedSlots);
+      console.log("Successfully submitted request for session");
+      // Note: Success feedback will be visible when the component re-renders with updated data
       
     } catch (error) {
       console.error("Error signing up for session:", error);
+      alert(t("Failed to submit request") + ": " + error.message);
     } finally {
       setSignupLoading(false);
     }
@@ -417,7 +339,11 @@ const VolunteerCalendar = () => {
 
   // Filter slots based on selected date and showOnlyAvailable setting
   const getFilteredSlots = () => {
-    let filtered = calendarSlots.filter(slot => slot.date instanceof Date && !isNaN(slot.date));
+    let filtered = calendarSlots.filter(slot => {
+      // Convert date string to Date object for comparison
+      const slotDate = new Date(slot.date);
+      return !isNaN(slotDate.getTime());
+    });
     
     if (viewMode === "week") {
       const weekDates = getWeekDates();
@@ -432,36 +358,18 @@ const VolunteerCalendar = () => {
     else if (viewMode === "month") {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      filtered = filtered.filter(slot =>
-        slot.date.getFullYear() === year &&
-        slot.date.getMonth() === month
-      );
+      filtered = filtered.filter(slot => {
+        const slotDate = new Date(slot.date);
+        return slotDate.getFullYear() === year && slotDate.getMonth() === month;
+      });
     }
     
-    // Fixed: Check the isOpen property correctly
+    // Check the isOpen property correctly
     if (showOnlyAvailable) {
       filtered = filtered.filter(slot => slot.isOpen === true);
     }
     
-    // Fixed: Handle session type filtering including default "Session" type
-    if (selectedSessionType !== "all") {
-      filtered = filtered.filter(slot => {
-        const slotType = slot.customLabel || slot.type || "Session";
-        return slotType.toLowerCase() === selectedSessionType.toLowerCase();
-      });
-    }
-    
     return filtered;
-  };
-
-  // Get unique session types for filter
-  const getSessionTypes = () => {
-    const types = new Set();
-    calendarSlots.forEach(slot => {
-      const sessionType = slot.customLabel || slot.type || "Session";
-      types.add(sessionType);
-    });
-    return Array.from(types).filter(Boolean).sort();
   };
 
   // Format date for display
@@ -484,16 +392,20 @@ const VolunteerCalendar = () => {
 
   // Render session slot with improved stacking
   const renderSessionSlot = (slot, stackIdx = 0, totalInStack = 1) => {
-    const borderColor = getSessionTypeBorderColor(slot.type);
-    const hasUserRequest = slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username);
-    const hasPendingRequests = slot.volunteers?.some(v => v.status === "pending");
-    const userApprovalStatus = getUserApprovalStatus(slot, currentUser);
+    const borderColor = getSessionBorderColor();
+    const hasUserRequest = slot.volunteerRequests?.some(vr => 
+      vr.volunteerId === currentUser?.uid || 
+      vr.volunteerId === currentUser?.id || 
+      vr.volunteerId === currentUser?.username
+    );
+    const hasPendingRequests = slot.volunteerRequests?.some(vr => vr.status === "pending");
+    const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
 
     return (
       <Dialog key={slot.id}>
         <DialogTrigger asChild>
           <div
-            className={`time-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable-slot" : ""}`}
+            className={`time-slot ${getSessionColor()}${!slot.isOpen ? " unavailable-slot" : ""}`}
             style={{
               position: stackIdx > 0 ? "absolute" : "relative",
               top: stackIdx > 0 ? `${stackIdx * 12}px` : "0",
@@ -533,7 +445,7 @@ const VolunteerCalendar = () => {
                 fontWeight: "bold",
                 zIndex: 20
               }}>
-                Approved
+                {t("SessionStatus.approved")}
               </div>
             )}
             
@@ -550,7 +462,7 @@ const VolunteerCalendar = () => {
                 fontWeight: "bold",
                 zIndex: 20
               }}>
-                Pending
+                {t("SessionStatus.pending")}
               </div>
             )}
             
@@ -567,21 +479,12 @@ const VolunteerCalendar = () => {
                 fontWeight: "bold",
                 zIndex: 20
               }}>
-                Rejected
+                {t("SessionStatus.rejected")}
               </div>
-            )}
-            
-            {!userApprovalStatus && hasUserRequest && (
-              <div className="my-request-badge">My Request</div>
-            )}
-            
-            {!userApprovalStatus && !hasUserRequest && hasPendingRequests && (
-              <div className="pending-badge">Pending</div>
             )}
             
             <div className="time-slot-header">
               <span className="start-time">{slot.startTime}</span>
-              <span className="session-type-badge">{slot.type}</span>
             </div>
             <div className="time-range">
               {slot.startTime} - {slot.endTime}
@@ -589,7 +492,7 @@ const VolunteerCalendar = () => {
             <div className="volunteers-count">
               <Users className="h-3 w-3" />
               <span>
-                {(slot.volunteers?.length || 0)}/{slot.maxVolunteers || 1}
+                {slot.approvedVolunteers?.length || 0}/{slot.maxCapacity || 1}
               </span>
             </div>
           </div>
@@ -597,16 +500,16 @@ const VolunteerCalendar = () => {
         <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold mb-4">
-              Sign Up for <span className="capitalize">{slot.type}</span> Session
+              {t("Sign Up for Session")}
             </DialogTitle>
-            <div className="flex items-center text-gray-500 text-sm mb-4">
-              <span className="mr-2 font-medium">Date:</span>
-              <span>{slot.date.toDateString()}</span>
-            </div>
+            <DialogDescription className="flex items-center text-gray-500 text-sm mb-4">
+              <span className="mr-2 font-medium">{t("Date:")}</span>
+              <span>{new Date(slot.date).toDateString()}</span>
+            </DialogDescription>
           </DialogHeader>
           <div className="mb-6">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700">Time:</span>
+              <span className="font-medium text-gray-700">{t("Time:")}</span>
               <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
                 {slot.startTime} - {slot.endTime}
               </span>
@@ -622,7 +525,13 @@ const VolunteerCalendar = () => {
                   <span className="font-medium" style={{ 
                     color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
                   }}>
-                    Status: {userApprovalStatus === "approved" ? "Approved ✅" : userApprovalStatus === "rejected" ? "Rejected ❌" : "Pending Approval ⏳"}
+                    {t("SessionStatus.label")}: {
+                      userApprovalStatus === "approved" 
+                        ? t("SessionStatus.approved") + " ✅" 
+                        : userApprovalStatus === "rejected" 
+                          ? t("SessionStatus.rejected") + " ❌" 
+                          : t("SessionStatus.pendingApproval") + " ⏳"
+                    }
                   </span>
                 </div>
               </div>
@@ -632,33 +541,29 @@ const VolunteerCalendar = () => {
             <button
               type="button"
               disabled={
-                !slot.available || 
-                !isEventAvailable(slot.date) || 
+                !slot.isOpen || 
+                !isEventAvailable(new Date(slot.date)) || 
                 signupLoading || 
-                userApprovalStatus === "approved" ||
-                userApprovalStatus === "pending" ||
-                userApprovalStatus === "rejected"
+                userApprovalStatus
               }
               style={
-                (!slot.available || !isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
+                (!slot.isOpen || !isEventAvailable(new Date(slot.date)) || signupLoading || userApprovalStatus)
                   ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                   : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
               }
               onClick={() => handleSignUp(slot)}
             >
               {signupLoading
-                ? "Submitting Request..."
+                ? t("Submitting Request...")
                 : userApprovalStatus === "approved"
-                  ? "Already Approved"
+                  ? t("Already Approved")
                   : userApprovalStatus === "rejected"
-                    ? "Request Rejected"
+                    ? t("Request Rejected")
                     : userApprovalStatus === "pending"
-                      ? "Request Pending"
-                      : (!slot.available || !isEventAvailable(slot.date))
-                        ? "Not Available"
-                        : hasUserRequest
-                          ? "Request Pending"
-                          : "Request to Join"}
+                      ? t("Request Pending")
+                      : (!slot.isOpen || !isEventAvailable(new Date(slot.date)))
+                        ? t("Not Available")
+                        : t("Request to Join")}
             </button>
           </div>
         </DialogContent>
@@ -668,6 +573,10 @@ const VolunteerCalendar = () => {
 
   if (isLoading) {
     return <LoadingScreen />;
+  }
+
+  if (error) {
+    console.error("Calendar error:", error);
   }
 
   return (
@@ -742,39 +651,7 @@ const VolunteerCalendar = () => {
                     <span>{t("Month")}</span>
                   </button>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="filter-button">
-                      <Filter className="h-4 w-4 mr-1" />
-                      {t("Filter")}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <div className="filter-dropdown-content">
-                      <Select
-                        value={selectedSessionType}
-                        onValueChange={setSelectedSessionType}
-                      >
-                        <SelectTrigger
-                          className={`session-type-select flex items-center justify-between ${
-                            i18n.language === "he" ? "flex-row-reverse text-right" : "flex-row text-left"
-                          }`}
-                          dir="auto"
-                        >
-                          <SelectValue placeholder={t("Select session type")} />
-                        </SelectTrigger>
-                        <SelectContent dir={i18n.language === "he" ? "rtl" : "ltr"}>
-                          <SelectItem value="all">{t("All Session Types")}</SelectItem>
-                          {getSessionTypes().map((type) => (
-                            <SelectItem key={type} value={type.toLowerCase()}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+
               </div>
             </div>
 
@@ -808,7 +685,8 @@ const VolunteerCalendar = () => {
                   <div className="week-grid">
                     {getWeekDates().map((date, index) => {
                       const slotsForDay = getFilteredSlots().filter(slot => {
-                        return slot.date && slot.date.toDateString() === date.toDateString();
+                        const slotDate = new Date(slot.date);
+                        return slotDate.toDateString() === date.toDateString();
                       });
                       
                       if (slotsForDay.length === 0) {
@@ -827,14 +705,14 @@ const VolunteerCalendar = () => {
                         <div key={index} className="week-day-column">
                           <div className="day-time-container" style={{ position: "relative", minHeight: "600px" }}>
                             {positionedSlots.map((slot) => {
-                              const userApprovalStatus = getUserApprovalStatus(slot, currentUser);
-                              const borderColor = getSessionTypeBorderColor(slot.type);
+                              const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
+                              const borderColor = getSessionBorderColor();
                               
                               return (
                                 <Dialog key={slot.id}>
                                   <DialogTrigger asChild>
                                     <div
-                                      className={`time-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable-slot" : ""}`}
+                                      className={`time-slot ${getSessionColor()}${!slot.isOpen ? " unavailable-slot" : ""}`}
                                       style={{
                                         position: "absolute",
                                         top: `${slot.topPosition + (slot.stackIndex * 12)}px`,
@@ -900,20 +778,8 @@ const VolunteerCalendar = () => {
                                         </div>
                                       )}
                                       
-                                      {/* Add status indicator for slots you've requested */}
-                                      {!userApprovalStatus && slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
-                                        <div className="my-request-badge">My Request</div>
-                                      )}
-                                      
-                                      {/* Or show pending badge if it has any pending requests */}
-                                      {!userApprovalStatus && !slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && 
-                                       slot.volunteers?.some(v => v.status === "pending") && (
-                                        <div className="pending-badge">Pending</div>
-                                      )}
-                                      
                                       <div className="time-slot-header">
                                         <span className="start-time">{slot.startTime}</span>
-                                        <span className="session-type-badge">{slot.type}</span>
                                       </div>
                                       <div className="time-range">
                                         {slot.startTime} - {slot.endTime}
@@ -921,7 +787,7 @@ const VolunteerCalendar = () => {
                                       <div className="volunteers-count">
                                         <Users className="h-3 w-3" />
                                         <span>
-                                          {(slot.volunteers?.length || 0)}/{slot.maxVolunteers || 1}
+                                          {slot.approvedVolunteers?.length || 0}/{slot.maxCapacity || 1}
                                         </span>
                                       </div>
                                     </div>
@@ -933,19 +799,19 @@ const VolunteerCalendar = () => {
                                         dir="auto"
                                         style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
                                       >
-                                        {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
+                                        {t("Sign Up for Session")}
                                       </DialogTitle>
-                                      <div className="flex items-center text-gray-500 text-sm mb-4">
+                                      <DialogDescription className="flex items-center text-gray-500 text-sm mb-4">
                                         <span className="mr-2 font-medium">{t("Date:")}</span>
                                         <span>
-                                          {slot.date.toLocaleDateString(i18n.language, {
+                                          {new Date(slot.date).toLocaleDateString(i18n.language, {
                                             weekday: 'short',
                                             day: 'numeric',
                                             month: 'short',
                                             year: 'numeric'
                                           })}
                                         </span>
-                                      </div>
+                                      </DialogDescription>
                                     </DialogHeader>
                                     <div className="mb-6">
                                       <div className="flex items-center gap-2">
@@ -965,13 +831,13 @@ const VolunteerCalendar = () => {
                                             <span className="font-medium" style={{ 
                                               color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
                                             }}>
-                                                {t(
-                                                  userApprovalStatus === "approved"
-                                                    ? "SessionStatus.approvedStatus"
-                                                    : userApprovalStatus === "rejected"
-                                                    ? "SessionStatus.rejectedStatus"
-                                                    : "SessionStatus.pendingApproval"
-                                                )}
+                                              {t("SessionStatus.label")}: {
+                                                userApprovalStatus === "approved" 
+                                                  ? t("SessionStatus.approved") + " ✅" 
+                                                  : userApprovalStatus === "rejected" 
+                                                    ? t("SessionStatus.rejected") + " ❌" 
+                                                    : t("SessionStatus.pendingApproval") + " ⏳"
+                                              }
                                             </span>
                                           </div>
                                         </div>
@@ -981,19 +847,17 @@ const VolunteerCalendar = () => {
                                       <button
                                         type="button"
                                         disabled={
-                                          !slot.available || 
-                                          !isEventAvailable(slot.date) || 
+                                          !slot.isOpen || 
+                                          !isEventAvailable(new Date(slot.date)) || 
                                           signupLoading || 
-                                          userApprovalStatus === "approved" ||
-                                          userApprovalStatus === "pending" ||
-                                          userApprovalStatus === "rejected"
+                                          userApprovalStatus
                                         }
-                                          style={
-                                            (!slot.available || !isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
-                                              ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
-                                              : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
-                                          }
-                                          onClick={() => handleSignUp(slot)}
+                                        style={
+                                          (!slot.isOpen || !isEventAvailable(new Date(slot.date)) || signupLoading || userApprovalStatus)
+                                            ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
+                                            : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
+                                        }
+                                        onClick={() => handleSignUp(slot)}
                                       >
                                         {signupLoading 
                                           ? t("Submitting Request...")
@@ -1003,11 +867,9 @@ const VolunteerCalendar = () => {
                                               ? t("Request Rejected")
                                               : userApprovalStatus === "pending"
                                                 ? t("Request Pending")
-                                                : (!slot.available || !isEventAvailable(slot.date))
+                                                : (!slot.isOpen || !isEventAvailable(new Date(slot.date)))
                                                   ? t("Not Available")
-                                                  : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
-                                                    ? t("Request Pending")
-                                                    : t("Request to Join")}
+                                                  : t("Request to Join")}
                                       </button>
                                     </div>
                                   </DialogContent>
@@ -1040,11 +902,13 @@ const VolunteerCalendar = () => {
                     {getMonthGrid(currentDate).map((date, idx) => {
                       const isToday = date && date.toDateString() === new Date().toDateString();
                       const slotsUnsorted = date
-                        ? getFilteredSlots().filter(slot => slot.date && slot.date.toDateString() === date.toDateString())
+                        ? getFilteredSlots().filter(slot => {
+                            const slotDate = new Date(slot.date);
+                            return slotDate.toDateString() === date.toDateString();
+                          })
                         : [];
                         
                       const slots = sortSlotsByTime(slotsUnsorted);
-                      const grouped = groupSlotsByTime(slots);
                         
                       return (
                         <div
@@ -1053,23 +917,23 @@ const VolunteerCalendar = () => {
                         >
                           {date && <div className="month-day-number">{date.getDate()}</div>}
                           {slots.map((slot, slotIdx) => {
-                            const userApprovalStatus = getUserApprovalStatus(slot, currentUser);
-                            const borderColor = getSessionTypeBorderColor(slot.type);
+                            const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
+                            const borderColor = getSessionBorderColor();
                             
                             return (
                               <Dialog key={slot.id}>
                                 <DialogTrigger asChild>
                                   <div
-                                    className={`month-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable" : ""}`}
+                                    className={`month-slot ${getSessionColor()}${!slot.isOpen ? " unavailable" : ""}`}
                                     style={{
                                       borderLeft: "4px solid",
                                       borderLeftColor: borderColor,
                                       order: slotIdx,
                                       position: "relative"
                                     }}
-                                    title={`${slot.type} ${slot.startTime} - ${slot.endTime}`}
+                                    title={`Session ${slot.startTime} - ${slot.endTime}`}
                                   >
-                                    <span className="month-slot-type">{slot.type}</span>
+                                    <span className="month-slot-type">Session</span>
                                     <span className="month-slot-time">{slot.startTime}</span>
                                     
                                     {/* Show approval status indicator */}
@@ -1105,18 +969,6 @@ const VolunteerCalendar = () => {
                                         marginLeft: "4px" 
                                       }}></span>
                                     )}
-                                    
-                                    {/* Small indicator dot if you've requested this slot but no status yet */}
-                                    {!userApprovalStatus && slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
-                                      <span style={{ 
-                                        display: "inline-block", 
-                                        width: "6px", 
-                                        height: "6px", 
-                                        borderRadius: "50%", 
-                                        backgroundColor: "#2563eb", 
-                                        marginLeft: "4px" 
-                                      }}></span>
-                                    )}
                                   </div>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
@@ -1126,19 +978,19 @@ const VolunteerCalendar = () => {
                                       dir="auto"
                                       style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
                                     >
-                                      {t("Sign Up for:")} <span className="capitalize">{slot.type}</span>
+                                      {t("Sign Up for Session")}
                                     </DialogTitle>
-                                    <div className="flex items-center text-gray-500 text-sm mb-4">
+                                    <DialogDescription className="flex items-center text-gray-500 text-sm mb-4">
                                       <span className="mr-2 font-medium">{t("Date:")}</span>
                                       <span>
-                                        {slot.date.toLocaleDateString(i18n.language, {
+                                        {new Date(slot.date).toLocaleDateString(i18n.language, {
                                           weekday: "short",
                                           day:     "numeric",
                                           month:   "short",
                                           year:    "numeric"
                                         })}
                                       </span>
-                                    </div>
+                                    </DialogDescription>
                                   </DialogHeader>                                                    
                                   <div className="space-y-3 mb-6">
                                     <div className="flex items-center gap-2">
@@ -1180,12 +1032,13 @@ const VolunteerCalendar = () => {
                                                   : "#92400e"
                                             }}
                                           >
-                                            {t("SessionStatus.label")}{" "}
-                                            {userApprovalStatus === "approved"
-                                              ? t("SessionStatus.approved")
-                                              : userApprovalStatus === "rejected"
-                                              ? t("SessionStatus.rejected")
-                                              : t("SessionStatus.pendingApproval")}
+                                            {t("SessionStatus.label")}: {
+                                              userApprovalStatus === "approved"
+                                                ? t("SessionStatus.approved") + " ✅"
+                                                : userApprovalStatus === "rejected"
+                                                ? t("SessionStatus.rejected") + " ❌"
+                                                : t("SessionStatus.pendingApproval") + " ⏳"
+                                            }
                                           </span>
                                         </div>
                                       </div>
@@ -1195,15 +1048,13 @@ const VolunteerCalendar = () => {
                                     <button
                                       type="button"
                                       disabled={
-                                        !slot.available || 
-                                        !isEventAvailable(slot.date) || 
+                                        !slot.isOpen || 
+                                        !isEventAvailable(new Date(slot.date)) || 
                                         signupLoading || 
-                                        userApprovalStatus === "approved" ||
-                                        userApprovalStatus === "pending" ||
-                                        userApprovalStatus === "rejected"
+                                        userApprovalStatus
                                       }
                                       style={
-                                        (!slot.available || !isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
+                                        (!slot.isOpen || !isEventAvailable(new Date(slot.date)) || signupLoading || userApprovalStatus)
                                           ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                                           : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
                                       }
@@ -1217,11 +1068,9 @@ const VolunteerCalendar = () => {
                                             ? t("Request Rejected")
                                             : userApprovalStatus === "pending"
                                               ? t("Request Pending")
-                                              : (!slot.available || !isEventAvailable(slot.date))
+                                              : (!slot.isOpen || !isEventAvailable(new Date(slot.date)))
                                                 ? t("Not Available")
-                                                : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
-                                                  ? t("Request Pending")
-                                                  : t("Request to Join")}
+                                                : t("Request to Join")}
                                     </button>                         
                                   </div>
                                 </DialogContent>
@@ -1243,24 +1092,24 @@ const VolunteerCalendar = () => {
           </button>
           {showLangOptions && (
             <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-                          <button onClick={() => { 
-              localStorage.setItem('language', 'en');
-              i18n.changeLanguage('en').then(() => {
-                document.documentElement.dir = 'ltr';
-              });
-              setShowLangOptions(false); 
-            }}>
-              English
-            </button>
-            <button onClick={() => { 
-              localStorage.setItem('language', 'he');
-              i18n.changeLanguage('he').then(() => {
-                document.documentElement.dir = 'rtl';
-              });
-              setShowLangOptions(false); 
-            }}>
-              עברית
-            </button>
+              <button onClick={() => { 
+                localStorage.setItem('language', 'en');
+                i18n.changeLanguage('en').then(() => {
+                  document.documentElement.dir = 'ltr';
+                });
+                setShowLangOptions(false); 
+              }}>
+                English
+              </button>
+              <button onClick={() => { 
+                localStorage.setItem('language', 'he');
+                i18n.changeLanguage('he').then(() => {
+                  document.documentElement.dir = 'rtl';
+                });
+                setShowLangOptions(false); 
+              }}>
+                עברית
+              </button>
             </div>
           )}
         </div>
@@ -1269,4 +1118,4 @@ const VolunteerCalendar = () => {
   );
 };
 
-export default VolunteerCalendar;
+export default VolunteerCalendar; 

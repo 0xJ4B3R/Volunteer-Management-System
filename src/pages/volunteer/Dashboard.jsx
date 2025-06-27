@@ -186,20 +186,20 @@ const Dashboard = () => {
       // Parse date string (format: "YYYY-MM-DD")
       const [year, month, day] = dateStr.split('-');
       const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      
+
       if (!timeStr) return date;
-      
+
       // Parse time string (could be "2:00 PM", "14:00", etc.)
       let hours = 0;
       let minutes = 0;
-      
+
       // Handle AM/PM format
       if (timeStr.includes('AM') || timeStr.includes('PM')) {
         const timePart = timeStr.replace(/\s*(AM|PM)/i, '');
         const [hourStr, minuteStr = '0'] = timePart.split(':');
         hours = parseInt(hourStr);
         minutes = parseInt(minuteStr);
-        
+
         // Convert to 24-hour format
         if (timeStr.toUpperCase().includes('PM') && hours !== 12) {
           hours += 12;
@@ -212,7 +212,7 @@ const Dashboard = () => {
         hours = parseInt(hourStr);
         minutes = parseInt(minuteStr);
       }
-      
+
       date.setHours(hours, minutes, 0, 0);
       return date;
     } catch (error) {
@@ -227,7 +227,7 @@ const Dashboard = () => {
       // Get user ID from localStorage
       const userId = localStorage.getItem('userId');
       const username = localStorage.getItem('username');
-      
+
       if (!userId) {
         setDataLoaded(prev => ({ ...prev, volunteerData: true }));
         return;
@@ -237,11 +237,11 @@ const Dashboard = () => {
       const volunteersRef = collection(db, "volunteers");
       const q = query(volunteersRef, where("userId", "==", userId));
       const volunteerSnapshot = await getDocs(q);
-      
+
       if (!volunteerSnapshot.empty) {
         const volunteerDoc = volunteerSnapshot.docs[0];
         const volunteerData = volunteerDoc.data();
-                
+
         setUserData({
           name: username || volunteerData.fullName || 'Volunteer',
           totalHours: volunteerData.totalHours || 0,
@@ -268,30 +268,30 @@ const Dashboard = () => {
 
       const calendarSlotsRef = collection(db, "calendar_slots");
       const q = query(calendarSlotsRef);
-      
+
       const snapshot = await getDocs(q);
       const sessions = [];
       const now = new Date();
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        
+
         // Check status first
         if (data.status === "inProgress") {
-          
+
           // Check if volunteers array exists and current user is approved
           if (data.volunteers && Array.isArray(data.volunteers)) {
-            
+
             const userVolunteer = data.volunteers.find(v => {
               return v.id === userId && v.status === "approved";
             });
-            
+
             if (userVolunteer) {
-              
+
               // Parse end time to determine if session has actually ended
               const endTime = data.endTime;
               let sessionEndDateTime;
-              
+
               if (data.date && endTime) {
                 sessionEndDateTime = parseTimeAndCombineWithDate(data.date, endTime);
               } else {
@@ -311,27 +311,27 @@ const Dashboard = () => {
                   }
                 }
               }
-              
+
               // Only show sessions that haven't ended yet
               if (sessionEndDateTime > now) {
                 const startTime = data.startTime || "Time TBD";
                 const endTimeStr = data.endTime || "";
                 const timeRange = endTimeStr ? `${startTime} - ${endTimeStr}` : startTime;
-                
+
                 // Format display date
                 let displayDate;
                 try {
                   const [year, month, day] = data.date.split('-');
                   const sessionDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                  displayDate = sessionDate.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
+                  displayDate = sessionDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
                   });
                 } catch (error) {
                   displayDate = "Date TBD";
                 }
-                
+
                 const session = {
                   id: doc.id,
                   title: data.customLabel || "Session",
@@ -340,12 +340,12 @@ const Dashboard = () => {
                   location: data.location || "Location TBD",
                   fullDateTime: sessionEndDateTime
                 };
-                
+
                 sessions.push(session);
               }
             }
           }
-        } 
+        }
       });
 
       // Sort by end date/time and take first 3
@@ -370,7 +370,7 @@ const Dashboard = () => {
 
       const attendanceRef = collection(db, "attendance");
       const q = query(attendanceRef, limit(10)); // Increased limit to get more data for sorting
-      
+
       const snapshot = await getDocs(q);
       const activities = [];
 
@@ -386,15 +386,15 @@ const Dashboard = () => {
           icon: Award,
           iconColor: 'dash-icon-gold',
           confirmedAt: new Date(), // Use current date for level up
-          displayDate: new Date().toLocaleDateString('en-US', { 
-            month: 'short', 
+          displayDate: new Date().toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric',
             year: 'numeric'
           }),
-          displayTime: new Date().toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
+          displayTime: new Date().toLocaleTimeString('en-US', {
+            hour: '2-digit',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
           })
         });
       }
@@ -416,7 +416,7 @@ const Dashboard = () => {
             const appointmentSnap = await getDoc(appointmentRef);
             if (appointmentSnap.exists()) {
               const appointmentData = appointmentSnap.data();
-              
+
               // Get session time from calendar slot
               if (appointmentData.calendarSlotId) {
                 const slotRef = doc(db, "calendar_slots", appointmentData.calendarSlotId);
@@ -428,15 +428,15 @@ const Dashboard = () => {
                   // Format date and time
                   if (sessionDate && sessionStartTime) {
                     const sessionDateObj = parseTimeAndCombineWithDate(sessionDate, sessionStartTime);
-                    displayDate = sessionDateObj.toLocaleDateString('en-US', { 
-                      month: 'short', 
+                    displayDate = sessionDateObj.toLocaleDateString('en-US', {
+                      month: 'short',
                       day: 'numeric',
                       year: 'numeric'
                     });
-                    displayTime = sessionDateObj.toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
+                    displayTime = sessionDateObj.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
                       minute: '2-digit',
-                      hour12: true 
+                      hour12: true
                     });
                   }
                 }
@@ -458,15 +458,15 @@ const Dashboard = () => {
               } else {
                 confirmedDate = new Date(data.confirmedAt);
               }
-              displayDate = confirmedDate.toLocaleDateString('en-US', { 
-                month: 'short', 
+              displayDate = confirmedDate.toLocaleDateString('en-US', {
+                month: 'short',
                 day: 'numeric',
                 year: 'numeric'
               });
-              displayTime = confirmedDate.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
+              displayTime = confirmedDate.toLocaleTimeString('en-US', {
+                hour: '2-digit',
                 minute: '2-digit',
-                hour12: true 
+                hour12: true
               });
             } catch (error) {
               console.error("Error parsing confirmedAt:", error);
@@ -478,7 +478,7 @@ const Dashboard = () => {
         let activityText = "";
         let icon = Activity;
         let iconColor = "dash-icon-blue";
-      
+
         if (status === "present") {
           activityText = `You Attended a Session${notes ? ` - ${notes}` : ''}`;
           icon = CheckCircle2;
@@ -494,7 +494,7 @@ const Dashboard = () => {
         } else {
           activityText = `Attendance: ${status}${notes ? ` - ${notes}` : ''}`;
         }
-      
+
         activities.push({
           id: docSnap.id,
           type: status,
@@ -519,16 +519,16 @@ const Dashboard = () => {
       setDataLoaded(prev => ({ ...prev, recentActivity: true }));
     } catch (error) {
       console.error("Error fetching recent activity:", error);
-      
+
       // Fallback activity data
       setRecentActivity([
-        { 
-          id: 'fallback-1', 
-          type: 'present', 
-          text: 'Recent attendance activity', 
+        {
+          id: 'fallback-1',
+          type: 'present',
+          text: 'Recent attendance activity',
           displayDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           displayTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-          icon: CheckCircle2, 
+          icon: CheckCircle2,
           iconColor: 'dash-icon-green',
           residentNames: []
         }
@@ -544,11 +544,11 @@ const Dashboard = () => {
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
-      
+
       // Set fixed elder-friendly colors
       const fixedColors = getFixedColors();
       setCardColors(fixedColors);
-      
+
       // Fetch all data
       await fetchVolunteerData();
       await fetchUpcomingSessions();
@@ -578,7 +578,7 @@ const Dashboard = () => {
       const value = Math.min(userData.totalHours, maxHours);
       const progressRatio = value / maxHours;
       const offset = 565.48 - (progressRatio * 565.48);
-    
+
       setTimeout(() => {
         setHoursProgress(offset);
         setAnimateHours(true);
@@ -627,240 +627,440 @@ const Dashboard = () => {
 
   const currentLevel = getLevel(userData.totalHours);
 
-    if (loading) {
+  if (loading) {
     return <LoadingScreen />;
   }
 
   return (
     <Layout>
       <div className="dash-dashboard-container">
-      <div className="dash-dashboard-wrapper">
-        <div className="dash-dashboard-header">
-          <p className="dash-dashboard-greeting">
-            {getGreeting()}, {userData.name}! 👋
-          </p>
-        </div>
+        <div className="dash-dashboard-wrapper">
+          <div className="dash-dashboard-header">
+            <p className="dash-dashboard-greeting">
+              {getGreeting()}, {userData.name}! 👋
+            </p>
+          </div>
 
-        <div className="dash-new-layout-grid">
-          {/* Left Column */}
-          <div className="dash-left-column">
-            {/* Check In Button */}
-            <a href="/volunteer/attendance" className="dash-checkin-button">
-              <div className="dash-checkin-content">
-                <div className="dash-checkin-icon-wrapper">
-                  <CheckCircle2 className="dash-checkin-icon" />
-                </div>
-                <div className="dash-checkin-text">
-                  <span className="dash-checkin-title">{t('dashboard.checkIn.title')}</span>
-                  <span className="dash-checkin-subtitle">{t('dashboard.checkIn.subtitle')}</span>
-                </div>
-                {i18n.language === 'he' 
-                  ? <ChevronLeft className="dash-checkin-arrow" /> 
-                  : <ChevronRight className="dash-checkin-arrow" />
-                }
-              </div>
-            </a>
-
-            {/* Upcoming Sessions */}
-            <div className="dash-upcoming-card">
-              <div className="dash-upcoming-header">
-                <h2 className="dash-upcoming-title">{t('dashboard.upcoming.title')}</h2>
-                <a href="/volunteer/appointments" className="dash-view-all-link">
-                  {t('dashboard.upcoming.viewAll')}&nbsp;
+          <div className="dash-new-layout-grid">
+            {/* Left Column */}
+            <div className="dash-left-column">
+              {/* Check In Button */}
+              <a href="/volunteer/attendance" className="dash-checkin-button">
+                <div className="dash-checkin-content">
+                  <div className="dash-checkin-icon-wrapper">
+                    <CheckCircle2 className="dash-checkin-icon" />
+                  </div>
+                  <div className="dash-checkin-text">
+                    <span className="dash-checkin-title">{t('dashboard.checkIn.title')}</span>
+                    <span className="dash-checkin-subtitle">{t('dashboard.checkIn.subtitle')}</span>
+                  </div>
                   {i18n.language === 'he'
-                    ? <ChevronLeft style={{ width: '1rem', height: '1rem', display: 'inline' }} />
-                    : <ChevronRight style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                    ? <ChevronLeft className="dash-checkin-arrow" />
+                    : <ChevronRight className="dash-checkin-arrow" />
                   }
-                </a>
-              </div>
-              <div className="dash-upcoming-list">
-                {upcomingSessions.length > 0 ? (
-                  upcomingSessions.map((session) => (
-                    <div key={session.id} className="dash-upcoming-item">
-                      <div className="dash-upcoming-item-header">
-                        <h3 className="dash-upcoming-item-title">{session.title}</h3>
-                        <span className="dash-upcoming-item-date">{session.date}</span>
+                </div>
+              </a>
+
+              {/* Upcoming Sessions */}
+              <div className="dash-upcoming-card">
+                <div className="dash-upcoming-header">
+                  <h2 className="dash-upcoming-title" style={{ marginBottom: 0 }}>{t('dashboard.upcoming.title')}</h2>
+                  <a href="/volunteer/appointments" className="dash-view-all-link">
+                    {t('dashboard.upcoming.viewAll')}&nbsp;
+                    {i18n.language === 'he'
+                      ? <ChevronLeft style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                      : <ChevronRight style={{ width: '1rem', height: '1rem', display: 'inline' }} />
+                    }
+                  </a>
+                </div>
+                <div className="dash-upcoming-list">
+                  {upcomingSessions.length > 0 ? (
+                    upcomingSessions.map((session) => (
+                      <div key={session.id} className="dash-upcoming-item">
+                        <div className="dash-upcoming-item-header">
+                          <h3 className="dash-upcoming-item-title">{session.title}</h3>
+                          <span className="dash-upcoming-item-date">{session.date}</span>
+                        </div>
+                        <div className="dash-upcoming-item-details">
+                          <div className="dash-upcoming-detail">
+                            <Clock className="dash-upcoming-detail-icon" />
+                            <span>{session.time}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="dash-upcoming-item-details">
-                        <div className="dash-upcoming-detail">
-                          <Clock className="dash-upcoming-detail-icon" />
-                          <span>{session.time}</span>
+                    ))
+                  ) : (
+                    <div className="dash-upcoming-item">
+                      <div className="dash-upcoming-item-header">
+                        <div className="dash-upcoming-item-content">
+                          <div
+                            className="dash-upcoming-detail"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1rem',
+                              padding: '1.5rem',
+                              borderRadius: '1rem',
+                              background: 'linear-gradient(135deg, rgba(79, 120, 80, 0.08) 0%, rgba(79, 120, 80, 0.12) 100%)',
+                              border: '2px solid rgba(79, 120, 80, 0.15)',
+                              boxShadow: '0 2px 8px rgba(79, 120, 80, 0.1)',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '3rem',
+                                height: '3rem',
+                                borderRadius: '0.75rem',
+                                background: 'linear-gradient(135deg, #4f7850, #416a42)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 4px 12px rgba(79, 120, 80, 0.3)'
+                              }}
+                            >
+                              <Calendar
+                                style={{
+                                  color: 'white',
+                                  width: '1.5rem',
+                                  height: '1.5rem',
+                                  filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))'
+                                }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', flex: 1 }}>
+                              <span style={{
+                                fontWeight: '700',
+                                color: '#1f2937',
+                                fontSize: '1.125rem',
+                                lineHeight: '1.3'
+                              }}>
+                                No upcoming sessions
+                              </span>
+                              <span style={{
+                                fontSize: '0.875rem',
+                                color: '#6b7280',
+                                lineHeight: '1.4'
+                              }}>
+                                Great job staying on top of your schedule! New opportunities will appear here when they become available.
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-1px',
+                                right: '-1px',
+                                width: '2rem',
+                                height: '2rem',
+                                background: 'linear-gradient(135deg, rgba(79, 120, 80, 0.1), rgba(79, 120, 80, 0.05))',
+                                borderRadius: '0 1rem 0 1rem',
+                                borderLeft: '2px solid rgba(79, 120, 80, 0.2)',
+                                borderBottom: '2px solid rgba(79, 120, 80, 0.2)'
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="dash-upcoming-empty">
-                    <p>{t('dashboard.upcoming.none')}</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Recent Activity */}
-            <div className="dash-activity-card">
-              <div className="dash-activity-header">
-                <h2 className="dash-activity-title">{t('dashboard.activity.title')}</h2>
-              </div>
-              <ul className="dash-activity-list">
+              {/* Recent Activity */}
+              <div className="dash-activity-card">
+                <div className="dash-activity-header">
+                  <h2 className="dash-activity-title" style={{ marginBottom: 0 }}>{t('dashboard.activity.title')}</h2>
+                </div>
+                <ul className="dash-activity-list">
+                  {recentActivity.length > 0 ? (
+                    recentActivity.map((activity) => {
+                      const IconComponent = activity.icon;
+                      const { type, notes = '' } = activity;
 
-                {recentActivity.map((activity) => {
-                  const IconComponent = activity.icon;
-                  const { type, notes = '' } = activity;
-                  
-                  // figure out which text key + params to use
-                  const text = (() => {
-                    switch (type) {
-                      case 'level-up':
-                        return t('dashboard.levelUp', { level: getLevel(userData.totalHours).label });
-                      case 'present':
-                        return 'You Attended a Session';
-                      case 'late':
-                        return t('dashboard.activity.late', { notes });
-                      case 'absent':
-                        return t('dashboard.activity.absent', { notes });
-                      default:
-                        return t('dashboard.activity.generic', { status: type, notes });
-                    }
-                  })();
-                
-                  return (
-                    <li key={activity.id} className="dash-activity-item">
-                      <div className="dash-activity-content">
-                        <div className={`dash-activity-icon-wrapper ${activity.iconColor}`}>
-                          <IconComponent className="dash-activity-icon" />
-                        </div>
-                        <div className="dash-activity-details">
-                          <p className="dash-activity-text">{text}</p>
-                          <div className="dash-activity-datetime">
-                            <span className="dash-activity-date">{activity.displayDate}</span>
-                            <span className="dash-activity-time">{activity.displayTime}</span>
+                      // figure out which text key + params to use
+                      const text = (() => {
+                        switch (type) {
+                          case 'level-up':
+                            return t('dashboard.levelUp', { level: getLevel(userData.totalHours).label });
+                          case 'present':
+                            return 'You Attended a Session';
+                          case 'late':
+                            return t('dashboard.activity.late', { notes });
+                          case 'absent':
+                            return t('dashboard.activity.absent', { notes });
+                          default:
+                            return t('dashboard.activity.generic', { status: type, notes });
+                        }
+                      })();
+
+                      return (
+                        <li key={activity.id} className="dash-activity-item">
+                          <div className="dash-activity-content">
+                            <div className={`dash-activity-icon-wrapper ${activity.iconColor}`}>
+                              <IconComponent className="dash-activity-icon" />
+                            </div>
+                            <div className="dash-activity-details">
+                              <p className="dash-activity-text">{text}</p>
+                              <div className="dash-activity-datetime">
+                                <span className="dash-activity-date">{activity.displayDate}</span>
+                                <span className="dash-activity-time">{activity.displayTime}</span>
+                              </div>
+                            </div>
                           </div>
-                          {activity.residentNames && activity.residentNames.length > 0 && (
-                            <p className="dash-activity-residents">
-                              With Resident: {activity.residentNames.length > 2 
-                                ? `${activity.residentNames.slice(0, 2).join(', ')}...`
-                                : activity.residentNames.join(', ')
-                              }
-                            </p>
-                          )}
+                        </li>
+                      );
+                    })
+                  ) : (
+                    <li className="dash-activity-item" style={{ borderBottom: 'none', marginBottom: 0, padding: 0 }}>
+                      <div className="dash-activity-content">
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            padding: '1.5rem',
+                            borderRadius: '1rem',
+                            background: 'linear-gradient(135deg, rgba(79, 120, 80, 0.08) 0%, rgba(79, 120, 80, 0.12) 100%)',
+                            border: '2px solid rgba(79, 120, 80, 0.15)',
+                            boxShadow: '0 2px 8px rgba(79, 120, 80, 0.1)',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '3rem',
+                              height: '3rem',
+                              borderRadius: '0.75rem',
+                              background: 'linear-gradient(135deg, #4f7850, #416a42)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 4px 12px rgba(79, 120, 80, 0.3)'
+                            }}
+                          >
+                            <Activity
+                              style={{
+                                color: 'white',
+                                width: '1.5rem',
+                                height: '1.5rem',
+                                filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))'
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', flex: 1 }}>
+                            <span style={{
+                              fontWeight: '700',
+                              color: '#1f2937',
+                              fontSize: '1.125rem',
+                              lineHeight: '1.3'
+                            }}>
+                              No recent activity
+                            </span>
+                            <span style={{
+                              fontSize: '0.875rem',
+                              color: '#6b7280',
+                              lineHeight: '1.4'
+                            }}>
+                              Your volunteering activities will appear here. Start making a difference today!
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '-1px',
+                              right: '-1px',
+                              width: '2rem',
+                              height: '2rem',
+                              background: 'linear-gradient(135deg, rgba(79, 120, 80, 0.1), rgba(79, 120, 80, 0.05))',
+                              borderRadius: '0 1rem 0 1rem',
+                              borderLeft: '2px solid rgba(79, 120, 80, 0.2)',
+                              borderBottom: '2px solid rgba(79, 120, 80, 0.2)'
+                            }}
+                          />
                         </div>
                       </div>
                     </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-
-          {/* Right Column */}
-          <div className="dash-right-column">
-            {/* Total Hours */}
-            <div 
-              className="dash-stat-widget dash-hours-widget" 
-              style={{ background: cardColors[0]?.bg }}
-            >
-              <div className="dash-widget-header">
-                <p className="dash-widget-label">{t('dashboard.stats.totalHours')}</p>
-                <div 
-                  className="dash-widget-icon-wrapper"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${cardColors[0]?.primary}, ${cardColors[0]?.secondary})` 
-                  }}
-                >
-                  <Clock className="dash-widget-icon" />
-                </div>
-              </div>
-              <div className="dash-hours-simple-display">
-                <div className="dash-hours-main">
-                  <span className="dash-hours-number-simple">{userData.totalHours}</span>
-                  <span className="dash-hours-unit">{t('dashboard.stats.hoursLabel')}</span>
-                </div>
-                <div className="dash-hours-progress-simple">
-                  <div className="dash-hours-progress-track">
-                    <div 
-                      className="dash-hours-progress-fill"
-                      style={{ 
-                        width: `${currentLevel.nextLevel 
-                          ? Math.min(((userData.totalHours - getLevelStartHours(currentLevel.label)) / (getLevelEndHours(currentLevel.label) - getLevelStartHours(currentLevel.label))) * 100, 100)
-                          : 100}%`,
-                        background: `linear-gradient(90deg, ${cardColors[0]?.primary}, ${cardColors[0]?.secondary})`
-                      }}
-                    ></div>
-                  </div>
-                  <span className="dash-hours-progress-text">
-                    {currentLevel.nextLevel 
-                      ? t('dashboard.hoursToMilestone', { count: currentLevel.hoursToNext, level: currentLevel.nextLevel })
-                      : t('dashboard.maxLevelAchieved')}
-                  </span>
-                </div>
+                  )}
+                </ul>
               </div>
             </div>
 
-            {/* Sessions Completed */}
-            <div 
-              className="dash-stat-widget dash-sessions-widget"
-              style={{ background: cardColors[1]?.bg }}
-            >
-              <div className="dash-widget-header">
-                <p className="dash-widget-label">{t('dashboard.stats.sessionsCompleted')}</p>
-                <div 
-                  className="dash-widget-icon-wrapper dash-icon-purple"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${cardColors[1]?.primary}, ${cardColors[1]?.secondary})` 
-                  }}
-                >
-                  <CheckCircle2 className="dash-widget-icon" />
-                </div>
-              </div>
-              <div className="dash-sessions-simple-display">
-                <div className="dash-sessions-main">
-                  <span className="dash-sessions-number-simple">{userData.totalSessions}</span>
-                  <span className="dash-sessions-unit">
-                    {userData.totalSessions === 1 
-                      ? t('dashboard.stats.sessionLabelSingular') 
-                      : t('dashboard.stats.sessionsLabel')
-                    }
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* Right Column */}
+            <div className="dash-right-column">
+              {/* Total Hours */}
+              <div
+                className="dash-stat-widget dash-hours-widget"
+                style={{
+                  background: cardColors[0]?.bg,
+                  borderRadius: '1.5rem',
+                  padding: '2rem',
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Background decoration */}
+                <div style={{
+                  position: 'absolute',
+                  top: '-50%',
+                  right: '-50%',
+                  width: '200%',
+                  height: '200%',
+                  background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
+                  pointerEvents: 'none'
+                }} />
 
-            {/* Current Level */}
-            <div 
-              className="dash-stat-widget dash-level-widget"
-              style={{ background: cardColors[2]?.bg }}
-            >
-              <div className="dash-widget-header">
-                <p className="dash-widget-label">{t('dashboard.stats.level')}</p>
-                <div 
-                  className="dash-widget-icon-wrapper dash-icon-amber"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${cardColors[2]?.primary}, ${cardColors[2]?.secondary})` 
-                  }}
-                >
-                  <Award className="dash-widget-icon" />
-                </div>
-              </div>
-              <div className="dash-level-content">
-                <div className="dash-level-badge dash-level-badge--centered">
-                  <div 
-                    className="dash-level-icon"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${cardColors[2]?.bg})`,
-                      borderColor: cardColors[2]?.primary,
-                      color: cardColors[2]?.primary
+                <div className="dash-widget-header" style={{ position: 'relative', zIndex: 1, textAlign: 'center', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p className="dash-widget-label" style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#1e293b',
+                    marginBottom: '0.5rem',
+                    margin: 0
+                  }}>{t('dashboard.stats.totalHours')}</p>
+                  <div
+                    className="dash-widget-icon-wrapper"
+                    style={{
+                      background: `linear-gradient(135deg, ${cardColors[0]?.primary}, ${cardColors[0]?.secondary})`,
+                      width: '3rem',
+                      height: '3rem',
+                      borderRadius: '1rem',
+                      boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
+                      margin: 0
                     }}
                   >
-                    {currentLevel.icon}
+                    <Clock className="dash-widget-icon" style={{ width: '1.5rem', height: '1.5rem' }} />
                   </div>
-                  <span className="dash-level-name">{currentLevel.label}</span>
+                </div>
+
+                <div className="dash-hours-simple-display" style={{ position: 'relative', zIndex: 1, marginTop: '1.5rem' }}>
+                  <div className="dash-hours-main">
+                    <span className="dash-hours-number-simple" style={{
+                      fontSize: '3.5rem',
+                      fontWeight: '900',
+                      color: '#000000',
+                      lineHeight: '1',
+                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                    }}>{userData.totalHours}</span>
+                    <span className="dash-hours-unit" style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '600',
+                      color: '#64748b'
+                    }}>{t('dashboard.stats.hoursLabel')}</span>
+                  </div>
+                  <div className="dash-hours-progress-simple" style={{ marginTop: '1.5rem' }}>
+                    <div className="dash-hours-progress-track" style={{
+                      height: '12px',
+                      background: 'rgba(0, 0, 0, 0.1)',
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <div
+                        className="dash-hours-progress-fill"
+                        style={{
+                          width: `${currentLevel.nextLevel
+                            ? Math.min(((userData.totalHours - getLevelStartHours(currentLevel.label)) / (getLevelEndHours(currentLevel.label) - getLevelStartHours(currentLevel.label))) * 100, 100)
+                            : 100}%`,
+                          background: `linear-gradient(90deg, ${cardColors[0]?.primary}, ${cardColors[0]?.secondary})`,
+                          height: '100%',
+                          borderRadius: '6px',
+                          transition: 'width 0.8s ease-out',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                        }}
+                      ></div>
+                    </div>
+                    <span className="dash-hours-progress-text" style={{
+                      fontSize: '1rem',
+                      color: '#475569',
+                      fontWeight: '600',
+                      textAlign: 'center',
+                      marginTop: '1rem',
+                      lineHeight: '1.4',
+                      display: 'block'
+                    }}>
+                      {currentLevel.nextLevel
+                        ? t('dashboard.hoursToMilestone', { count: currentLevel.hoursToNext, level: currentLevel.nextLevel })
+                        : t('dashboard.maxLevelAchieved')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Sessions Section */}
+                <div style={{
+                  marginTop: '2rem',
+                  paddingTop: '2rem',
+                  borderTop: '2px solid rgba(0, 0, 0, 0.08)',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
+                  <div className="dash-widget-header" style={{ marginBottom: '1.5rem' }}>
+                    <p className="dash-widget-label" style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '700',
+                      color: '#1e293b',
+                      margin: 0
+                    }}>Total Sessions Since Joining</p>
+                  </div>
+                  <div className="dash-hours-simple-display" style={{ margin: '0' }}>
+                    <div className="dash-hours-main">
+                      <span className="dash-hours-number-simple" style={{
+                        fontSize: '3.5rem',
+                        fontWeight: '900',
+                        color: '#000000',
+                        lineHeight: '1',
+                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                      }}>{userData.totalSessions}</span>
+                      <span className="dash-hours-unit" style={{
+                        fontSize: '1.25rem',
+                        fontWeight: '600',
+                        color: '#64748b'
+                      }}>
+                        {userData.totalSessions === 1 ? 'session' : 'sessions'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Level */}
+              <div
+                className="dash-stat-widget dash-level-widget"
+                style={{ background: cardColors[2]?.bg }}
+              >
+                <div className="dash-widget-header">
+                  <p className="dash-widget-label">{t('dashboard.stats.level')}</p>
+                  <div
+                    className="dash-widget-icon-wrapper dash-icon-amber"
+                    style={{
+                      background: `linear-gradient(135deg, ${cardColors[2]?.primary}, ${cardColors[2]?.secondary})`
+                    }}
+                  >
+                    <Award className="dash-widget-icon" />
+                  </div>
+                </div>
+                <div className="dash-level-content">
+                  <div className="dash-level-badge dash-level-badge--centered">
+                    <div
+                      className="dash-level-icon"
+                      style={{
+                        background: `linear-gradient(135deg, ${cardColors[2]?.primary}20, ${cardColors[2]?.secondary}20)`,
+                        borderColor: cardColors[2]?.primary,
+                        color: cardColors[2]?.primary
+                      }}
+                    >
+                      {currentLevel.icon}
+                    </div>
+                    <span className="dash-level-name">{currentLevel.label}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
       <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
         <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
@@ -868,21 +1068,21 @@ const Dashboard = () => {
         </button>
         {showLangOptions && (
           <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={() => { 
+            <button onClick={() => {
               localStorage.setItem('language', 'en');
               i18n.changeLanguage('en').then(() => {
                 document.documentElement.dir = 'ltr';
               });
-              setShowLangOptions(false); 
+              setShowLangOptions(false);
             }}>
               English
             </button>
-            <button onClick={() => { 
+            <button onClick={() => {
               localStorage.setItem('language', 'he');
               i18n.changeLanguage('he').then(() => {
                 document.documentElement.dir = 'rtl';
               });
-              setShowLangOptions(false); 
+              setShowLangOptions(false);
             }}>
               עברית
             </button>
@@ -893,4 +1093,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Dashboard; 

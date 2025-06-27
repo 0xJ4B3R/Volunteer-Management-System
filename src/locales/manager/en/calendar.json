@@ -27,9 +27,15 @@
   },
   "pendingRequests": {
     "title": "Pending Volunteer Requests",
-    "description": "{{count}} session{{count !== 1 ? 's' : ''}} with pending requests",
+    "description": "{{count}} session with pending requests",
+    "description_plural": "{{count}} sessions with pending requests",
     "noRequests": "No pending volunteer requests at this time.",
-    "pendingCount": "{{count}} pending request{{count !== 1 ? 's' : ''}}",
+    "pendingCount_one": "{{count}} pending request",
+    "pendingCount_other": "{{count}} pending requests",
+    "assignedResident": "Assigned Resident:",
+    "matchScore": "Match Score:",
+    "noneAssigned": "None assigned",
+    "notCalculated": "Not calculated",
     "approve": "Approve",
     "reject": "Reject"
   },
@@ -86,11 +92,12 @@
       "nov": "Nov",
       "dec": "Dec"
     },
-      "sessionCount": "{{count}} session",
-  "sessionCount_plural": "{{count}} sessions",
+    "sessionCount_one": "{{count}} session",
+    "sessionCount_other": "{{count}} sessions",
     "moreSessions": "+{{count}} more",
     "noSessions": "No sessions scheduled for this day.",
-    "filled": "{{current}}/{{capacity}} filled"
+    "filled": "{{current}}/{{capacity}} filled",
+    "filled_plural": "{{current}}/{{capacity}} filled"
   },
   "session": {
     "status": {
@@ -293,14 +300,12 @@
   "badges": {
     "custom": "custom",
     "pending": "pending",
-    "pendingRequest": "pending request",
-    "pendingRequests": "pending requests",
+    "pendingRequest": "{{count}} pending",
     "more": "more",
     "sessions": "sessions",
     "session": "session"
   },
   "messages": {
-
     "sessionCreated": "Session Created",
     "sessionCreatedDescription": "Session has been created successfully.",
     "sessionUpdated": "Session Updated",
@@ -341,4 +346,4 @@
     "externalGroupError": "Failed to create external group",
     "calendarSlotError": "Failed to create calendar slot"
   }
-} 
+}

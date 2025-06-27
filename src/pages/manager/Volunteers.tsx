@@ -1446,8 +1446,8 @@ const ManagerVolunteers = () => {
                           key={volunteer.id}
                           className="relative bg-white rounded-lg overflow-hidden shadow-sm p-4 border border-slate-300 hover:border-primary/30 hover:shadow-md transition-shadow duration-300"
                         >
-                          <div className="flex items-start space-x-4">
-                            <div className="relative">
+                          <div className={cn("flex items-start", isRTL ? "space-x-reverse space-x-4" : "space-x-4")}>
+                            <div className="relative flex-shrink-0">
                               <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white shadow-md bg-primary/10 flex items-center justify-center">
                                 <UserIcon className="h-8 w-8 text-primary" />
                               </div>
@@ -1455,12 +1455,12 @@ const ManagerVolunteers = () => {
                             <div className="flex-1 min-w-0">
                               <h4 className="font-medium text-slate-900 truncate">{volunteer.fullName}</h4>
                               <div className="mt-2 space-y-1.5">
-                                <div className="flex items-center text-sm text-slate-600">
-                                  <Clock4 className="h-4 w-4 mr-1 text-primary" />
+                                <div className={cn("flex items-center text-sm text-slate-600", isRTL ? "space-x-reverse space-x-2" : "space-x-2")}>
+                                  <Clock4 className="h-4 w-4 text-primary flex-shrink-0" />
                                   <span>{formatHours(volunteer.totalHours || 0)} {t('topVolunteers.hours')}</span>
                                 </div>
-                                <div className="flex items-center text-sm text-slate-600">
-                                  <CheckCircle2 className="h-4 w-4 mr-1 text-primary" />
+                                <div className={cn("flex items-center text-sm text-slate-600", isRTL ? "space-x-reverse space-x-2" : "space-x-2")}>
+                                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
                                   <span>{volunteer.totalSessions || 0} {t('topVolunteers.sessions')}</span>
                                 </div>
                               </div>
@@ -1619,7 +1619,7 @@ const ManagerVolunteers = () => {
                       onClick={() => setIsCreateDialogOpen(true)}
                       className="bg-primary hover:bg-primary/90"
                     >
-                      <Plus className="h-5 w-5 mr-1" /> {t('addVolunteer')}
+                      <Plus className="h-5 w-5" /> {t('addVolunteer')}
                     </Button>
                   </div>
                 ) : (
@@ -2078,15 +2078,15 @@ const ManagerVolunteers = () => {
                               checked={isValueInArray(hobby, newVolunteer.hobbies || [], isRTL)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                setNewVolunteer({
-                                  ...newVolunteer,
+                                  setNewVolunteer({
+                                    ...newVolunteer,
                                     hobbies: addValueToArray(hobby, newVolunteer.hobbies || [], isRTL)
                                   });
                                 } else {
                                   setNewVolunteer({
                                     ...newVolunteer,
                                     hobbies: removeValueFromArray(hobby, newVolunteer.hobbies || [], isRTL)
-                                });
+                                  });
                                 }
                               }}
                             />
@@ -2466,15 +2466,15 @@ const ManagerVolunteers = () => {
                                 checked={isValueInArray(hobby, selectedVolunteer.hobbies || [], isRTL)}
                                 onCheckedChange={(checked) => {
                                   if (checked) {
-                                  setSelectedVolunteer({
-                                    ...selectedVolunteer,
+                                    setSelectedVolunteer({
+                                      ...selectedVolunteer,
                                       hobbies: addValueToArray(hobby, selectedVolunteer.hobbies || [], isRTL)
                                     });
                                   } else {
                                     setSelectedVolunteer({
                                       ...selectedVolunteer,
                                       hobbies: removeValueFromArray(hobby, selectedVolunteer.hobbies || [], isRTL)
-                                  });
+                                    });
                                   }
                                 }}
                               />
@@ -2611,10 +2611,10 @@ const ManagerVolunteers = () => {
                   </div>
                   <div className="pl-6 space-y-1">
                     {volunteersToDelete.map(volunteer => (
-                        <div key={volunteer.id} className="flex items-center">
-                          <span>{volunteer.fullName}</span>
-                        </div>
-                      ))}
+                      <div key={volunteer.id} className="flex items-center">
+                        <span>{volunteer.fullName}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

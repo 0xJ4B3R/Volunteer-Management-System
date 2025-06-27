@@ -52,8 +52,8 @@
     "notes": "Notes",
     "notesPlaceholder": "Add notes about this appointment...",
     "timeline": "Timeline",
-    "createdOn": "Created on",
-    "lastUpdated": "Last updated on"
+    "createdOn": "Created on ",
+    "lastUpdated": "Last updated on "
   },
   "externalGroup": {
     "title": "External Group Details",

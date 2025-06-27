@@ -12,22 +12,20 @@
   "todaySessions": {
     "title": "Today's Sessions",
     "description": "Overview of today's volunteer sessions",
-    "sessions": "sessions",
-    "sessions_one": "session",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessions",
     "volunteers": "volunteers",
     "volunteersCount": "{{current}}/{{capacity}} filled",
-    "volunteersCount_plural": "{{current}}/{{capacity}} filled",
     "noSessionsToday": "No sessions today"
   },
   "pendingVolunteers": {
     "title": "Pending Volunteers",
     "description": "Volunteers awaiting approval",
-    "pending": "pending",
-    "pending_one": "pending",
+    "pending": "{{count}} pending",
+    "pending_plural": "{{count}} pending",
     "noPendingVolunteers": "No pending volunteers to review",
     "filled": "filled",
-    "volunteersCount": "{{current}}/{{capacity}} filled",
-    "volunteersCount_plural": "{{current}}/{{capacity}} filled"
+    "volunteersCount": "{{current}}/{{capacity}} filled"
   },
   "quickStats": {
     "title": "Quick Stats",
@@ -42,16 +40,16 @@
   "checkedInToday": {
     "title": "Checked In Today",
     "description": "Volunteers who attended today's sessions",
-    "checkedIn": "checked in",
-    "checkedIn_one": "checked in",
+    "checkedIn": "{{count}} checked in",
+    "checkedIn_plural": "{{count}} checked in",
     "checkedInAt": "Checked in at",
     "allAttendanceConfirmed": "All attendance manually confirmed"
   },
   "missingAttendance": {
     "title": "Missing Attendance",
     "description": "Volunteers who attended but have no attendance records",
-    "missing": "missing",
-    "missing_one": "missing",
+    "missing": "{{count}} missing",
+    "missing_plural": "{{count}} missing",
     "allAttendanceMarked": "All attendance marked"
   },
   "performanceAlerts": {
@@ -75,14 +73,14 @@
     "lowCapacitySession": "Low Capacity Session",
     "capacity": "capacity",
     "capacityPlanning": "Capacity Planning",
-    "capacityPlanningDescription": "session at full capacity today",
-    "capacityPlanningDescription_plural": "sessions at full capacity today",
+    "capacityPlanningDescription_one": "{{count}} session at full capacity today",
+    "capacityPlanningDescription_other": "{{count}} sessions at full capacity today",
     "lowEngagementVolunteers": "Low Engagement Volunteers",
-    "lowEngagementDescription": "volunteer has less than 3 sessions",
-    "lowEngagementDescription_plural": "volunteers have less than 3 sessions",
+    "lowEngagementDescription_one": "{{count}} volunteer has less than 3 sessions",
+    "lowEngagementDescription_other": "{{count}} volunteers have less than 3 sessions",
     "newVolunteerOnboarding": "New Volunteer Onboarding", 
-    "newVolunteerOnboardingDescription": "volunteer joined in the last 7 days",
-    "newVolunteerOnboardingDescription_plural": "volunteers joined in the last 7 days",
+    "newVolunteerOnboardingDescription_one": "{{count}} volunteer joined in the last 7 days",
+    "newVolunteerOnboardingDescription_other": "{{count}} volunteers joined in the last 7 days",
     "reviewMatchingRules": "Review Matching Rules",
     "reviewMatchingRulesDescription": "Consider updating matching algorithm weights based on recent feedback"
   },

@@ -64,13 +64,19 @@
       "sat": "Sat"
     },
     "SessionStatus": {
-      "label": "Status:",
+      "label": "Status",
       "approved": "Approved",
       "pending": "Pending",
       "rejected": "Rejected",
       "none": "Not Requested",
-      "pendingApproval": "Pending Approval ⏳",
-      "approvedStatus": "Approved ✅",
-      "rejectedStatus": "Rejected ❌"
-    }
+      "pendingApproval": "Pending Approval",
+      "approvedStatus": "Approved",
+      "rejectedStatus": "Rejected"
+    },
+    "Sign Up for Session": "Sign Up for Session",
+    "Date:": "Date:",
+    "Time:": "Time:",
+    "Submitting Request...": "Submitting Request...",
+    "Request submitted successfully!": "Request submitted successfully!",
+    "Failed to submit request": "Failed to submit request"
 }

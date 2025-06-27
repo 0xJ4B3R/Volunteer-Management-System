@@ -328,9 +328,7 @@ const ManagerDashboard = () => {
       title: t('performanceAlerts.capacityPlanning'),
       description: (() => {
         const fullSessionsCount = todaySessions.filter(s => s.status === 'full').length;
-        return fullSessionsCount === 1
-          ? t('performanceAlerts.capacityPlanningDescription')
-          : `${fullSessionsCount} ${t('performanceAlerts.capacityPlanningDescription_plural')}`;
+        return t('performanceAlerts.capacityPlanningDescription', { count: fullSessionsCount });
       })(),
       priority: 'medium' as const
     },
@@ -340,9 +338,7 @@ const ManagerDashboard = () => {
       title: t('performanceAlerts.lowEngagementVolunteers'),
       description: (() => {
         const lowEngagementCount = volunteers.filter(v => (v.totalSessions || 0) < 3).length;
-        return lowEngagementCount === 1
-          ? t('performanceAlerts.lowEngagementDescription')
-          : `${lowEngagementCount} ${t('performanceAlerts.lowEngagementDescription_plural')}`;
+        return t('performanceAlerts.lowEngagementDescription', { count: lowEngagementCount });
       })(),
       priority: 'medium' as const
     },
@@ -355,9 +351,7 @@ const ManagerDashboard = () => {
           const created = new Date(v.createdAt);
           return (new Date().getTime() - created.getTime()) / (1000 * 60 * 60 * 24) <= 7;
         }).length;
-        return newVolunteersCount === 1
-          ? t('performanceAlerts.newVolunteerOnboardingDescription')
-          : `${newVolunteersCount} ${t('performanceAlerts.newVolunteerOnboardingDescription_plural')}`;
+        return t('performanceAlerts.newVolunteerOnboardingDescription', { count: newVolunteersCount });
       })(),
       priority: 'medium' as const
     },
@@ -753,10 +747,7 @@ const ManagerDashboard = () => {
                         </div>
                         {dashboardData?.todayStats.sessions.length > 0 && (
                           <Badge variant="secondary" className="h-7 px-3 mr-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-500 hover:border-blue-600 transition-colors font-medium text-sm shadow-sm">
-                            {dashboardData?.todayStats.sessions.length === 1
-                              ? t('todaySessions.sessions_one')
-                              : `${dashboardData?.todayStats.sessions.length} ${t('todaySessions.sessions')}`
-                            }
+                            {t('todaySessions.sessions', { count: dashboardData?.todayStats.sessions.length })}
                           </Badge>
                         )}
                       </div>
@@ -790,16 +781,10 @@ const ManagerDashboard = () => {
                                       {session.startTime} - {session.endTime}
                                     </div>
                                     <div className="text-sm text-slate-500 mt-1">
-                                      {getVolunteerCount(session) === 1
-                                        ? t('todaySessions.volunteersCount', {
-                                          current: getVolunteerCount(session),
-                                          capacity: getCapacityDisplay(session)
-                                        })
-                                        : t('todaySessions.volunteersCount_plural', {
-                                          current: getVolunteerCount(session),
-                                          capacity: getCapacityDisplay(session)
-                                        })
-                                      }
+                                      {t('todaySessions.volunteersCount', {
+                                        current: getVolunteerCount(session),
+                                        capacity: getCapacityDisplay(session)
+                                      })}
                                     </div>
                                   </div>
 
@@ -831,10 +816,7 @@ const ManagerDashboard = () => {
                         </div>
                         {isDataFullyLoaded && totalPendingRequestsAllSessions > 0 && (
                           <Badge variant="secondary" className="h-7 px-3 mr-2 bg-amber-100 text-amber-700 border-amber-600 hover:border-amber-700 hover:bg-amber-200 transition-colors font-medium text-sm shadow-sm">
-                            {totalPendingRequestsAllSessions === 1
-                              ? t('pendingVolunteers.pending_one')
-                              : `${totalPendingRequestsAllSessions} ${t('pendingVolunteers.pending')}`
-                            }
+                            {t('pendingVolunteers.pending' + (totalPendingRequestsAllSessions == 1 ? '' : '_plural'), { count: totalPendingRequestsAllSessions })}
                           </Badge>
                         )}
                       </div>
@@ -864,16 +846,10 @@ const ManagerDashboard = () => {
                                       {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                     </div>
                                     <div className="text-sm text-slate-500 mt-1">
-                                      {session.startTime} - {session.endTime} • {getVolunteerCount(session) === 1
-                                        ? t('pendingVolunteers.volunteersCount', {
-                                          current: getVolunteerCount(session),
-                                          capacity: getCapacityDisplay(session)
-                                        })
-                                        : t('pendingVolunteers.volunteersCount_plural', {
-                                          current: getVolunteerCount(session),
-                                          capacity: getCapacityDisplay(session)
-                                        })
-                                      }
+                                      {session.startTime} - {session.endTime} • {t('pendingVolunteers.volunteersCount', {
+                                        current: getVolunteerCount(session),
+                                        capacity: getCapacityDisplay(session)
+                                      })}
                                     </div>
                                   </div>
                                   <div className="flex items-center">
@@ -883,7 +859,7 @@ const ManagerDashboard = () => {
                                       className="bg-amber-300 border-amber-600 text-amber-800 hover:bg-amber-400/75 hover:border-amber-700 hover:text-amber-800"
                                     >
                                       <AlertCircle className="h-4 w-4 mr-1" />
-                                      {session.volunteerRequests.filter(v => v.status === "pending").length} {t('pendingVolunteers.pending')}
+                                      {t('pendingVolunteers.pending', { count: session.volunteerRequests.filter(v => v.status === "pending").length })}
                                     </Button>
                                   </div>
                                 </div>
@@ -985,10 +961,7 @@ const ManagerDashboard = () => {
                         </div>
                         {isDataFullyLoaded && volunteersCheckedInToday.length > 0 && (
                           <Badge variant="secondary" className="h-7 px-3 mr-2 bg-emerald-50 text-emerald-700 border-emerald-500 hover:border-emerald-600 hover:bg-emerald-100 transition-colors font-medium text-sm shadow-sm">
-                            {volunteersCheckedInToday.length === 1
-                              ? t('checkedInToday.checkedIn_one')
-                              : `${volunteersCheckedInToday.length} ${t('checkedInToday.checkedIn')}`
-                            }
+                            {t('checkedInToday.checkedIn' + (volunteersCheckedInToday.length == 1 ? '' : '_plural'), { count: volunteersCheckedInToday.length })}
                           </Badge>
                         )}
                       </div>
@@ -1038,10 +1011,7 @@ const ManagerDashboard = () => {
                         </div>
                         {isDataFullyLoaded && volunteersWithMissingAttendance.length > 0 && (
                           <Badge variant="secondary" className="h-7 px-3 mr-2 bg-red-50 text-red-700 border-red-500 hover:border-red-600 hover:bg-red-100 transition-colors font-medium text-sm shadow-sm">
-                            {volunteersWithMissingAttendance.length === 1
-                              ? t('missingAttendance.missing_one')
-                              : `${volunteersWithMissingAttendance.length} ${t('missingAttendance.missing')}`
-                            }
+                            {t('missingAttendance.missing' + (volunteersWithMissingAttendance.length == 1 ? '' : '_plural'), { count: volunteersWithMissingAttendance.length })}
                           </Badge>
                         )}
                       </div>

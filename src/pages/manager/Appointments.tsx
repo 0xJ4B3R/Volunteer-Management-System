@@ -7,7 +7,6 @@ import {
   Clock2,
   XCircle,
   Calendar,
-  Download,
   CheckCircle,
   AlertCircle,
   MoreVertical,
@@ -35,7 +34,6 @@ import { he } from "date-fns/locale";
 import { useAppointments, AppointmentUI } from "@/hooks/useFirestoreCalendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAttendanceByAppointment, useAddAttendance, useUpdateAttendance } from "@/hooks/useAttendance";
 import ManagerSidebar from "@/components/manager/ManagerSidebar";
@@ -1325,22 +1323,6 @@ const ManagerAppointments = () => {
                       {t('filters.clearRange')}
                     </Button>
                   )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="bg-white hover:bg-slate-50 border-slate-300">
-                        <Download className="h-4 w-4 text-primary" />
-                        {t('actions.export')}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                        {t('actions.exportPdf')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExport('csv')}>
-                        {t('actions.exportCsv')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </div>
             </div>
@@ -1357,7 +1339,7 @@ const ManagerAppointments = () => {
                     onClick={() => navigate("/manager/calendar")}
                     className="bg-white hover:bg-slate-50 border-slate-300"
                   >
-                    <Calendar className="h-4 w-4 mr-2 text-primary" />
+                    <Calendar className="h-4 w-4 text-primary" />
                     {t('appointment.goToCalendar')}
                   </Button>
                 </div>

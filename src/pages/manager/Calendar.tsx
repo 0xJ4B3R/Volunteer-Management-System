@@ -9,6 +9,7 @@ import {
   User,
   Users,
   Clock,
+  Target,
   Columns,
   BookText,
   FileText,
@@ -184,14 +185,15 @@ const getCapacityDisplay = (session: CalendarSlotUI) => {
     return session.maxCapacity;
   }
 
-  // For past sessions, return the actual number of participants as the capacity
+  // For past sessions with participants, return the actual number of participants as the capacity
+  // For past sessions with NO participants, return the original maxCapacity (not 0)
   const isPast = isSessionInPast(session.date, session.startTime);
-  if (isPast) {
+  if (isPast && session.approvedVolunteers.length > 0) {
     return session.approvedVolunteers.length;
   }
 
-  // For future/ongoing sessions, return the max capacity
-  return session.maxCapacity || 0;
+  // For future/ongoing sessions or past sessions with no participants, return the max capacity
+  return session.maxCapacity || 1;
 };
 
 // Add this function before the ManagerCalendar component
@@ -470,8 +472,7 @@ const ManagerCalendar = () => {
   const [hasFutureRecurringSessions, setHasFutureRecurringSessions] = useState(false);
 
   // Add navigation loading state to prevent flash during day navigation
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [previousDayContent, setPreviousDayContent] = useState<JSX.Element | null>(null);
+  // Removed day view caching states for better performance
 
 
 
@@ -574,93 +575,7 @@ const ManagerCalendar = () => {
     return inDateRange && matchesStatus;
   });
 
-  // Store previous day content when navigation completes
-  useEffect(() => {
-    if (!isNavigating && calendarView === "day") {
-      const dateStr = formatIsraelTime(selectedDate, 'yyyy-MM-dd');
-      const sessionsForDay = filteredSessions.filter(s => s.date === dateStr);
-
-      const currentContent = sessionsForDay.length === 0 ? (
-        <div className="p-8 text-center text-slate-500">
-          <span dir={dir}>{t('calendar.noSessions')}</span>
-        </div>
-      ) : (
-        <>
-          {sessionsForDay
-            .sort((a, b) => a.startTime.localeCompare(b.startTime))
-            .map(session => (
-              <div
-                key={session.id}
-                className={cn(
-                  "p-4 hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-colors text-center",
-                )}
-                onClick={() => {
-                  setSelectedSlot(session);
-                  setIsEditDialogOpen(true);
-                }}
-              >
-                <div className="flex flex-col items-center space-y-2">
-                  <div>
-                    <h4 className="text-lg font-medium">
-                      {session.startTime} - {session.endTime}
-                    </h4>
-
-                    <div className="mt-1 flex justify-center space-x-3">
-                      <div className="flex items-center text-slate-600">
-                        <Users className="h-4 w-4 mr-1" />
-                        <span>{getVolunteerCount(session)}/{getCapacityDisplay(session)}</span>
-                      </div>
-
-                      {session.isCustom && (
-                        <Badge variant="outline" className="bg-gray-50 border-gray-400 hover:bg-gray-100 hover:border-gray-500">
-                          {t('badges.custom')}
-                        </Badge>
-                      )}
-
-                      <Badge
-                        className={cn(
-                          "border px-2 py-1 text-s transition-colors",
-                          session.status === "full"
-                            ? "bg-amber-100 border-amber-600 text-amber-800 hover:bg-amber-200 hover:border-amber-700 hover:text-amber-800"
-                            : session.status === "canceled"
-                              ? "bg-red-100 border-red-400 text-red-800 hover:bg-red-200 hover:border-red-500 hover:text-red-800"
-                              : "bg-blue-100 border-blue-400 text-blue-800 hover:bg-blue-200 hover:border-blue-500 hover:text-blue-800"
-                        )}
-                      >
-                        {t(`session.status.${session.status}`)}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {session.notes && (
-                    <p className="text-sm text-slate-600 mt-2 max-w-md text-center">{session.notes}</p>
-                  )}
-
-                  {session.volunteerRequests.some(v => v.status === "pending") && !isSlotInPast(session) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-amber-300 border-amber-600 text-amber-800 hover:bg-amber-400/75 hover:border-amber-700 hover:text-amber-800"
-                      onClick={e => {
-                        e.stopPropagation();
-                        setSelectedSlot(session);
-                        setIsDaySessionsDialogOpen(false);
-                        setIsPendingRequestsDialogOpen(true);
-                      }}
-                    >
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {session.volunteerRequests.filter(v => v.status === "pending").length} {session.volunteerRequests.filter(v => v.status === "pending").length === 1 ? t('badges.pendingRequest') : t('badges.pendingRequests')}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-        </>
-      );
-
-      setPreviousDayContent(currentContent);
-    }
-  }, [isNavigating, selectedDate, filteredSessions, calendarView, t, dir]);
+  // Removed heavy day view caching useEffect for better performance
 
   // Get visible date range based on current view
   const getVisibleDateRange = () => {
@@ -689,11 +604,6 @@ const ManagerCalendar = () => {
 
   // Jump to previous/next period based on current view
   const goToPrevious = () => {
-    if (calendarView === "day") {
-      setIsNavigating(true);
-      setTimeout(() => setIsNavigating(false), 100);
-    }
-
     if (calendarView === "month") {
       const newDate = new Date(selectedDate);
       newDate.setMonth(newDate.getMonth() - 1);
@@ -710,11 +620,6 @@ const ManagerCalendar = () => {
   };
 
   const goToNext = () => {
-    if (calendarView === "day") {
-      setIsNavigating(true);
-      setTimeout(() => setIsNavigating(false), 100);
-    }
-
     if (calendarView === "month") {
       const newDate = new Date(selectedDate);
       newDate.setMonth(newDate.getMonth() + 1);
@@ -2026,8 +1931,8 @@ const ManagerCalendar = () => {
       }
 
       toast({
-        title: t('messages.volunteerRejected'),
-        description: t('messages.volunteerRejectedDesc')
+        title: t('messages.volunteerRequestRejected'),
+        description: t('messages.volunteerRequestRejectedDescription')
       });
     } catch (error) {
       toast({
@@ -2102,7 +2007,8 @@ const ManagerCalendar = () => {
             status: isApproveAction(action) ? 'approved' as VolunteerRequestStatus : 'rejected' as VolunteerRequestStatus,
             approvedAt: isApproveAction(action) ? Timestamp.fromDate(new Date()).toDate().toISOString() : v.approvedAt,
             rejectedAt: !isApproveAction(action) ? Timestamp.fromDate(new Date()).toDate().toISOString() : v.rejectedAt,
-            rejectedReason: !isApproveAction(action) ? 'Rejected by manager' : v.rejectedReason
+            rejectedReason: !isApproveAction(action) ? 'Rejected by manager' : v.rejectedReason,
+            assignedResidentId: v.assignedResidentId
           }
           : v
       );
@@ -2307,7 +2213,7 @@ const ManagerCalendar = () => {
                 {t('pendingRequests.title')}
               </h3>
               <p className="text-sm text-slate-600">
-                {pendingRequests.length === 1 ? t('pendingRequests.description', { count: pendingRequests.length }) : t('pendingRequests.description_plural', { count: pendingRequests.length })}
+                {t('pendingRequests.description' + (pendingRequests.length === 1 ? '' : '_plural'), { count: pendingRequests.length })}
               </p>
             </div>
             <div className="divide-y divide-slate-300 border-t border-slate-300">
@@ -2349,7 +2255,7 @@ const ManagerCalendar = () => {
                             </div>
                             <div className="flex items-center text-slate-600">
                               <Users className={cn("h-4 w-4 mr-2")} />
-                              <span>{getVolunteerCount(session) === 1 ? t('calendar.filled', { current: getVolunteerCount(session), capacity: getCapacityDisplay(session) }) : t('calendar.filled_plural', { current: getVolunteerCount(session), capacity: getCapacityDisplay(session) })}</span>
+                              <span>{t('calendar.filled', { current: getVolunteerCount(session), capacity: getCapacityDisplay(session) })}</span>
                             </div>
                           </div>
                         </div>
@@ -2364,7 +2270,7 @@ const ManagerCalendar = () => {
                           }}
                         >
                           <AlertCircle className="h-4 w-4 mr-1" />
-                          {session.volunteerRequests.filter(v => v.status === "pending").length === 1 ? t('pendingRequests.pendingCount', { count: session.volunteerRequests.filter(v => v.status === "pending").length }) : t('pendingRequests.pendingCount_plural', { count: session.volunteerRequests.filter(v => v.status === "pending").length })}
+                          {t('pendingRequests.pendingCount' + (session.volunteerRequests.filter(v => v.status === "pending").length === 1 ? '' : '_plural'), { count: session.volunteerRequests.filter(v => v.status === "pending").length })}
                         </Button>
                       </div>
                     </div>
@@ -2443,7 +2349,7 @@ const ManagerCalendar = () => {
                           </div>
                           {sessionsForDay.length > 0 && (
                             <Badge variant="outline" className="hover:bg-blue-100 hover:border-blue-500 hover:text-blue-800 text-xs font-normal px-1.5 py-0.5 bg-blue-50 border-blue-400 text-blue-800" dir={dir}>
-                              {sessionsForDay.length === 1 ? t('calendar.sessionCount') : t('calendar.sessionCount_plural', { count: sessionsForDay.length })}
+                              {t('calendar.sessionCount', { count: sessionsForDay.length })}
                             </Badge>
                           )}
                         </div>
@@ -2559,7 +2465,7 @@ const ManagerCalendar = () => {
                                     <span>{getVolunteerCount(session)}/{getCapacityDisplay(session)}</span>
                                   </div>
                                   {session.isCustom && (
-                                    <Badge variant="outline" className="bg-gray-50 border-gray-400 hover:bg-gray-100 hover:border-gray-500 my-[3px]">
+                                    <Badge variant="outline" className="bg-gray-100 border-gray-500 hover:bg-gray-200 hover:border-gray-600 my-[3px]">
                                       {t('badges.custom')}
                                     </Badge>
                                   )}
@@ -2575,7 +2481,7 @@ const ManagerCalendar = () => {
                                       dir={dir}
                                     >
                                       <AlertCircle className={cn("h-3 w-3 inline", isRTL ? "ml-1" : "mr-1")} />
-                                      <span>{session.volunteerRequests.filter(v => v.status === "pending").length} {t('badges.pending')}</span>
+                                      {t('badges.pendingRequest', { count: session.volunteerRequests.filter(v => v.status === "pending").length })}
                                     </Badge>
                                   )}
                                 </div>
@@ -2607,12 +2513,6 @@ const ManagerCalendar = () => {
                     const dateStr = formatIsraelTime(selectedDate, 'yyyy-MM-dd');
                     const sessionsForDay = filteredSessions.filter(s => s.date === dateStr);
 
-                    // If we're navigating, show the previous content
-                    if (isNavigating && previousDayContent) {
-                      return previousDayContent;
-                    }
-
-                    // Otherwise, render current content
                     return sessionsForDay.length === 0 ? (
                       <div className="p-8 text-center text-slate-500">
                         <span dir={dir}>{t('calendar.noSessions')}</span>
@@ -2645,7 +2545,7 @@ const ManagerCalendar = () => {
                                     </div>
 
                                     {session.isCustom && (
-                                      <Badge variant="outline" className="bg-gray-50 border-gray-400 hover:bg-gray-100 hover:border-gray-500">
+                                      <Badge variant="outline" className="bg-gray-100 border-gray-500 hover:bg-gray-200 hover:border-gray-600">
                                         {t('badges.custom')}
                                       </Badge>
                                     )}
@@ -2683,7 +2583,7 @@ const ManagerCalendar = () => {
                                     dir={dir}
                                   >
                                     <AlertCircle className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
-                                    {session.volunteerRequests.filter(v => v.status === "pending").length} {session.volunteerRequests.filter(v => v.status === "pending").length === 1 ? t('badges.pendingRequest') : t('badges.pendingRequests')}
+                                    {t('pendingRequests.pendingCount' + (session.volunteerRequests.filter(v => v.status === "pending").length === 1 ? '' : '_plural'), { count: session.volunteerRequests.filter(v => v.status === "pending").length })}
                                   </Button>
                                 )}
                               </div>
@@ -3147,10 +3047,6 @@ const ManagerCalendar = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    if (calendarView === "day") {
-                      setIsNavigating(true);
-                      setTimeout(() => setIsNavigating(false), 100);
-                    }
                     setSelectedDate(new Date());
                   }}
                   className={cn(
@@ -3820,7 +3716,7 @@ const ManagerCalendar = () => {
                                 )}
                                 dir={dir}
                               >
-                                <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                     <User className="h-4 w-4 text-blue-600" />
                                   </div>
@@ -3871,7 +3767,7 @@ const ManagerCalendar = () => {
                               )}
                               dir={dir}
                             >
-                              <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                              <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                 <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                   <User className="h-4 w-4 text-blue-600" />
                                 </div>
@@ -3960,7 +3856,7 @@ const ManagerCalendar = () => {
                                     )}
                                     dir={dir}
                                   >
-                                    <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                    <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                       <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                         <User className="h-4 w-4 text-green-600" />
                                       </div>
@@ -4011,7 +3907,7 @@ const ManagerCalendar = () => {
                                     )}
                                     dir={dir}
                                   >
-                                    <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                    <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                       <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                         <User className="h-4 w-4 text-green-600" />
                                       </div>
@@ -4096,7 +3992,7 @@ const ManagerCalendar = () => {
                                     )}
                                     dir={dir}
                                   >
-                                    <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                    <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                       <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                         <User className="h-4 w-4 text-blue-600" />
                                       </div>
@@ -4147,7 +4043,7 @@ const ManagerCalendar = () => {
                                   )}
                                   dir={dir}
                                 >
-                                  <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                  <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                     <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                       <User className="h-4 w-4 text-blue-600" />
                                     </div>
@@ -4554,7 +4450,7 @@ const ManagerCalendar = () => {
                                   )}
                                   dir={dir}
                                 >
-                                  <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                  <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                     <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                       <User className="h-4 w-4 text-blue-600" />
                                     </div>
@@ -4603,7 +4499,7 @@ const ManagerCalendar = () => {
                                 )}
                                 dir={dir}
                               >
-                                <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                     <User className="h-4 w-4 text-blue-600" />
                                   </div>
@@ -4690,7 +4586,7 @@ const ManagerCalendar = () => {
                                       )}
                                       dir={dir}
                                     >
-                                      <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                      <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                         <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                           <User className="h-4 w-4 text-green-600" />
                                         </div>
@@ -4745,7 +4641,7 @@ const ManagerCalendar = () => {
                                       )}
                                       dir={dir}
                                     >
-                                      <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                      <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                         <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                           <User className="h-4 w-4 text-green-600" />
                                         </div>
@@ -4832,7 +4728,7 @@ const ManagerCalendar = () => {
                                       )}
                                       dir={dir}
                                     >
-                                      <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                      <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                         <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                           <User className="h-4 w-4 text-blue-600" />
                                         </div>
@@ -4883,7 +4779,7 @@ const ManagerCalendar = () => {
                                     )}
                                     dir={dir}
                                   >
-                                    <div className={cn("flex items-center min-w-0 gap-2", !isRTL && "flex-row-reverse")}>
+                                    <div className={cn("flex items-center min-w-0 gap-2", isRTL && "space-x-reverse")}>
                                       <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                                         <User className="h-4 w-4 text-blue-600" />
                                       </div>
@@ -5007,7 +4903,7 @@ const ManagerCalendar = () => {
         open={isPendingRequestsDialogOpen && selectedSlot?.volunteerRequests.some(v => v.status === "pending") && !isSlotInPast(selectedSlot)}
         onOpenChange={setIsPendingRequestsDialogOpen}
       >
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col" dir={dir}>
+        <DialogContent className="sm:max-w-[500px] max-h-[82vh] flex flex-col" dir={dir}>
           <DialogHeader className="border-b border-slate-300 pb-3">
             <DialogTitle dir={dir}>{t('pendingRequests.title')}</DialogTitle>
             <DialogDescription dir={dir}>
@@ -5029,41 +4925,113 @@ const ManagerCalendar = () => {
 
                 <div className="space-y-4">
                   {selectedSlot.volunteerRequests
-                    .filter(volunteer => volunteer.status === "pending")
+                    .filter(volunteerRequest => volunteerRequest.status === "pending")
                     .sort((a, b) => a.volunteerId.localeCompare(b.volunteerId))
-                    .map(volunteer => {
-                      const volunteerInfo = volunteers.find(v => v.id === volunteer.volunteerId);
+                    .map(volunteerRequest => {
+                      // Get volunteer info from the volunteer list using the ID from the request
+                      const volunteerInfo = volunteers.find(v => v.id === volunteerRequest.volunteerId);
+                      // Use match score directly from the volunteer request
+                      const matchScore = volunteerRequest.matchScore;
+
                       return (
                         <div
-                          key={volunteer.volunteerId}
-                          className="p-4 flex items-center justify-between rounded-lg border border-slate-300 bg-white hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-colors"
+                          key={volunteerRequest.volunteerId}
+                          className="p-4 flex items-start gap-4 rounded-lg border border-slate-300 bg-white hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-colors"
                         >
-                          <div>
-                            <div className="font-medium">{volunteerInfo?.fullName || volunteer.volunteerId}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-900 mb-2">{volunteerInfo?.fullName || volunteerRequest.volunteerId}</div>
+
+                            <div className="space-y-2.5">
+                              {/* Assigned Resident */}
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                <span className="text-sm font-medium text-slate-500 min-w-0">{t('pendingRequests.assignedResident')}</span>
+                                <div className="flex flex-wrap gap-1 min-w-0">
+                                  {volunteerRequest.assignedResidentId ? (
+                                    (() => {
+                                      const resident = residents.find(r => r.id === volunteerRequest.assignedResidentId);
+                                      return (
+                                        <Badge
+                                          key={volunteerRequest.assignedResidentId}
+                                          variant="outline"
+                                          className="text-xs bg-blue-50 border border-blue-500 hover:bg-blue-100 hover:border-blue-600 text-blue-700 px-2 py-0.5"
+                                        >
+                                          {resident?.fullName || volunteerRequest.assignedResidentId}
+                                        </Badge>
+                                      );
+                                    })()
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs bg-blue-50 border border-blue-500 hover:bg-blue-100 hover:border-blue-600 text-blue-700 px-2 py-0.5">
+                                      {t('pendingRequests.noneAssigned')}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Match Score */}
+                              <div className="flex items-center gap-2">
+                                <Target className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                                <span className="text-sm font-medium text-slate-500">{t('pendingRequests.matchScore')}</span>
+                                {matchScore !== null && matchScore !== undefined ? (
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      className={cn(
+                                        "text-sm px-2 py-0.5 font-medium",
+                                        matchScore >= 80
+                                          ? "bg-emerald-100 border-emerald-400 text-emerald-700 hover:bg-emerald-200 hover:border-emerald-500"
+                                          : matchScore >= 60
+                                            ? "bg-amber-100 border-amber-500 text-amber-700 hover:bg-amber-200 hover:border-amber-600"
+                                            : "bg-red-100 border-red-400 text-red-700 hover:bg-red-200 hover:border-red-500"
+                                      )}
+                                      variant="outline"
+                                    >
+                                      {matchScore}%
+                                    </Badge>
+                                    <div className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                      <div
+                                        className={cn(
+                                          "h-full rounded-full transition-all duration-300",
+                                          matchScore >= 80
+                                            ? "bg-emerald-500"
+                                            : matchScore >= 60
+                                              ? "bg-amber-500"
+                                              : "bg-red-500"
+                                        )}
+                                        style={{ width: `${Math.min(matchScore, 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-slate-100 border-slate-500 text-slate-600 hover:bg-slate-200 hover:border-slate-600 px-2 py-0.5">
+                                    {t('pendingRequests.notCalculated')}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="flex gap-2">
-                            {pendingVolunteerAction[`${selectedSlot.id}-${volunteer.volunteerId}`] ? (
-                              <div className="flex items-center justify-center w-20">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary inline-block"></div>
+                          <div className="flex flex-col gap-2.5 flex-shrink-0 pt-1">
+                            {pendingVolunteerAction[`${selectedSlot.id}-${volunteerRequest.volunteerId}`] ? (
+                              <div className="flex items-center justify-center w-24 h-10">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary inline-block"></div>
                               </div>
                             ) : (
                               <>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="bg-red-200/80 border-red-500 text-red-700 hover:bg-red-300/75 hover:border-red-500 hover:text-red-700"
-                                  onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'reject')}
+                                  className="bg-emerald-200/80 border-green-500 text-green-700 hover:bg-emerald-300/75 hover:border-emerald-600 hover:text-green-700 h-10 px-4 text-sm font-medium"
+                                  onClick={() => handleVolunteerRequest(selectedSlot.id, volunteerRequest.volunteerId, 'approve')}
                                 >
-                                  {t('pendingRequests.reject')}
+                                  {t('pendingRequests.approve')}
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="bg-emerald-200/80 border-green-500 text-green-700 hover:bg-emerald-300/75 hover:border-emerald-500 hover:text-green-700"
-                                  onClick={() => handleVolunteerRequest(selectedSlot.id, volunteer.volunteerId, 'approve')}
+                                  className="bg-red-200/80 border-red-500 text-red-700 hover:bg-red-300/75 hover:border-red-600 hover:text-red-700 h-10 px-4 text-sm font-medium"
+                                  onClick={() => handleVolunteerRequest(selectedSlot.id, volunteerRequest.volunteerId, 'reject')}
                                 >
-                                  {t('pendingRequests.approve')}
+                                  {t('pendingRequests.reject')}
                                 </Button>
                               </>
                             )}
@@ -5087,7 +5055,7 @@ const ManagerCalendar = () => {
           <DialogHeader className="border-b border-slate-300 pb-3" dir={dir}>
             <DialogTitle dir={dir}>
               {t('daySessions.title', {
-                date: selectedDayDate && `${formatIsraelTime(selectedDayDate, 'd')} ב${t(`calendar.months.${formatIsraelTime(selectedDayDate, 'MMMM').toLowerCase()}`)} ${formatIsraelTime(selectedDayDate, 'yyyy')}`
+                date: selectedDayDate && `${t(`calendar.weekDays.${formatIsraelTime(selectedDayDate, 'EEEE').toLowerCase()}`)}, ${t(`calendar.months.${formatIsraelTime(selectedDayDate, 'MMMM').toLowerCase()}`)} ${formatIsraelTime(selectedDayDate, 'd')}, ${formatIsraelTime(selectedDayDate, 'yyyy')}`
               })}
             </DialogTitle>
             <DialogDescription>
@@ -5138,7 +5106,7 @@ const ManagerCalendar = () => {
                             {session.startTime} - {session.endTime}
                           </div>
                           <div className="text-sm text-slate-500 mt-1">
-                            {getVolunteerCount(session) === 1 ? t('calendar.filled', { current: getVolunteerCount(session), capacity: getCapacityDisplay(session) }) : t('calendar.filled_plural', { current: getVolunteerCount(session), capacity: getCapacityDisplay(session) })}
+                            {t('calendar.filled', { current: getVolunteerCount(session), capacity: getCapacityDisplay(session) })}
                           </div>
                         </div>
                         <div className="flex items-center">
@@ -5177,7 +5145,7 @@ const ManagerCalendar = () => {
                             }}
                           >
                             <AlertCircle className="h-4 w-4 mr-1" />
-                            {session.volunteerRequests.filter(v => v.status === "pending").length === 1 ? t('pendingRequests.pendingCount', { count: session.volunteerRequests.filter(v => v.status === "pending").length }) : t('pendingRequests.pendingCount_plural', { count: session.volunteerRequests.filter(v => v.status === "pending").length })}
+                            {t('pendingRequests.pendingCount' + (session.volunteerRequests.filter(v => v.status === "pending").length === 1 ? '' : '_plural'), { count: session.volunteerRequests.filter(v => v.status === "pending").length })}
                           </Button>
                         </div>
                       )}

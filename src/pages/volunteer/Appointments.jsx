@@ -1,58 +1,72 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Clock3, MapPin, Search, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { collection, getDocs, doc, updateDoc, arrayRemove, query, where } from "firebase/firestore";
+import { doc, updateDoc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Appointments.css";
 import { Layout } from '@/components/volunteer/Layout';
 
-// Utility functions for session type colors
-const getSessionTypeColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "reading": return "#3b82f6";
-    case "games": return "#ec4899";
-    case "music": return "#f59e0b";
-    case "art": return "#10b981";
-    case "crafts": return "#8b5cf6";
-    case "exercise": return "#ef4444";
-    case "therapy": return "#6366f1";
-    case "social": return "#14b8a6";
-    case "session": return "#6b7280";
-    default: return "#6b7280";
-  }
+// Import proper Firestore hooks and types
+import { useAppointments } from "@/hooks/useFirestoreCalendar";
+import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import { useAttendanceByAppointment } from "@/hooks/useAttendance";
+
+// Utility: Get default color for sessions
+const getSessionColor = () => {
+  return "#6b7280";
 };
 
-const getSessionTypeBorderColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "reading": return "#2563eb";
-    case "games": return "#db2777";
-    case "music": return "#d97706";
-    case "art": return "#059669";
-    case "crafts": return "#7c3aed";
-    case "exercise": return "#dc2626";
-    case "therapy": return "#4f46e5";
-    case "social": return "#0d9488";
-    case "session": return "#4b5563";
-    default: return "#4b5563";
-  }
+// Utility: Get default border color for sessions
+const getSessionBorderColor = () => {
+  return "#4b5563";
 };
 
-const getSessionTypeClass = (type) => {
-  return (type || '').toLowerCase().replace(/\s+/g, '');
+const getSessionTypeClass = () => {
+  return "session";
+};
+
+// Helper function to convert time to minutes for sorting
+const timeToMinutes = (timeStr) => {
+  if (!timeStr) return 0;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+// Format Firebase date string to "MONTH DATE" format
+const formatFirebaseDate = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const month = date.toLocaleString('en-US', { month: 'long' });
+  const day = date.getDate();
+  return `${month} ${day}`;
+};
+
+// Get day of week from date string
+const getDayFromDate = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const day = date.toLocaleString('en-US', { weekday: 'short' });
+  return day.substring(0, 3); // Get first 3 letters (Mon, Tue, etc.)
 };
 
 export default function Appointments() {
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation('appointments');
   const [tab, setTab] = useState("upcoming");
   const [query, setQuery] = useState("");
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [showLangOptions, setShowLangOptions] = useState(false);
-  const [userId, setUserId] = useState(""); 
-  const [username, setUsername] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [currentVolunteer, setCurrentVolunteer] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+
+  // Use proper Firestore hooks
+  const { appointments, loading: appointmentsLoading } = useAppointments();
+  const { slots, loading: slotsLoading } = useCalendarSlots();
+  const { volunteers, loading: volunteersLoading } = useVolunteers();
 
   // Function to show notifications
   const showNotification = (message, type = "error") => {
@@ -68,249 +82,272 @@ export default function Appointments() {
     document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
   }, [i18n.language]);
 
-  // Get the username from localStorage
+  // Check authentication and get current user
   useEffect(() => {
-    // Get username from localStorage
-    const storedUsername = localStorage.getItem('username');
-    if (storedUsername) {
-      setUsername(storedUsername);
-    }
-    
-    // Also get userId if available
-    const storedUserId = localStorage.getItem('userId');
-    if (storedUserId) {
-      setUserId(storedUserId);
-    }
-  }, []);
-
-  // Function to check if appointment date has passed and update status
-  const updatePastAppointments = async (appointmentsData) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    const updatePromises = [];
-    const updatedAppointments = [...appointmentsData];
-    
-    for (let i = 0; i < appointmentsData.length; i++) {
-      const appointment = appointmentsData[i];
-      const appointmentDate = new Date(appointment.rawData.date);
-      const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
-      
-      // Check if appointment date has passed and status is not already "completed"
-      if (appointmentDay < today && appointment.rawData.status !== "completed") {        
-        // Update in Firebase
-        const appointmentRef = doc(db, "calendar_slots", appointment.id);
-        const updatePromise = updateDoc(appointmentRef, {
-          status: "completed"
-        }).then(() => {
-          // Update local state
-          updatedAppointments[i] = {
-            ...appointment,
-            rawData: {
-              ...appointment.rawData,
-              status: "completed"
-            }
-          };
-        }).catch((error) => {
-          console.error(`Error updating appointment ${appointment.id}:`, error);
-        });
-        
-        updatePromises.push(updatePromise);
-      }
-    }
-    
-    // Wait for all updates to complete
-    if (updatePromises.length > 0) {
-      try {
-        await Promise.all(updatePromises);
-        return updatedAppointments;
-      } catch (error) {
-        console.error("Error updating some appointments:", error);
-        return updatedAppointments;
-      }
-    }
-    
-    return appointmentsData;
-  };
-
-  // Fetch appointments from Firebase
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!username) return; // Don't fetch if username isn't available
-      
-      try {
-        setLoading(true);
-        const calendarRef = collection(db, "calendar_slots");
-        const snapshot = await getDocs(calendarRef);
-        
-        const appointmentsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          
-          // Check if current user is a volunteer for this slot by username
-          const userVolunteer = data.volunteers?.find(v => v.username === username);
-          
-          // Get session type from customLabel, fallback to "Session"
-          const sessionType = data.customLabel || "Session";
-          
-          // Format the appointment data
-          return {
-            id: doc.id,
-            appointmentId: data.appointmentId,
-            date: formatFirebaseDate(data.date),
-            day: getDayFromDate(data.date),
-            time: `${data.startTime} - ${data.endTime}`,
-            location: sessionType,
-            sessionType: sessionType, // Keep separate for color logic
-            note: data.notes || "",
-            category: data.isCustom ? "Custom" : "Regular",
-            status: userVolunteer ? userVolunteer.status : (data.isOpen ? "Open" : "Closed"),
-            maxCapacity: data.maxCapacity,
-            volunteers: data.volunteers || [],
-            volunteerRequests: data.volunteerRequests || [],
-            isOpen: data.isOpen,
-            residentIds: data.residentIds || [],
-            rawData: data // Keep the raw data for reference
-          };
-        });
-        
-        // Update past appointments automatically
-        const updatedAppointments = await updatePastAppointments(appointmentsData);
-        
-        setAppointments(updatedAppointments);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching appointments:", error);
-        setLoading(false);
-      }
-    };
-    
-    fetchAppointments();
-  }, [username]); // Depend on username instead of userId
-
-  // Periodic check for past appointments (every 5 minutes)
-  useEffect(() => {
-    if (appointments.length === 0) return;
-    
-    const intervalId = setInterval(async () => {
-      const updatedAppointments = await updatePastAppointments(appointments);
-      if (updatedAppointments !== appointments) {
-        setAppointments(updatedAppointments);
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
-    
-    return () => clearInterval(intervalId);
-  }, [appointments]);
-
-  // Format Firebase date string to "MONTH DATE for example May 27" format
-  const formatFirebaseDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const month = date.toLocaleString('en-US', { month: 'long' });
-    const day = date.getDate();
-    return `${month} ${day}`;
-  };
-
-  // Get day of week from date string
-  const getDayFromDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const day = date.toLocaleString('en-US', { weekday: 'short' });
-    return day.substring(0, 3); // Get first 3 letters (Mon, Tue, etc.)
-  };
-
-  const now = new Date();
-
-  const tabAppointments = appointments.filter((a) => {
-    const dateObj = new Date(a.rawData.date);
-    
-    if (tab === "upcoming") {
-      // Show appointment where user is approved, but ONLY if the appointment is NOT completed
-      const isUserApproved = a.volunteers?.some(v => 
-        v.username === username && v.status === "approved"
-      );
-      // Make sure it's not a completed appointment
-      return (isUserApproved || a.rawData.status === "upcoming") && a.rawData.status !== "completed";
-    }
-    if (tab === "past") {
-      // Show any appointment with status "completed" regardless of date
-      return a.rawData.status === "completed";
-    }
-    if (tab === "pending") {
-      // Show appointments where this user's status is "pending"
-      return a.volunteers?.some(v => 
-        v.username === username && v.status === "pending"
-      );
-    }
-    return false;
-  });
-
-  const filtered = tabAppointments.filter((a) => {
-    const matchSearch =
-      (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
-      (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
-    return matchSearch;
-  });
-
-  const handleCancel = async (id) => {
     try {
-      // Find the appointment to get volunteer data
-      const appointment = appointments.find(a => a.id === id);
-      if (!appointment) return;
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.username) {
+        navigate("/login");
+      } else if (user.role !== "volunteer") {
+        navigate("/manager");
+      } else {
+        setCurrentUser(user);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  // Find current volunteer record when user and volunteers data is available
+  useEffect(() => {
+    if (currentUser && volunteers.length > 0) {
+      const volunteer = volunteers.find(v => 
+        v.userId === currentUser.id || 
+        v.userId === currentUser.uid ||
+        v.fullName === currentUser.username // Fallback if linked by name
+      );
+      setCurrentVolunteer(volunteer);
       
-      // Update Firestore: Remove the current user from volunteers array
-      const appointmentRef = doc(db, "calendar_slots", id);
-      
-      // Find the volunteer entry to remove by username
-      const volunteerToRemove = appointment.volunteers.find(v => v.username === username);
-      
-      if (volunteerToRemove) {
-        // Create update object to remove from both arrays
-        const updateData = {
-          volunteers: arrayRemove(volunteerToRemove)
+      if (!volunteer) {
+        console.warn("Could not find volunteer record for user:", currentUser);
+      }
+    }
+  }, [currentUser, volunteers]);
+
+  // Memoized appointments filtering for current volunteer
+  const userAppointments = useMemo(() => {
+    if (!currentVolunteer || !slots.length) {
+      return [];
+    }
+
+    console.log("Current volunteer:", currentVolunteer);
+    console.log("Appointments:", appointments);
+    console.log("Slots:", slots);
+
+    // Get appointments where volunteer is assigned
+    const assignedAppointments = appointments
+      .filter(appointment => {
+        // Check if current volunteer is assigned to this appointment
+        const isVolunteerAssigned = appointment.volunteerIds.some(vol => 
+          vol.id === currentVolunteer.id && vol.type === 'volunteer'
+        );
+        return isVolunteerAssigned;
+      })
+      .map(appointment => {
+        const slot = slots.find(s => s.id === appointment.calendarSlotId);
+        if (!slot) return null;
+
+        const volunteerRequest = slot.volunteerRequests?.find(vr => 
+          vr.volunteerId === currentVolunteer.id
+        );
+
+        return {
+          id: appointment.id,
+          appointmentId: appointment.id,
+          date: formatFirebaseDate(slot.date),
+          day: getDayFromDate(slot.date),
+          time: `${slot.startTime} - ${slot.endTime}`,
+          location: slot.customLabel || "Session",
+          sessionType: slot.customLabel || "Session",
+          note: appointment.notes || slot.notes || "",
+          category: slot.isCustom ? "Custom" : "Regular",
+          status: volunteerRequest?.status || appointment.status,
+          appointmentStatus: appointment.status,
+          maxCapacity: slot.maxCapacity,
+          volunteerRequests: slot.volunteerRequests || [],
+          isOpen: slot.isOpen,
+          residentIds: appointment.residentIds || [],
+          rawData: {
+            ...appointment,
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            status: appointment.status,
+            calendarSlotId: appointment.calendarSlotId
+          }
         };
-        
-        // Also remove from volunteerRequests if the user ID exists there
-        // Check different possible ID formats that might be stored in volunteerRequests
-        const possibleIds = [
-          userId,
-          volunteerToRemove.id,
-          username,
-          volunteerToRemove.username
-        ].filter(Boolean); // Remove any null/undefined values
-        
-        // Find which ID format is actually in the volunteerRequests array
-        const userIdInRequests = possibleIds.find(id => 
-          appointment.volunteerRequests?.includes(id)
+      })
+      .filter(Boolean);
+
+    // Get slots with pending volunteer requests (not yet appointments)
+    const pendingRequestSlots = slots
+      .filter(slot => {
+        // Check if current volunteer has a request for this slot
+        const hasVolunteerRequest = slot.volunteerRequests?.some(vr => 
+          vr.volunteerId === currentVolunteer.id
         );
         
-        if (userIdInRequests) {
-          updateData.volunteerRequests = arrayRemove(userIdInRequests);
+        // Only include if there's no corresponding appointment yet
+        const hasAppointment = appointments.some(appointment => 
+          appointment.calendarSlotId === slot.id &&
+          appointment.volunteerIds.some(vol => 
+            vol.id === currentVolunteer.id && vol.type === 'volunteer'
+          )
+        );
+        
+        return hasVolunteerRequest && !hasAppointment;
+      })
+      .map(slot => {
+        const volunteerRequest = slot.volunteerRequests?.find(vr => 
+          vr.volunteerId === currentVolunteer.id
+        );
+
+        return {
+          id: slot.id, // Use slot ID for pending requests
+          appointmentId: slot.appointmentId || slot.id,
+          date: formatFirebaseDate(slot.date),
+          day: getDayFromDate(slot.date),
+          time: `${slot.startTime} - ${slot.endTime}`,
+          location: slot.customLabel || "Session",
+          sessionType: slot.customLabel || "Session",
+          note: slot.notes || "",
+          category: slot.isCustom ? "Custom" : "Regular",
+          status: volunteerRequest?.status || "pending",
+          appointmentStatus: "pending",
+          maxCapacity: slot.maxCapacity,
+          volunteerRequests: slot.volunteerRequests || [],
+          isOpen: slot.isOpen,
+          residentIds: slot.residentIds || [],
+          rawData: {
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            status: "pending",
+            calendarSlotId: slot.id
+          }
+        };
+      });
+
+    // Combine both arrays and sort
+    return [...assignedAppointments, ...pendingRequestSlots]
+      .filter(Boolean) // Remove null entries
+      .sort((a, b) => {
+        // Sort by date, then by time
+        const dateA = new Date(a.rawData.date);
+        const dateB = new Date(b.rawData.date);
+        
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateA.getTime() - dateB.getTime();
         }
         
-        // Perform the update
-        await updateDoc(appointmentRef, updateData);
+        // If same date, sort by start time
+        const timeA = timeToMinutes(a.rawData.startTime);
+        const timeB = timeToMinutes(b.rawData.startTime);
+        return timeA - timeB;
+      });
+  }, [currentVolunteer, appointments, slots]);
+
+  // Loading state
+  const loading = appointmentsLoading || slotsLoading || volunteersLoading;
+
+  // Filter appointments by tab
+  const tabAppointments = useMemo(() => {
+    return userAppointments.filter((a) => {
+      const dateObj = new Date(a.rawData.date);
+      const now = new Date();
+      
+      if (tab === "upcoming") {
+        // Show appointments that are approved and not completed, or upcoming status
+        const isApproved = a.status === "approved";
+        const isNotCompleted = a.appointmentStatus !== "completed";
+        const isFuture = dateObj >= now || a.appointmentStatus === "upcoming";
+        return isApproved && isNotCompleted && isFuture;
+      }
+      if (tab === "past") {
+        // Show completed appointments or past dates where user was approved
+        return a.appointmentStatus === "completed" || 
+               (a.status === "approved" && dateObj < now);
+      }
+      if (tab === "pending") {
+        // Show appointments where volunteer status is pending
+        return a.status === "pending";
+      }
+      return false;
+    });
+  }, [userAppointments, tab]);
+
+  // Filter by search query
+  const filtered = useMemo(() => {
+    return tabAppointments.filter((a) => {
+      const matchSearch =
+        (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
+        (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
+      return matchSearch;
+    });
+  }, [tabAppointments, query]);
+
+  const handleCancel = async (appointmentId) => {
+    console.log("=== CANCEL DEBUG ===");
+    console.log("appointmentId:", appointmentId);
+    console.log("currentVolunteer:", currentVolunteer);
+    
+    if (!currentVolunteer) {
+      showNotification("Volunteer data not available", "error");
+      return;
+    }
+
+    try {
+      // Find the appointment to get slot data
+      const appointment = userAppointments.find(a => a.id === appointmentId);
+      console.log("Found appointment:", appointment);
+      
+      if (!appointment) {
+        showNotification("Appointment not found", "error");
+        return;
+      }
+
+      // Find the corresponding slot
+      const slot = slots.find(s => 
+        s.id === appointment.rawData.calendarSlotId || 
+        s.appointmentId === appointmentId ||
+        s.id === appointmentId // For pending requests, the slot ID is used as appointment ID
+      );
+      console.log("Found slot:", slot);
+      
+      if (!slot) {
+        showNotification("Slot not found", "error");
+        return;
+      }
+
+      // Remove the volunteer request from the slot
+      const slotRef = doc(db, "calendar_slots", slot.id);
+      
+      // Find the volunteer request to remove
+      console.log("Looking for volunteer request with volunteerId:", currentVolunteer.id);
+      console.log("Slot volunteerRequests:", slot.volunteerRequests);
+      
+      const volunteerRequestToRemove = slot.volunteerRequests?.find(vr => 
+        vr.volunteerId === currentVolunteer.id
+      );
+      
+      console.log("volunteerRequestToRemove:", volunteerRequestToRemove);
+      
+      if (volunteerRequestToRemove) {
+        console.log("Attempting to remove request from slot:", slot.id);
         
-        // Update local state
-        setAppointments(prev => prev.map(a => {
-          if (a.id === id) {
-            return {
-              ...a,
-              volunteers: a.volunteers.filter(v => v.username !== username),
-              volunteerRequests: a.volunteerRequests.filter(reqId => reqId !== userIdInRequests),
-              status: "Open" // Reset status for this user's view
-            };
-          }
-          return a;
-        }));
+        // Instead of arrayRemove, filter out the volunteer request
+        const updatedVolunteerRequests = slot.volunteerRequests.filter(vr => 
+          vr.volunteerId !== currentVolunteer.id
+        );
+        
+        console.log("Original requests:", slot.volunteerRequests.length);
+        console.log("Updated requests:", updatedVolunteerRequests.length);
+        
+        await updateDoc(slotRef, {
+          volunteerRequests: updatedVolunteerRequests
+        });
+        
+        showNotification("Request canceled successfully!", "success");
+      } else {
+        showNotification("No pending request found to cancel", "error");
       }
       
-      if (selected && selected.id === id) setSelected(null);
+      if (selected && selected.id === appointmentId) setSelected(null);
       
-      // Show success notification
-      showNotification("Appointment canceled successfully!", "success");
     } catch (error) {
       console.error("Error canceling appointment:", error);
-      showNotification("Error canceling appointment. Please try again.", "error");
+      showNotification("Error canceling request. Please try again.", "error");
     }
   };
 
@@ -344,8 +381,7 @@ export default function Appointments() {
 
   // Get status tag with appropriate styling
   const getStatusTag = (appointment) => {
-    const userVolunteer = appointment.volunteers?.find(v => v.username === username);
-    const status = userVolunteer?.status || appointment.status;
+    const status = appointment.status;
     
     const getStatusClass = (status) => {
       switch (status) {
@@ -358,7 +394,7 @@ export default function Appointments() {
     };
     
     return (
-      <div className={`tag ${getSessionTypeClass(appointment.sessionType)} ${getStatusClass(status)}`}>
+      <div className={`tag ${getSessionTypeClass()} ${getStatusClass(status)}`}>
         {appointment.sessionType}
       </div>
     );
@@ -424,20 +460,20 @@ export default function Appointments() {
               </button>
               {showLangOptions && (
                 <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-                                  <button onClick={() => { 
-                  localStorage.setItem('language', 'en');
-                  i18n.changeLanguage('en').then(() => {
-                    document.documentElement.dir = 'ltr';
-                  });
-                  setShowLangOptions(false); 
-                }}>English</button>
-                <button onClick={() => { 
-                  localStorage.setItem('language', 'he');
-                  i18n.changeLanguage('he').then(() => {
-                    document.documentElement.dir = 'rtl';
-                  });
-                  setShowLangOptions(false); 
-                }}>עברית</button>
+                  <button onClick={() => { 
+                    localStorage.setItem('language', 'en');
+                    i18n.changeLanguage('en').then(() => {
+                      document.documentElement.dir = 'ltr';
+                    });
+                    setShowLangOptions(false); 
+                  }}>English</button>
+                  <button onClick={() => { 
+                    localStorage.setItem('language', 'he');
+                    i18n.changeLanguage('he').then(() => {
+                      document.documentElement.dir = 'rtl';
+                    });
+                    setShowLangOptions(false); 
+                  }}>עברית</button>
                 </div>
               )}
             </div>
@@ -471,11 +507,11 @@ export default function Appointments() {
                 ) : (
                   filtered.map((a) => (
                     <div 
-                      className={`appointment-card ${getSessionTypeClass(a.sessionType)}`} 
+                      className={`appointment-card ${getSessionTypeClass()}`} 
                       key={a.id} 
                       onClick={() => setSelected(a)}
                       style={{
-                        borderLeftColor: getSessionTypeBorderColor(a.sessionType)
+                        borderLeftColor: getSessionBorderColor()
                       }}
                     >
                       <div className="appointment-left">
@@ -525,12 +561,12 @@ export default function Appointments() {
                   className="modal-content appointments-modal" 
                   onClick={(e) => e.stopPropagation()}
                   style={{
-                    maxWidth: '28rem', // max-w-md equivalent
+                    maxWidth: '28rem',
                     width: '100%',
-                    borderRadius: '0.75rem', // rounded-xl
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-xl
+                    borderRadius: '0.75rem',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                     backgroundColor: 'white',
-                    padding: '1.5rem', // p-6
+                    padding: '1.5rem',
                     position: 'relative'
                   }}
                 >
@@ -538,7 +574,7 @@ export default function Appointments() {
                   <div style={{ marginBottom: '1.5rem' }}>
                     <h2 
                       style={{
-                        fontSize: '1.125rem', // text-lg
+                        fontSize: '1.125rem',
                         fontWeight: 'bold',
                         marginBottom: '1rem',
                         textAlign: i18n.language === 'he' ? 'right' : 'left',
@@ -552,7 +588,7 @@ export default function Appointments() {
                     <div style={{ marginBottom: '1rem' }}>
                       <span 
                         style={{
-                          backgroundColor: getSessionTypeColor(selected.sessionType),
+                          backgroundColor: getSessionColor(),
                           color: 'white',
                           fontSize: '0.875rem',
                           fontWeight: '500',
@@ -569,8 +605,8 @@ export default function Appointments() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        color: '#6b7280', // text-gray-500
-                        fontSize: '0.875rem', // text-sm
+                        color: '#6b7280',
+                        fontSize: '0.875rem',
                         marginBottom: '1rem'
                       }}
                     >

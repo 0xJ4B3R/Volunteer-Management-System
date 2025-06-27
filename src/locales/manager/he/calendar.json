@@ -23,7 +23,7 @@
   },
   "actions": {
     "newSession": "פגישה חדשה",
-    "pending": "ממתין"
+    "pending": "בקשות ממתינות"
   },
   "pendingRequests": {
     "title": "בקשות מתנדבים ממתינות",
@@ -32,6 +32,10 @@
     "noRequests": "אין בקשות מתנדבים ממתינות כעת.",
     "pendingCount": "בקשה אחת ממתינה",
     "pendingCount_plural": "{{count}} בקשות ממתינות",
+    "assignedResident": "דייר משוייך:",
+    "matchScore": "ציון התאמה:",
+    "noneAssigned": "אין משוייך",
+    "notCalculated": "לא חושב",
     "approve": "אשר",
     "reject": "דחה"
   },
@@ -88,12 +92,12 @@
       "nov": "נוב׳",
       "dec": "דצמ׳"
     },
-      "sessionCount": "פגישה אחת",
-  "sessionCount_plural": "{{count}} פגישות",
+    "sessionCount": "פגישה אחת",
+    "sessionCount_plural": "{{count}} פגישות",
     "moreSessions": "+{{count}} נוספות",
     "noSessions": "אין פגישות מתוכננות ביום זה.",
     "filled": "מולא {{current}} מתוך {{capacity}}",
-  "filled_plural": "מולאו {{current}} מתוך {{capacity}}"
+    "filled_plural": "מולאו {{current}} מתוך {{capacity}}"
   },
   "session": {
     "status": {
@@ -296,7 +300,7 @@
   "badges": {
     "custom": "מותאם אישית",
     "pending": "ממתין",
-    "pendingRequest": "בקשה ממתינה",
+    "pendingRequest": "{{count}} ממתין",
     "pendingRequests": "בקשות ממתינות",
     "more": "נוספות",
     "sessions": "פגישות",
@@ -351,4 +355,4 @@
     "externalGroupError": "נכשל ביצירת קבוצה חיצונית",
     "calendarSlotError": "נכשל ביצירת חריץ בלוח שנה"
   }
-} 
+}

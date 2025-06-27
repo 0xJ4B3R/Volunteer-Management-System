@@ -103,11 +103,11 @@ i18n
     fallbackLng: 'en',
     lng: localStorage.getItem('language') || 'en',
     debug: false,
-    
+
     interpolation: {
       escapeValue: false // React already escapes by default
     },
-    
+
     detection: {
       order: ['localStorage', 'navigator'],
       caches: ['localStorage']

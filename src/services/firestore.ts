@@ -117,6 +117,7 @@ export interface VolunteerRequest {
   rejectedAt?: Timestamp | null;
   rejectedReason?: string | null;
   matchScore?: number | null;
+  assignedResidentId?: string | null;
   assignedBy: VolunteerRequestAssignedBy;
 }
 

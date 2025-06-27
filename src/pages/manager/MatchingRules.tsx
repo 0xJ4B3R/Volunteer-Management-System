@@ -46,109 +46,153 @@ import { useMatchingRules, useAddMatchingRule, useUpdateMatchingRule, useResetMa
 import { matchVolunteersToResidents } from "@/utils/matchingAlgorithm";
 
 // Translation Utilities
-const REASON_TRANSLATIONS: Record<string, string> = {
-  "Resident has not specified any required skills.": "הדייר לא ציין כישורים נדרשים.",
-  "All required resident skills are present in the volunteer's skill set.": "כל הכישורים הנדרשים של הדייר קיימים בסט הכישורים של המתנדב.",
-  "Volunteer does not possess any of the resident's required skills.": "המתנדב לא מחזיק באף אחד מהכישורים הנדרשים של הדייר.",
-  "No hobbies specified for volunteer or resident.": "לא צוינו תחביבים למתנדב או לדייר.",
-  "Volunteer and resident share all listed hobbies.": "המתנדב והדייר חולקים את כל התחביבים המפורטים.",
-  "No shared hobbies between volunteer and resident.": "אין תחביבים משותפים בין המתנדב לדייר.",
-  "No languages specified for volunteer or resident.": "לא צוינו שפות למתנדב או לדייר.",
-  "Volunteer speaks all languages required by the resident.": "המתנדב מדבר את כל השפות הנדרשות על ידי הדייר.",
-  "Volunteer does not speak any of the resident's required languages.": "המתנדב לא מדבר אף אחת מהשפות הנדרשות של הדייר.",
-  "Resident has not specified any required availability.": "הדייר לא ציין זמינות נדרשת.",
-  "Volunteer is available for all of the resident's requested time slots.": "המתנדב זמין לכל חלונות הזמן המבוקשים של הדייר.",
-  "Volunteer is not available for any of the resident's requested time slots.": "המתנדב לא זמין לאף אחד מחלונות הזמן המבוקשים של הדייר.",
-  "Volunteer fulfills every exact time slot required by the resident.": "המתנדב ממלא כל חלון זמן מדויק נדרש על ידי הדייר.",
-  "Gender information is missing for volunteer or resident.": "מידע מגדר חסר למתנדב או לדייר.",
-  "Birth date is missing for volunteer or resident.": "תאריך לידה חסר למתנדב או לדייר.",
-  "No residents have received any visits yet.": "אין דיירים שקיבלו ביקורים עדיין."
+const REASON_TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    "Resident has not specified any required skills.": "Resident has not specified any required skills.",
+    "All required resident skills are present in the volunteer's skill set.": "All required resident skills are present in the volunteer's skill set.",
+    "Volunteer does not possess any of the resident's required skills.": "Volunteer does not possess any of the resident's required skills.",
+    "No hobbies specified for volunteer or resident.": "No hobbies specified for volunteer or resident.",
+    "Volunteer and resident share all listed hobbies.": "Volunteer and resident share all listed hobbies.",
+    "No shared hobbies between volunteer and resident.": "No shared hobbies between volunteer and resident.",
+    "No languages specified for volunteer or resident.": "No languages specified for volunteer or resident.",
+    "Volunteer speaks all languages required by the resident.": "Volunteer speaks all languages required by the resident.",
+    "Volunteer does not speak any of the resident's required languages.": "Volunteer does not speak any of the resident's required languages.",
+    "Resident has not specified any required availability.": "Resident has not specified any required availability.",
+    "Volunteer is available for all of the resident's requested time slots.": "Volunteer is available for all of the resident's requested time slots.",
+    "Volunteer is not available for any of the resident's requested time slots.": "Volunteer is not available for any of the resident's requested time slots.",
+    "Volunteer fulfills every exact time slot required by the resident.": "Volunteer fulfills every exact time slot required by the resident.",
+    "Gender information is missing for volunteer or resident.": "Gender information is missing for volunteer or resident.",
+    "Birth date is missing for volunteer or resident.": "Birth date is missing for volunteer or resident.",
+    "No residents have received any visits yet.": "No residents have received any visits yet."
+  },
+  he: {
+    "Resident has not specified any required skills.": "הדייר לא ציין כישורים נדרשים.",
+    "All required resident skills are present in the volunteer's skill set.": "כל הכישורים הנדרשים של הדייר קיימים בסט הכישורים של המתנדב.",
+    "Volunteer does not possess any of the resident's required skills.": "המתנדב לא מחזיק באף אחד מהכישורים הנדרשים של הדייר.",
+    "No hobbies specified for volunteer or resident.": "לא צוינו תחביבים למתנדב או לדייר.",
+    "Volunteer and resident share all listed hobbies.": "המתנדב והדייר חולקים את כל התחביבים המפורטים.",
+    "No shared hobbies between volunteer and resident.": "אין תחביבים משותפים בין המתנדב לדייר.",
+    "No languages specified for volunteer or resident.": "לא צוינו שפות למתנדב או לדייר.",
+    "Volunteer speaks all languages required by the resident.": "המתנדב מדבר את כל השפות הנדרשות על ידי הדייר.",
+    "Volunteer does not speak any of the resident's required languages.": "המתנדב לא מדבר אף אחת מהשפות הנדרשות של הדייר.",
+    "Resident has not specified any required availability.": "הדייר לא ציין זמינות נדרשת.",
+    "Volunteer is available for all of the resident's requested time slots.": "המתנדב זמין לכל חלונות הזמן המבוקשים של הדייר.",
+    "Volunteer is not available for any of the resident's requested time slots.": "המתנדב לא זמין לאף אחד מחלונות הזמן המבוקשים של הדייר.",
+    "Volunteer fulfills every exact time slot required by the resident.": "המתנדב ממלא כל חלון זמן מדויק נדרש על ידי הדייר.",
+    "Gender information is missing for volunteer or resident.": "מידע מגדר חסר למתנדב או לדייר.",
+    "Birth date is missing for volunteer or resident.": "תאריך לידה חסר למתנדב או לדייר.",
+    "No residents have received any visits yet.": "אין דיירים שקיבלו ביקורים עדיין."
+  }
 };
 
-const DYNAMIC_TERMS: Record<string, string> = {
-  "sunday": "ראשון",
-  "monday": "שני",
-  "tuesday": "שלישי",
-  "wednesday": "רביעי",
-  "thursday": "חמישי",
-  "friday": "שישי",
-  "saturday": "שבת",
-  "morning": "בוקר",
-  "afternoon": "צהריים",
-  "evening": "ערב",
-  "night": "לילה",
-  "male": "זכר",
-  "female": "נקבה",
-  "other": "אחר"
+const DYNAMIC_TERMS: Record<string, Record<string, string>> = {
+  en: {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "night": "Night",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other"
+  },
+  he: {
+    "sunday": "ראשון",
+    "monday": "שני",
+    "tuesday": "שלישי",
+    "wednesday": "רביעי",
+    "thursday": "חמישי",
+    "friday": "שישי",
+    "saturday": "שבת",
+    "morning": "בוקר",
+    "afternoon": "צהריים",
+    "evening": "ערב",
+    "night": "לילה",
+    "male": "זכר",
+    "female": "נקבה",
+    "other": "אחר"
+  }
 };
 
-const translateDynamicTerms = (text: string): string => {
+const translateDynamicTerms = (text: string, language: string): string => {
   let translatedText = text;
+  const terms = DYNAMIC_TERMS[language] || DYNAMIC_TERMS.en;
 
-  // First, handle day-time combinations (e.g., "sunday morning" -> "ראשון-בוקר")
+  // First, handle day-time combinations (e.g., "sunday morning" -> "ראשון-בוקר" or "Sunday-Morning")
   const dayTimePattern = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(morning|afternoon|evening|night)\b/gi;
   translatedText = translatedText.replace(dayTimePattern, (match, day, time) => {
-    const hebrewDay = DYNAMIC_TERMS[day.toLowerCase()];
-    const hebrewTime = DYNAMIC_TERMS[time.toLowerCase()];
-    return `${hebrewDay}-${hebrewTime}`;
+    const translatedDay = terms[day.toLowerCase()];
+    const translatedTime = terms[time.toLowerCase()];
+    return language === 'he' ? `${translatedDay}-${translatedTime}` : `${translatedDay}-${translatedTime}`;
   });
 
   // Then handle individual terms
-  Object.entries(DYNAMIC_TERMS).forEach(([english, hebrew]) => {
+  Object.entries(terms).forEach(([english, translated]) => {
     const regex = new RegExp(`\\b${english}\\b`, 'gi');
-    translatedText = translatedText.replace(regex, hebrew);
+    translatedText = translatedText.replace(regex, translated);
   });
 
   return translatedText;
 };
 
-const translateReason = (reason: string): string => {
-  // Handle dynamic messages with specific patterns
+const translateReason = (reason: string, language: string): string => {
+  // If language is English, return the original reason
+  if (language === 'en') {
+    return reason;
+  }
+
+  // Handle dynamic messages with specific patterns for Hebrew
   if (reason.includes("Volunteer skills matched:")) {
     const translated = reason.replace("Volunteer skills matched:", "כישורי מתנדב תואמים:").replace("Required but missing:", "נדרש אך חסר:");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Shared hobbies:")) {
     const translated = reason.replace("Shared hobbies:", "תחביבים משותפים:").replace("Resident's hobbies not shared:", "תחביבי דייר לא משותפים:");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Languages in common:")) {
     const translated = reason.replace("Languages in common:", "שפות משותפות:").replace("Resident's required languages not spoken:", "שפות נדרשות של דייר לא מדוברות:");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Matching time slots:")) {
     const translated = reason.replace("Matching time slots:", "חלונות זמן תואמים:").replace("Unavailable for:", "לא זמין עבור:");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Volunteer does not meet the following required time slots:")) {
     const translated = reason.replace("Volunteer does not meet the following required time slots:", "המתנדב לא עומד בחלונות הזמן הנדרשים הבאים:").replace("(All must be met for a perfect match.)", "(כל אחד חייב להתקיים להתאמה מושלמת.)");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Volunteer and resident have the same gender:")) {
     const translated = reason.replace("Volunteer and resident have the same gender:", "למתנדב ולדייר יש אותו מגדר:");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Volunteer gender:") && reason.includes("Resident gender:")) {
     const translated = reason.replace("Volunteer gender:", "מגדר מתנדב:").replace("Resident gender:", "מגדר דייר:");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Volunteer is") && reason.includes("years old, resident is") && reason.includes("Age difference:")) {
     const translated = reason.replace("Volunteer is", "המתנדב בן").replace("years old, resident is", "שנים, הדייר בן").replace("years old. Age difference:", "שנים. הבדל גיל:").replace("years.", "שנים.");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
   if (reason.includes("Resident has received") && reason.includes("visits. The most visited resident has")) {
     const translated = reason.replace("Resident has received", "הדייר קיבל").replace("visits. The most visited resident has", "ביקורים. הדייר המבוקר ביותר קיבל").replace("visits.", "ביקורים.");
-    return translateDynamicTerms(translated);
+    return translateDynamicTerms(translated, language);
   }
 
   // For static messages, translate and then apply dynamic terms translation
-  const staticTranslation = REASON_TRANSLATIONS[reason];
-  if (staticTranslation) {
-    return translateDynamicTerms(staticTranslation);
+  const translations = REASON_TRANSLATIONS[language];
+  if (translations && translations[reason]) {
+    return translateDynamicTerms(translations[reason], language);
   }
 
   // If no translation found, still try to translate dynamic terms in the original
-  return translateDynamicTerms(reason);
+  return translateDynamicTerms(reason, language);
 };
 
 // Constants
@@ -210,9 +254,10 @@ interface TestRulesTableDialogContentProps {
   loadingVolunteers: boolean;
   loadingResidents: boolean;
   loadingRules: boolean;
+  language: string;
 }
 
-function TestRulesTableDialogContent({ volunteers, residents, rules, loadingVolunteers, loadingResidents, loadingRules }: TestRulesTableDialogContentProps) {
+function TestRulesTableDialogContent({ volunteers, residents, rules, loadingVolunteers, loadingResidents, loadingRules, language }: TestRulesTableDialogContentProps) {
   const { t } = useTranslation('matching-rules');
   const { isRTL } = useLanguage();
   const [results, setResults] = useState([]);
@@ -338,7 +383,7 @@ function TestRulesTableDialogContent({ volunteers, residents, rules, loadingVolu
                                   <span className="inline-block px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-semibold">{f.weight}</span>
                                 </div>
                                 <div className="w-2/5 text-center text-xs text-gray-700">
-                                  {translateReason(f.reason || '')}
+                                  {translateReason(f.reason || '', language)}
                                 </div>
                               </div>
                             ))}
@@ -358,7 +403,7 @@ function TestRulesTableDialogContent({ volunteers, residents, rules, loadingVolu
 
 const ManagerMatchingRules = () => {
   const { t } = useTranslation('matching-rules');
-  const { isRTL } = useLanguage();
+  const { isRTL, language } = useLanguage();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const isMobile = window.innerWidth < 768;
@@ -953,6 +998,7 @@ const ManagerMatchingRules = () => {
             loadingVolunteers={loadingVolunteers}
             loadingResidents={loadingResidents}
             loadingRules={loading}
+            language={language}
           />
           <DialogFooter className="border-t border-slate-300 pt-5 flex justify-center items-center" />
         </DialogContent>
@@ -1096,7 +1142,7 @@ const ManagerMatchingRules = () => {
                                           <span className="inline-block px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-semibold">{f.weight}</span>
                                         </div>
                                         <div className="w-2/5 text-center text-xs text-gray-700">
-                                          {translateReason(f.reason || '')}
+                                          {translateReason(f.reason || '', language)}
                                         </div>
                                       </div>
                                     ))}

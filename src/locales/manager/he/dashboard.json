@@ -12,22 +12,20 @@
   "todaySessions": {
     "title": "פגישות היום",
     "description": "סקירה של פגישות המתנדבים של היום",
-    "sessions": "פגישות",
     "sessions_one": "פגישה אחת",
+    "sessions_other": "{{count}} פגישות",
     "volunteers": "מתנדבים",
     "volunteersCount": "מולא {{current}} מתוך {{capacity}}",
-    "volunteersCount_plural": "מולאו {{current}} מתוך {{capacity}}",
     "noSessionsToday": "אין פגישות היום"
   },
   "pendingVolunteers": {
     "title": "מתנדבים ממתינים",
     "description": "מתנדבים הממתינים לאישור",
-    "pending": "ממתינים",
-    "pending_one": "ממתין אחד",
+    "pending": "ממתין אחד",
+    "pending_plural": "{{count}} ממתינים",
     "noPendingVolunteers": "אין מתנדבים ממתינים לבדיקה",
     "filled": "מלא",
-    "volunteersCount": "מולא {{current}} מתוך {{capacity}}",
-    "volunteersCount_plural": "מולאו {{current}} מתוך {{capacity}}"
+    "volunteersCount": "מולא {{current}} מתוך {{capacity}}"
   },
   "quickStats": {
     "title": "סטטיסטיקות מהירות",
@@ -42,16 +40,16 @@
   "checkedInToday": {
     "title": "נרשמו היום",
     "description": "מתנדבים שהשתתפו בפגישות היום",
-    "checkedIn": "נרשמו",
-    "checkedIn_one": "נרשם אחד",
+    "checkedIn": "נרשם אחד",
+    "checkedIn_plural": "{{count}} נרשמו",
     "checkedInAt": "נרשם בשעה",
     "allAttendanceConfirmed": "כל הנוכחות אושרה באופן ידני"
   },
   "missingAttendance": {
     "title": "נוכחות חסרה",
     "description": "מתנדבים שהשתתפו אך אין להם רישומי נוכחות",
-    "missing": "חסרים",
-    "missing_one": "חסר אחד",
+    "missing": "חסר אחד",
+    "missing_plural": "{{count}} חסרים",
     "allAttendanceMarked": "כל הנוכחות סומנה"
   },
   "performanceAlerts": {
@@ -75,14 +73,14 @@
     "lowCapacitySession": "פגישה בקיבולת נמוכה",
     "capacity": "קיבולת",
     "capacityPlanning": "תכנון קיבולת",
-    "capacityPlanningDescription": "פגישה אחת בקיבולת מלאה היום",
-    "capacityPlanningDescription_plural": "פגישות בקיבולת מלאה היום",
+    "capacityPlanningDescription_one": "פגישה אחת בקיבולת מלאה היום",
+    "capacityPlanningDescription_other": "{{count}} פגישות בקיבולת מלאה היום",
     "lowEngagementVolunteers": "מתנדבים במעורבות נמוכה",
-    "lowEngagementDescription": "מתנדב אחד עם פחות מ-3 פגישות",
-    "lowEngagementDescription_plural": "מתנדבים עם פחות מ-3 פגישות",
+    "lowEngagementDescription_one": "מתנדב אחד עם פחות מ-3 פגישות",
+    "lowEngagementDescription_other": "{{count}} מתנדבים עם פחות מ-3 פגישות",
     "newVolunteerOnboarding": "הכשרת מתנדבים חדשים",
-    "newVolunteerOnboardingDescription": "מתנדב אחד הצטרף ב-7 הימים האחרונים",
-    "newVolunteerOnboardingDescription_plural": "מתנדבים הצטרפו ב-7 הימים האחרונים",
+    "newVolunteerOnboardingDescription_one": "מתנדב אחד הצטרף ב-7 הימים האחרונים",
+    "newVolunteerOnboardingDescription_other": "{{count}} מתנדבים הצטרפו ב-7 הימים האחרונים",
     "reviewMatchingRules": "בדוק כללי התאמה",
     "reviewMatchingRulesDescription": "שקול עדכון משקלי אלגוריתם ההתאמה בהתבסס על משוב אחרון"
   },

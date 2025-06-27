@@ -23,6 +23,7 @@ export interface VolunteerRequestUI extends Omit<VolunteerRequest, 'requestedAt'
   rejectedAt: string | null;
   rejectedReason: string | null;
   matchScore: number | null;
+  assignedResidentId: string | null;
 }
 export interface AppointmentUI extends Omit<Appointment, 'createdAt' | 'updatedAt'> {
   createdAt: string;
@@ -51,6 +52,7 @@ function ensureVolunteerRequestUI(vr: any): VolunteerRequestUI {
     rejectedAt: vr.rejectedAt ? convertTimestamp(vr.rejectedAt) : null,
     rejectedReason: vr.rejectedReason ?? null,
     matchScore: vr.matchScore ?? null,
+    assignedResidentId: vr.assignedResidentId ?? null,
     assignedBy: vr.assignedBy || 'manager'
   };
 }
@@ -105,6 +107,7 @@ function toUIFormat(data: CalendarSlot & { id: string }): CalendarSlotUI {
       rejectedAt: v.rejectedAt?.toDate().toISOString() || null,
       rejectedReason: v.rejectedReason || null,
       matchScore: v.matchScore || null,
+      assignedResidentId: v.assignedResidentId || null,
       assignedBy: v.assignedBy || 'manager'
     })),
     ...(data.recurringPattern ? { recurringPattern: data.recurringPattern } : {})

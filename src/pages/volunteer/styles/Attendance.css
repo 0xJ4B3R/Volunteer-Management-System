@@ -1202,9 +1202,33 @@
   animation: countUp 0.6s ease-out;
 }
 
-/* Smooth transitions for all interactive elements */
-* {
+/* Smooth transitions for attendance page elements only */
+.attendance-container *,
+.attendance-wrapper *,
+.session-card *,
+.history-item *,
+.stat-card *,
+.btn,
+.load-more-btn,
+.tab-button,
+.monthly-stat-item,
+.upcoming-session-item {
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Exclude UI components from transitions to prevent conflicts */
+[data-radix-popper-content-wrapper],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-radix-dialog-content],
+[data-radix-hover-card-content],
+[data-radix-context-menu-content],
+[data-radix-menubar-content],
+[data-radix-navigation-menu-content],
+[data-radix-tooltip-content],
+[data-radix-toast-viewport] {
+  transition: none !important;
 }
 
 /* Reason Text */
