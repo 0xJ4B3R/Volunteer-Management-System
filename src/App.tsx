@@ -10,15 +10,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // General Pages
 import Index from "@/pages/Index";
-import Login from "@/pages/Login";
-import NotFound from "@/pages/NotFound";
+import Login from "@/pages/Login.jsx";
+import NotFound from "@/pages/NotFound.jsx";
 
 // Volunteer Pages
-import VolunteerDashboard from "@/pages/volunteer/Dashboard";
-import VolunteerCalendar from "@/pages/volunteer/Calendar";
-import VolunteerAppointments from "@/pages/volunteer/Appointments";
-import VolunteerAttendance from "@/pages/volunteer/Attendance";
-import VolunteerProfile from "@/pages/volunteer/Profile";
+import VolunteerDashboard from "@/pages/volunteer/Dashboard.jsx";
+import VolunteerCalendar from "@/pages/volunteer/Calendar.jsx";
+import VolunteerAppointments from "@/pages/volunteer/Appointments.jsx";
+import VolunteerAttendance from "@/pages/volunteer/Attendance.jsx";
+import VolunteerProfile from "@/pages/volunteer/Profile.jsx";
 
 // Manager Pages
 import Dashboard from "@/pages/manager/Dashboard";
@@ -29,12 +29,6 @@ import Residents from "@/pages/manager/Residents";
 import MatchingRules from "@/pages/manager/MatchingRules";
 import Reports from "@/pages/manager/Reports";
 import Settings from "@/pages/manager/Settings";
-
-// Test Pages
-import TestVolunteers from './pages/test/TestVolunteers';
-import TestResidents from './pages/test/TestResidents';
-import CalendarFirestoreTest from './pages/test/CalendarFirestoreTest';
-import TestVolunteerRequests from './pages/test/TestVolunteerRequests';
 
 const queryClient = new QueryClient();
 
@@ -52,7 +46,12 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true
+            }}
+          >
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -112,12 +111,6 @@ const App = () => (
                 path="/manager/settings"
                 element={<RoleRoute role="manager" element={<Settings />} />}
               />
-
-              {/* Test Routes */}
-              <Route path="/test/volunteers" element={<TestVolunteers />} />
-              <Route path="/test/residents" element={<TestResidents />} />
-              <Route path="/test/calendar-firestore-test" element={<CalendarFirestoreTest />} />
-              <Route path="/test/volunteer-requests" element={<TestVolunteerRequests />} />
 
               {/* Catch-all 404 */}
               <Route path="*" element={<NotFound />} />

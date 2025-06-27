@@ -4,21 +4,25 @@ import {
   calendar_slotsRef, CalendarSlot, VolunteerRequest,
   appointmentsRef, Appointment,
   external_groupsRef, ExternalGroup,
-  ParticipantId
+  ParticipantId,
+  RecurringPattern
 } from '@/services/firestore';
 
 /**
  * UI-friendly types (all Timestamps as ISO strings, all optionals present)
  */
-export interface CalendarSlotUI extends Omit<CalendarSlot, 'createdAt' | 'volunteerRequests' | 'approvedVolunteers'> {
+export interface CalendarSlotUI extends Omit<CalendarSlot, 'createdAt' | 'volunteerRequests' | 'approvedVolunteers' | 'recurringPattern'> {
   createdAt: string;
   volunteerRequests: VolunteerRequestUI[];
   approvedVolunteers: ParticipantId[];
+  recurringPattern?: RecurringPattern;
 }
 export interface VolunteerRequestUI extends Omit<VolunteerRequest, 'requestedAt' | 'approvedAt' | 'rejectedAt'> {
   requestedAt: string;
   approvedAt: string | null;
   rejectedAt: string | null;
+  rejectedReason: string | null;
+  matchScore: number | null;
 }
 export interface AppointmentUI extends Omit<Appointment, 'createdAt' | 'updatedAt'> {
   createdAt: string;
@@ -69,6 +73,8 @@ function ensureSlotShape(raw: any): CalendarSlotUI {
     notes: raw.notes ?? null,
     createdAt: convertTimestamp(raw.createdAt),
     approvedVolunteers: raw.approvedVolunteers || [],
+    isRecurring: !!raw.isRecurring,
+    recurringPattern: raw.recurringPattern ?? undefined
   };
 }
 function ensureAppointmentUI(raw: any): AppointmentUI {
@@ -88,7 +94,7 @@ function ensureExternalGroupUI(raw: any): ExternalGroupUI {
 /**
  * Convert Firestore data to UI format
  */
-function toUIFormat(data: CalendarSlot): CalendarSlotUI {
+function toUIFormat(data: CalendarSlot & { id: string }): CalendarSlotUI {
   return {
     ...data,
     createdAt: data.createdAt.toDate().toISOString(),
@@ -98,8 +104,10 @@ function toUIFormat(data: CalendarSlot): CalendarSlotUI {
       approvedAt: v.approvedAt?.toDate().toISOString() || null,
       rejectedAt: v.rejectedAt?.toDate().toISOString() || null,
       rejectedReason: v.rejectedReason || null,
-      matchScore: v.matchScore || null
-    }))
+      matchScore: v.matchScore || null,
+      assignedBy: v.assignedBy || 'manager'
+    })),
+    ...(data.recurringPattern ? { recurringPattern: data.recurringPattern } : {})
   };
 }
 
@@ -107,7 +115,7 @@ function toUIFormat(data: CalendarSlot): CalendarSlotUI {
  * Convert UI data to Firestore format
  */
 export function toFirestoreFormat(data: Partial<CalendarSlotUI>): Partial<CalendarSlot> {
-  const { createdAt, volunteerRequests, ...rest } = data;
+  const { createdAt, volunteerRequests, recurringPattern, ...rest } = data;
   const result: Partial<CalendarSlot> = { ...rest };
 
   // Convert createdAt if present
@@ -124,8 +132,13 @@ export function toFirestoreFormat(data: Partial<CalendarSlotUI>): Partial<Calend
         requestedAt: Timestamp.fromDate(new Date(requestedAt)),
         approvedAt: approvedAt ? Timestamp.fromDate(new Date(approvedAt)) : null,
         rejectedAt: rejectedAt ? Timestamp.fromDate(new Date(rejectedAt)) : null
-      };
+      } as VolunteerRequest;
     });
+  }
+
+  // Add recurringPattern if present
+  if (recurringPattern) {
+    result.recurringPattern = recurringPattern;
   }
 
   return result;
@@ -149,8 +162,7 @@ export function useCalendarSlots(): UseCalendarSlotsResult {
       calendar_slotsRef,
       (snapshot: QuerySnapshot) => {
         const data: CalendarSlotUI[] = snapshot.docs.map(doc => {
-          const slotData = doc.data() as CalendarSlot;
-          return toUIFormat({ ...slotData, id: doc.id });
+          return ensureSlotShape({ id: doc.id, ...doc.data() });
         });
         setSlots(data);
         setLoading(false);

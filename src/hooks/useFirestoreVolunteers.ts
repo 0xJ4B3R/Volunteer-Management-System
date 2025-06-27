@@ -1,12 +1,31 @@
 import { useEffect, useState } from 'react';
 import { onSnapshot, QuerySnapshot, Timestamp, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { volunteersRef, Volunteer } from '@/services/firestore';
+import { volunteersRef, Volunteer, AvailableSlots, VolunteerAppointmentEntry, VolunteerAttendanceStats, MatchingPreference, ReasonForVolunteering } from '@/services/firestore';
 
 /**
  * UI-friendly Volunteer type (timestamps as ISO strings)
  */
-export interface VolunteerUI extends Omit<Volunteer, 'createdAt'> {
-  createdAt: string;
+export interface VolunteerUI {
+  id: string;
+  userId: string;
+  fullName: string;
+  birthDate: string; // YYYY-MM-DD
+  gender: 'male' | 'female';
+  phoneNumber: string;
+  skills?: string[];
+  hobbies?: string[];
+  languages: string[];
+  groupAffiliation?: string | null;
+  matchingPreference?: MatchingPreference;
+  reasonForVolunteering?: ReasonForVolunteering;
+  availability?: AvailableSlots; // Use the type from firestore.ts
+  appointmentHistory?: VolunteerAppointmentEntry[]; // Use the type from firestore.ts
+  totalAttendance?: VolunteerAttendanceStats; // Use the type from firestore.ts
+  totalSessions?: number; // Use the type from firestore.ts
+  totalHours?: number; // Use the type from firestore.ts
+  isActive: boolean;
+  createdAt: string; // Converted to string for UI
+  notes?: string | null;
 }
 
 /**
@@ -15,7 +34,30 @@ export interface VolunteerUI extends Omit<Volunteer, 'createdAt'> {
 export function ensureVolunteerShape(raw: any): VolunteerUI {
   return {
     ...raw,
-    createdAt: raw.createdAt instanceof Timestamp ? raw.createdAt.toDate().toISOString() : (raw.createdAt || ''),
+    createdAt: raw.createdAt instanceof Timestamp ? raw.createdAt.toDate().toISOString() : (raw.createdAt || new Date().toISOString()),
+    birthDate: raw.birthDate || '', // Assuming birthDate is also stored as Timestamp or needs default
+    fullName: raw.fullName || '',
+    gender: raw.gender || 'male', // Assuming a default gender
+    phoneNumber: raw.phoneNumber || '',
+    languages: raw.languages || [],
+    isActive: raw.isActive === undefined ? true : raw.isActive, // Default to true if undefined
+    userId: raw.userId || '',
+
+    // Handle optional fields from firestore.ts, ensuring they match types or are null/undefined
+    skills: raw.skills || [],
+    hobbies: raw.hobbies || [],
+    groupAffiliation: raw.groupAffiliation === undefined ? null : raw.groupAffiliation,
+    matchingPreference: raw.matchingPreference === undefined ? null : raw.matchingPreference,
+    reasonForVolunteering: raw.reasonForVolunteering === undefined ? null : raw.reasonForVolunteering,
+    availability: raw.availability || {
+      monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: []
+    }, // Default to empty availability object
+    appointmentHistory: raw.appointmentHistory || [],
+    totalAttendance: raw.totalAttendance || { present: 0, absent: 0, late: 0 }, // Default stats
+    totalSessions: raw.totalSessions || 0,
+    totalHours: raw.totalHours || 0,
+    notes: raw.notes === undefined ? null : raw.notes,
+    id: raw.id || '', // Ensure id is always present
   };
 }
 
@@ -49,7 +91,7 @@ export function useVolunteers(): UseVolunteersResult {
     const unsubscribe = onSnapshot(
       volunteersRef,
       (snapshot: QuerySnapshot) => {
-        const data: VolunteerUI[] = snapshot.docs.map(doc => 
+        const data: VolunteerUI[] = snapshot.docs.map(doc =>
           ensureVolunteerShape({ id: doc.id, ...doc.data() })
         );
         console.log('Loaded volunteers:', data);
