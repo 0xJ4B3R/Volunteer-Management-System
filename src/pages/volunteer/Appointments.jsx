@@ -243,13 +243,20 @@ export default function Appointments() {
     return false;
   });
 
-  const filtered = tabAppointments.filter((a) => {
-    const matchSearch =
-      (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
-      (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
-    return matchSearch;
-  });
-
+  const filtered = tabAppointments
+    .filter((a) => {
+      const matchSearch =
+        (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
+        (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
+      return matchSearch;
+    })
+    .sort((a, b) => {
+      if (tab === "past") {
+        return new Date(b.rawData.date) - new Date(a.rawData.date); // Latest to oldest
+      }
+      return new Date(a.rawData.date) - new Date(b.rawData.date); // Soonest to latest for other tabs
+    });
+    
   const handleCancel = async (id) => {
     try {
       // Find the appointment to get volunteer data
