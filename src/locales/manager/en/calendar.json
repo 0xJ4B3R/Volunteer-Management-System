@@ -19,7 +19,7 @@
     "allSessions": "All Sessions",
     "open": "Open",
     "full": "Full",
-    "cancelled": "Cancelled"
+    "canceled": "Canceled"
   },
   "actions": {
     "newSession": "New Session",

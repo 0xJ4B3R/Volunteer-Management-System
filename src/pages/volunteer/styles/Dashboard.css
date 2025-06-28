@@ -1756,4 +1756,10 @@
     min-width: 57px !important;
     min-height: 57px !important;
   }
+}
+
+/* Loading Spinner Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 } 

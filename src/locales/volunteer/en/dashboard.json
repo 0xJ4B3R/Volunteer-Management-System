@@ -1,6 +1,7 @@
 {
   "dashboard": {
     "title": "Volunteer Dashboard",
+    "defaultName": "Volunteer",
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
@@ -13,15 +14,23 @@
     "upcoming": {
       "title": "Upcoming Sessions",
       "viewAll": "View All",
-      "none": "No upcoming sessions found"
+      "none": "No upcoming sessions",
+      "loading": "Loading upcoming sessions...",
+      "loadingSubtitle": "Please wait while we fetch your schedule.",
+      "noSessionsMessage": "Great job staying on top of your schedule! New opportunities will appear here when they become available."
     },
     "activity": {
       "title": "Recent Activity",
-      "present": "You attended a session. {{notes}}",
-      "late": "You were late to a session. {{notes}}",
-      "absent": "You missed a session. {{notes}}",
-      "generic": "Status: {{status}}. {{notes}}",
-      "cancelledByVolunteer": "You missed the session. Cancelled by volunteer"
+      "present": "You attended a session{{notes}}",
+      "late": "You were late to a session{{notes}}",
+      "absent": "You missed a session{{notes}}",
+      "generic": "Status: {{status}}{{notes}}",
+      "cancelledByVolunteer": "You missed the session. Cancelled by volunteer",
+      "loading": "Loading recent activity...",
+      "loadingSubtitle": "Please wait while we fetch your activity history.",
+      "noActivity": "No recent activity",
+      "noActivityMessage": "Your volunteering activities will appear here. Start making a difference today!",
+      "unknownStatus": "Unknown"
     },
     "stats": {
       "totalHours": "Total Hours Since Joining",
@@ -30,6 +39,11 @@
       "sessionsCompleted": "Total Sessions Since Joining",
       "sessionsLabel": "sessions",
       "sessionLabelSingular": "session"
+    },
+    "session": {
+      "defaultTitle": "Volunteer Session",
+      "defaultLocation": "Session Location",
+      "timeTBD": "Time TBD"
     },
     "nextLevel": "Next: {{level}}",
     "hoursToGo": " {{count}} hours to go",
@@ -90,6 +104,10 @@
       "4": "Thu",
       "5": "Fri",
       "6": "Sat"
+    },
+    "languages": {
+      "english": "English",
+      "hebrew": "עברית"
     }
   }
 }

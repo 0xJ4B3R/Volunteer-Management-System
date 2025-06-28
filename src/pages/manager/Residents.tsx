@@ -41,6 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useResidents, useAddResident, useUpdateResident, useDeleteResident, ResidentUI } from "@/hooks/useFirestoreResidents";
 import DataTableSkeleton from "@/components/skeletons/DataTableSkeleton";
+import { validatePhoneNumber, getPhoneNumberError, formatPhoneNumber } from "@/utils/validation";
 
 // Helper functions to map between English and Hebrew values
 const getLanguageMapping = () => {
@@ -356,6 +357,10 @@ const ManagerResidents = () => {
   const [isDeletingLocal, setIsDeletingLocal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Phone number validation states
+  const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
+  const [editPhoneNumberError, setEditPhoneNumberError] = useState<string | null>(null);
+
   // Firestore hooks
   const { residents, loading: residentsLoading, error: residentsError } = useResidents();
   const { addResident, loading: addingResident, error: addError } = useAddResident();
@@ -397,6 +402,14 @@ const ManagerResidents = () => {
     try {
       if (!newResident.fullName || !newResident.birthDate) {
         alert(t('residents:errors.fillRequiredFields'));
+        return;
+      }
+
+      // Validate phone number if provided
+      if (newResident.phoneNumber && !validatePhoneNumber(newResident.phoneNumber)) {
+        const error = getPhoneNumberError(newResident.phoneNumber);
+        setPhoneNumberError(error);
+        alert(error || t('residents:errors.invalidPhoneNumber'));
         return;
       }
 
@@ -443,6 +456,14 @@ const ManagerResidents = () => {
     try {
       if (!selectedResident.fullName || !selectedResident.birthDate) {
         alert(t('residents:errors.fillRequiredFields'));
+        return;
+      }
+
+      // Validate phone number if provided
+      if (selectedResident.phoneNumber && !validatePhoneNumber(selectedResident.phoneNumber)) {
+        const error = getPhoneNumberError(selectedResident.phoneNumber);
+        setEditPhoneNumberError(error);
+        alert(error || t('residents:errors.invalidPhoneNumber'));
         return;
       }
 
@@ -510,6 +531,27 @@ const ManagerResidents = () => {
       age--;
     }
     return age;
+  };
+
+  // Phone number validation handlers
+  const handlePhoneNumberChange = (value: string, isEdit: boolean = false) => {
+    const error = getPhoneNumberError(value);
+    if (isEdit) {
+      setEditPhoneNumberError(error);
+    } else {
+      setPhoneNumberError(error);
+    }
+  };
+
+  const handlePhoneNumberBlur = (value: string, isEdit: boolean = false) => {
+    if (value.trim()) {
+      const formatted = formatPhoneNumber(value);
+      if (isEdit && selectedResident) {
+        setSelectedResident({ ...selectedResident, phoneNumber: formatted });
+      } else {
+        setNewResident({ ...newResident, phoneNumber: formatted });
+      }
+    }
   };
 
   // Filter residents based on search query and filters
@@ -1563,7 +1605,74 @@ const ManagerResidents = () => {
       </div>
 
       {/* Create Resident Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog 
+        open={isCreateDialogOpen} 
+        onOpenChange={(open) => {
+          setIsCreateDialogOpen(open);
+          setIsCreatingInstant(false);
+          if (open) {
+            setNewResident({
+              fullName: "",
+              birthDate: "",
+              gender: "male",
+              dateOfAliyah: null,
+              countryOfAliyah: null,
+              phoneNumber: null,
+              education: null,
+              needs: [],
+              hobbies: [],
+              languages: [],
+              cooperationLevel: 1,
+              availability: {
+                monday: [],
+                tuesday: [],
+                wednesday: [],
+                thursday: [],
+                friday: [],
+                saturday: [],
+                sunday: []
+              },
+              appointmentHistory: [],
+              totalSessions: 0,
+              totalHours: 0,
+              isActive: true,
+              createdAt: Timestamp.now(),
+              notes: null
+            });
+            setPhoneNumberError(null);
+          } else {
+            setNewResident({
+              fullName: "",
+              birthDate: "",
+              gender: "male",
+              dateOfAliyah: null,
+              countryOfAliyah: null,
+              phoneNumber: null,
+              education: null,
+              needs: [],
+              hobbies: [],
+              languages: [],
+              cooperationLevel: 1,
+              availability: {
+                monday: [],
+                tuesday: [],
+                wednesday: [],
+                thursday: [],
+                friday: [],
+                saturday: [],
+                sunday: []
+              },
+              appointmentHistory: [],
+              totalSessions: 0,
+              totalHours: 0,
+              isActive: true,
+              createdAt: Timestamp.now(),
+              notes: null
+            });
+            setPhoneNumberError(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
           <DialogHeader className="border-b border-slate-300 pb-3" dir={isRTL ? 'rtl' : 'ltr'}>
             <DialogTitle className="text-slate-900">{t('residents:dialogs.addNewResident')}</DialogTitle>
@@ -1596,9 +1705,17 @@ const ManagerResidents = () => {
                     id="phoneNumber"
                     placeholder={t('residents:forms.enterPhoneNumber')}
                     value={newResident.phoneNumber || ""}
-                    onChange={(e) => setNewResident({ ...newResident, phoneNumber: e.target.value })}
-                    className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    onChange={(e) => {
+                      setNewResident({ ...newResident, phoneNumber: e.target.value });
+                      handlePhoneNumberChange(e.target.value, false);
+                    }}
+                    onBlur={(e) => handlePhoneNumberBlur(e.target.value, false)}
+                    className={cn(
+                      "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                      phoneNumberError ? "border-red-500 focus:border-red-500" : ""
+                    )}
                   />
+                  {phoneNumberError && <p className="text-sm text-red-600 mt-1">{t(phoneNumberError, { ns: 'residents' })}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="birthDate" className="text-sm font-medium text-slate-700">{t('residents:forms.birthDateRequired')}</Label>
@@ -1929,9 +2046,17 @@ const ManagerResidents = () => {
                       id="edit-phoneNumber"
                       placeholder={t('residents:forms.enterPhoneNumber')}
                       value={selectedResident.phoneNumber || ""}
-                      onChange={(e) => setSelectedResident({ ...selectedResident, phoneNumber: e.target.value })}
-                      className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      onChange={(e) => {
+                        setSelectedResident({ ...selectedResident, phoneNumber: e.target.value });
+                        handlePhoneNumberChange(e.target.value, true);
+                      }}
+                      onBlur={(e) => handlePhoneNumberBlur(e.target.value, true)}
+                      className={cn(
+                        "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                        editPhoneNumberError ? "border-red-500 focus:border-red-500" : ""
+                      )}
                     />
+                    {editPhoneNumberError && <p className="text-sm text-red-600 mt-1">{t(editPhoneNumberError, { ns: 'residents' })}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-birthDate" className="text-sm font-medium text-slate-700">{t('residents:forms.birthDateRequired')}</Label>

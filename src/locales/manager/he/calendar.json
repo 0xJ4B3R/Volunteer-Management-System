@@ -19,7 +19,7 @@
     "allSessions": "כל הפגישות",
     "open": "פתוח",
     "full": "מלא",
-    "cancelled": "בוטל"
+    "canceled": "בוטל"
   },
   "actions": {
     "newSession": "פגישה חדשה",

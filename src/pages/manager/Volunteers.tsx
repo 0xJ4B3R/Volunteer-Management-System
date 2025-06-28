@@ -42,6 +42,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 // Utilities
 import { cn } from "@/lib/utils";
+import { validatePhoneNumber, getPhoneNumberError, formatPhoneNumber } from "@/utils/validation";
 
 // UI Components
 import { Input } from "@/components/ui/input";
@@ -441,6 +442,10 @@ const ManagerVolunteers = () => {
   const [editedUsername, setEditedUsername] = useState("");
   const [editedPassword, setEditedPassword] = useState("");
 
+  // Phone number validation states
+  const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
+  const [editPhoneNumberError, setEditPhoneNumberError] = useState<string | null>(null);
+
   // Firestore hooks
   const { volunteers, loading: volunteersLoading, error: volunteersError } = useVolunteers();
   const { users, loading: usersLoading } = useUsers();
@@ -493,6 +498,27 @@ const ManagerVolunteers = () => {
       age--;
     }
     return age;
+  };
+
+  // Phone number validation handlers
+  const handlePhoneNumberChange = (value: string, isEdit: boolean = false) => {
+    const error = getPhoneNumberError(value);
+    if (isEdit) {
+      setEditPhoneNumberError(error);
+    } else {
+      setPhoneNumberError(error);
+    }
+  };
+
+  const handlePhoneNumberBlur = (value: string, isEdit: boolean = false) => {
+    if (value.trim()) {
+      const formatted = formatPhoneNumber(value);
+      if (isEdit && selectedVolunteer) {
+        setSelectedVolunteer({ ...selectedVolunteer, phoneNumber: formatted });
+      } else {
+        setNewVolunteer({ ...newVolunteer, phoneNumber: formatted });
+      }
+    }
   };
 
   // Filter volunteers based on search query and filters
@@ -603,6 +629,18 @@ const ManagerVolunteers = () => {
         return;
       }
 
+      // Validate phone number
+      if (!validatePhoneNumber(newVolunteer.phoneNumber)) {
+        const error = getPhoneNumberError(newVolunteer.phoneNumber);
+        setPhoneNumberError(error);
+        toast({
+          title: t('volunteers:errors.invalidPhoneNumber'),
+          description: error || t('volunteers:errors.invalidPhoneNumberDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Generate unique username
       const username = await generateVolunteerUsername();
 
@@ -685,6 +723,18 @@ const ManagerVolunteers = () => {
   const handleEditVolunteer = async () => {
     if (!selectedVolunteer) return;
     try {
+      // Validate phone number
+      if (!validatePhoneNumber(selectedVolunteer.phoneNumber)) {
+        const error = getPhoneNumberError(selectedVolunteer.phoneNumber);
+        setEditPhoneNumberError(error);
+        toast({
+          title: t('volunteers:errors.invalidPhoneNumber'),
+          description: error || t('volunteers:errors.invalidPhoneNumberDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Update volunteer data
       const { id, createdAt, ...updateData } = selectedVolunteer;
       await updateVolunteer(id, updateData);
@@ -701,54 +751,6 @@ const ManagerVolunteers = () => {
       setSelectedVolunteer(null);
     } catch (error) {
       console.error("Error updating volunteer:", error);
-    }
-  };
-
-  // Handle delete volunteer
-  const handleDeleteVolunteer = async () => {
-    setIsDeletingLocal(true);
-
-    try {
-      if (selectedVolunteers.length > 0) {
-        // Handle bulk delete
-        for (const id of selectedVolunteers) {
-          const volunteer = volunteers.find(v => v.id === id);
-          if (volunteer) {
-            if ((volunteer.totalSessions || 0) === 0 && (volunteer.totalHours || 0) === 0) {
-              await deleteVolunteer(id);
-              if (volunteer.userId) {
-                await deleteUser(volunteer.userId);
-              }
-            } else {
-              alert(t('errors.cannotDeleteWithSessions'));
-            }
-          }
-        }
-        // Clear all states after operations complete
-        setSelectedVolunteers([]);
-        setVolunteersToDelete([]);
-        setIsDeleteDialogOpen(false);
-      } else if (selectedVolunteer) {
-        // Handle single delete
-        if ((selectedVolunteer.totalSessions || 0) === 0 && (selectedVolunteer.totalHours || 0) === 0) {
-          await deleteVolunteer(selectedVolunteer.id);
-          if (selectedVolunteer.userId) {
-            await deleteUser(selectedVolunteer.userId);
-          }
-          // Clear all states after operation completes
-          setSelectedVolunteer(null);
-          setVolunteersToDelete([]);
-          setIsDeleteDialogOpen(false);
-        } else {
-          alert(t('errors.cannotDeleteWithSessions'));
-          setIsDeletingLocal(false);
-          return;
-        }
-      }
-    } catch (error) {
-      console.error("Error deleting volunteer:", error);
-    } finally {
-      setIsDeletingLocal(false);
     }
   };
 
@@ -1203,7 +1205,7 @@ const ManagerVolunteers = () => {
         <td className="text-center py-2 px-4">
           <span>{volunteer.fullName}</span>
         </td>
-        <td className="text-center py-2 px-4">{volunteer.gender}</td>
+        <td className="text-center py-2 px-4">{translateGender(volunteer.gender, isRTL)}</td>
         <td className="text-center py-2 px-4">{age}</td>
         <td className="text-center py-2 px-4">{volunteer.phoneNumber}</td>
         <td className="text-center py-2 px-4">
@@ -1283,6 +1285,54 @@ const ManagerVolunteers = () => {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, [volunteers]);
+
+  // Handle delete volunteer
+  const handleDeleteVolunteer = async () => {
+    setIsDeletingLocal(true);
+
+    try {
+      if (selectedVolunteers.length > 0) {
+        // Handle bulk delete
+        for (const id of selectedVolunteers) {
+          const volunteer = volunteers.find(v => v.id === id);
+          if (volunteer) {
+            if ((volunteer.totalSessions || 0) === 0 && (volunteer.totalHours || 0) === 0) {
+              await deleteVolunteer(id);
+              if (volunteer.userId) {
+                await deleteUser(volunteer.userId);
+              }
+            } else {
+              alert(t('errors.cannotDeleteWithSessions'));
+            }
+          }
+        }
+        // Clear all states after operations complete
+        setSelectedVolunteers([]);
+        setVolunteersToDelete([]);
+        setIsDeleteDialogOpen(false);
+      } else if (selectedVolunteer) {
+        // Handle single delete
+        if ((selectedVolunteer.totalSessions || 0) === 0 && (selectedVolunteer.totalHours || 0) === 0) {
+          await deleteVolunteer(selectedVolunteer.id);
+          if (selectedVolunteer.userId) {
+            await deleteUser(selectedVolunteer.userId);
+          }
+          // Clear all states after operation completes
+          setSelectedVolunteer(null);
+          setVolunteersToDelete([]);
+          setIsDeleteDialogOpen(false);
+        } else {
+          alert(t('errors.cannotDeleteWithSessions'));
+          setIsDeletingLocal(false);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting volunteer:", error);
+    } finally {
+      setIsDeletingLocal(false);
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -1880,11 +1930,19 @@ const ManagerVolunteers = () => {
                   <Label htmlFor="phoneNumber" className="text-sm font-medium text-slate-700">{t('forms.phoneNumberRequired')}</Label>
                   <Input
                     id="phoneNumber"
-                    placeholder={t('forms.enterPhoneNumber')}
+                    placeholder={t('volunteers:forms.enterPhoneNumber')}
                     value={newVolunteer.phoneNumber}
-                    onChange={(e) => setNewVolunteer({ ...newVolunteer, phoneNumber: e.target.value })}
-                    className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    onChange={(e) => {
+                      setNewVolunteer({ ...newVolunteer, phoneNumber: e.target.value });
+                      handlePhoneNumberChange(e.target.value, false);
+                    }}
+                    onBlur={(e) => handlePhoneNumberBlur(e.target.value, false)}
+                    className={cn(
+                      "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                      phoneNumberError ? "border-red-500 focus:border-red-500" : ""
+                    )}
                   />
+                  {phoneNumberError && <p className="text-sm text-red-600 mt-1">{t(phoneNumberError, { ns: 'volunteers' })}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -2278,9 +2336,19 @@ const ManagerVolunteers = () => {
                     <Label htmlFor="edit-phoneNumber" className="text-sm font-medium text-slate-700">{t('forms.phoneNumberRequired')}</Label>
                     <Input
                       id="edit-phoneNumber"
-                      placeholder={t('forms.enterPhoneNumber')}
+                      placeholder={t('volunteers:forms.enterPhoneNumber')}
                       value={selectedVolunteer.phoneNumber}
-                      onChange={(e) => setSelectedVolunteer({ ...selectedVolunteer, phoneNumber: e.target.value })} className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      onChange={(e) => {
+                        setSelectedVolunteer({ ...selectedVolunteer, phoneNumber: e.target.value });
+                        handlePhoneNumberChange(e.target.value, true);
+                      }}
+                      onBlur={(e) => handlePhoneNumberBlur(e.target.value, true)}
+                      className={cn(
+                        "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                        editPhoneNumberError && "border-red-500 focus:border-red-500"
+                      )}
+                    />
+                    {editPhoneNumberError && <p className="text-sm text-red-600 mt-1">{t(editPhoneNumberError, { ns: 'volunteers' })}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -2301,8 +2369,8 @@ const ManagerVolunteers = () => {
                         <SelectValue placeholder={t('forms.selectGender')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="male">{t('forms.male')}</SelectItem>
+                        <SelectItem value="female">{t('forms.female')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

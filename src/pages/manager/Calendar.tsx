@@ -3127,7 +3127,7 @@ const ManagerCalendar = () => {
                           <SelectItem value="all">{t('filters.allSessions')}</SelectItem>
                           <SelectItem value="open">{t('filters.open')}</SelectItem>
                           <SelectItem value="full">{t('filters.full')}</SelectItem>
-                          <SelectItem value="canceled">{t('filters.cancelled')}</SelectItem>
+                          <SelectItem value="canceled">{t('filters.canceled')}</SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -4274,10 +4274,10 @@ const ManagerCalendar = () => {
                           value="open"
                           disabled={isSlotInPast(selectedSlot) || selectedSlot.approvedVolunteers.some(v => v.type === 'external_group') || selectedSlot.approvedVolunteers.length >= selectedSlot.maxCapacity}
                         >
-                          {t('session.status.open')}
+                          {t('filters.open')}
                         </SelectItem>
-                        <SelectItem value="full">{t('session.status.full')}</SelectItem>
-                        <SelectItem value="canceled">{t('session.status.canceled')}</SelectItem>
+                        <SelectItem value="full">{t('filters.full')}</SelectItem>
+                        <SelectItem value="canceled">{t('filters.canceled')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

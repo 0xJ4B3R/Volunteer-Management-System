@@ -96,6 +96,7 @@
     "fullNameRequired": "שם מלא *",
     "phoneNumber": "מספר טלפון",
     "phoneNumberRequired": "מספר טלפון *",
+    "phoneNumberPlaceholder": "למשל, 050-123-4567 או 021-234-567",
     "birthDate": "תאריך לידה",
     "birthDateRequired": "תאריך לידה *",
     "gender": "מגדר",
@@ -114,6 +115,7 @@
     "notesPlaceholder": "הכנס הערות נוספות על המתנדב",
     "enterFullName": "הכנס שם מלא",
     "enterPhoneNumber": "הכנס מספר טלפון",
+    "enterPhoneNumberPlaceholder": "למשל, 050-123-4567 או 021-234-567",
     "enterGroupAffiliation": "הכנס השתייכות קבוצתית",
     "selectGender": "בחר מגדר",
     "selectStatus": "בחר סטטוס",
@@ -190,7 +192,8 @@
     "loadingError": "שגיאה בטעינת מתנדבים:",
     "cannotDeleteWithSessions": "לא ניתן למחוק מתנדב עם לפחות פגישה אחת.",
     "createVolunteerErrorTitle": "שגיאה ביצירת מתנדב",
-    "createVolunteerErrorDescription": "אירעה שגיאה בעת יצירת המתנדב. אנא נסה שוב או פנה לתמיכה."
+    "createVolunteerErrorDescription": "אירעה שגיאה בעת יצירת המתנדב. אנא נסה שוב או פנה לתמיכה.",
+    "invalidPhoneNumber": "מספר הטלפון חייב להיות 10 ספרות המתחילות ב-05 או 9 ספרות המתחילות ב-02, 03, 04, 08, או 09"
   },
   "success": {
     "volunteerCreated": "המתנדב נוצר בהצלחה",
@@ -201,7 +204,8 @@
   "validation": {
     "nameRequired": "שם נדרש",
     "birthDateRequired": "תאריך לידה נדרש",
-    "genderRequired": "מגדר נדרש"
+    "genderRequired": "מגדר נדרש",
+    "invalidPhoneNumber": "מספר הטלפון חייב להיות 10 ספרות המתחילות ב-05 או 9 ספרות המתחילות ב-02, 03, 04, 08, או 09"
   },
   "actions": {
     "addVolunteer": "הוסף מתנדב",

@@ -680,8 +680,8 @@ const SessionCard = ({ session, index, onConfirm, onCancel, t, loadingState }) =
                                         </>
                                       ) : (
                                         <>
-                                          <X className="btn-icon" />
-                                          <span className="btn-text">{t('attendance.unableToAttend')}</span>
+                                      <X className="btn-icon" />
+                                      <span className="btn-text">{t('attendance.unableToAttend')}</span>
                                         </>
                                       )}
                                     </button>
@@ -697,7 +697,7 @@ const SessionCard = ({ session, index, onConfirm, onCancel, t, loadingState }) =
                                         </>
                                       ) : (
                                         <>
-                                          <Check className="btn-icon" />
+                                      <Check className="btn-icon" />
                                           <span className="btn-text">{t('attendance.confirm')}</span>
                                         </>
                                       )}

@@ -125,6 +125,7 @@
     "notesPlaceholder": "Enter any additional notes about the resident",
     "enterFullName": "Enter full name",
     "enterPhoneNumber": "Enter phone number",
+    "enterPhoneNumberPlaceholder": "e.g., 050-123-4567 or 021-234-567",
     "enterCountry": "Enter country",
     "enterEducation": "Enter education",
     "selectGender": "Select gender",
@@ -182,7 +183,9 @@
     "headerOrderError": "CSV header order does not match the required import format. Please use the sample file as a template.",
     "missingRequiredFields": "Missing required fields (name or birth date)",
     "loadingError": "Error loading residents:",
-    "cannotDeleteWithSessions": "Cannot delete a resident with at least one session."
+    "cannotDeleteWithSessions": "Cannot delete a resident with at least one session.",
+    "invalidPhoneNumber": "Invalid Phone Number",
+    "invalidPhoneNumberDescription": "Phone number must be either 10 digits starting with 05 or 9 digits starting with 02, 03, 04, 08, or 09"
   },
   "success": {
     "residentCreated": "Resident created successfully",
@@ -193,7 +196,8 @@
   "validation": {
     "nameRequired": "Name is required",
     "birthDateRequired": "Birth date is required",
-    "genderRequired": "Gender is required"
+    "genderRequired": "Gender is required",
+    "invalidPhoneNumber": "Phone number must be either 10 digits starting with 05 or 9 digits starting with 02, 03, 04, 08, or 09"
   },
   "actions": {
     "addResident": "Add Resident",

@@ -1,6 +1,7 @@
 {
   "dashboard": {
-    "title": "לוח מחוונים של מתנדב",
+    "title": "לוח בקרה של מתנדב",
+    "defaultName": "מתנדב",
     "greeting": {
       "morning": "בוקר טוב",
       "afternoon": "צהריים טובים",
@@ -13,15 +14,23 @@
     "upcoming": {
       "title": "פגישות קרובות",
       "viewAll": "הצג הכול",
-      "none": "אין פגישות קרובות"
+      "none": "אין פגישות קרובות",
+      "loading": "טוען פגישות קרובות...",
+      "loadingSubtitle": "אנא המתן בזמן שאנו מביאים את לוח הזמנים שלך.",
+      "noSessionsMessage": "עבודה טובה! הזדמנויות חדשות יופיעו כאן כאשר הן יהיו זמינות."
     },
     "activity": {
       "title": "פעילות אחרונה",
-      "present": "נכחת בפגישה. {{notes}}",
-      "late": "איחרת לפגישה. {{notes}}",
-      "absent": "החמצת פגישה. {{notes}}",
-      "generic": "סטטוס: {{status}}. {{notes}}",
-      "cancelledByVolunteer": "הפגישה בוטלה על ידי המתנדב"
+      "present": "נכחת בפגישה{{notes}}",
+      "late": "איחרת לפגישה{{notes}}",
+      "absent": "החמצת פגישה{{notes}}",
+      "generic": "סטטוס: {{status}}{{notes}}",
+      "cancelledByVolunteer": "הפגישה בוטלה על ידי המתנדב",
+      "loading": "טוען פעילות אחרונה...",
+      "loadingSubtitle": "אנא המתן בזמן שאנו מביאים את היסטוריית הפעילות שלך.",
+      "noActivity": "אין פעילות אחרונה",
+      "noActivityMessage": "פעילויות ההתנדבות שלך יופיעו כאן. התחל לעשות הבדל היום!",
+      "unknownStatus": "לא ידוע"
     },
     "stats": {
       "totalHours": "סה\"כ שעות מאז שהצטרפת",
@@ -30,6 +39,11 @@
       "sessionsCompleted": "סה\"כ פגישות מאז שהצטרפת",
       "sessionsLabel": "פגישות",
       "sessionLabelSingular": "פגישה אחת"
+    },
+    "session": {
+      "defaultTitle": "פגישת התנדבות",
+      "defaultLocation": "מיקום הפגישה",
+      "timeTBD": "זמן ייקבע"
     },
     "nextLevel": "הרמה הבאה: {{level}}",
     "hoursToGo": ", {{count}} שעות נותרו",
@@ -90,6 +104,10 @@
       "4": "ה׳",
       "5": "ו׳",
       "6": "ש׳"
+    },
+    "languages": {
+      "english": "English",
+      "hebrew": "עברית"
     }
   }
 }

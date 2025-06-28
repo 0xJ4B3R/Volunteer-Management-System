@@ -16,6 +16,27 @@ export const usernameSchema = z
   .max(20, 'Username must be at most 20 characters')
   .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens');
 
+// Phone number validation schemas
+export const phoneNumberSchema = z
+  .string()
+  .min(1, 'Phone number is required')
+  .refine((value) => {
+    // Remove any non-digit characters
+    const cleanNumber = value.replace(/\D/g, '');
+
+    // Check for 10 digits starting with 05
+    if (cleanNumber.length === 10 && cleanNumber.startsWith('05')) {
+      return true;
+    }
+
+    // Check for 9 digits starting with 02, 03, 04, 08, 09
+    if (cleanNumber.length === 9 && /^0[23489]/.test(cleanNumber)) {
+      return true;
+    }
+
+    return false;
+  }, 'Phone number must be either 10 digits starting with 05 or 9 digits starting with 02, 03, 04, 08, or 09');
+
 // Form schemas
 export const loginSchema = z.object({
   username: usernameSchema,
@@ -62,5 +83,57 @@ export const validateUsername = (username: string): boolean => {
     return true;
   } catch {
     return false;
+  }
+};
+
+// Phone number validation helpers
+export const validatePhoneNumber = (phoneNumber: string): boolean => {
+  try {
+    phoneNumberSchema.parse(phoneNumber);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const formatPhoneNumber = (phoneNumber: string): string => {
+  // Remove any non-digit characters
+  const cleanNumber = phoneNumber.replace(/\D/g, '');
+
+  // Format based on length and prefix
+  if (cleanNumber.length === 10 && cleanNumber.startsWith('05')) {
+    // Format: 05X-XXX-XXXX
+    return `${cleanNumber.slice(0, 3)}-${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6)}`;
+  }
+
+  if (cleanNumber.length === 9 && /^0[23489]/.test(cleanNumber)) {
+    // Format: 0XX-XXX-XXX
+    return `${cleanNumber.slice(0, 3)}-${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6)}`;
+  }
+
+  // Return original if not valid
+  return phoneNumber;
+};
+
+export const getPhoneNumberType = (phoneNumber: string): 'mobile' | 'landline' | 'invalid' => {
+  const cleanNumber = phoneNumber.replace(/\D/g, '');
+
+  if (cleanNumber.length === 10 && cleanNumber.startsWith('05')) {
+    return 'mobile';
+  }
+
+  if (cleanNumber.length === 9 && /^0[23489]/.test(cleanNumber)) {
+    return 'landline';
+  }
+
+  return 'invalid';
+};
+
+export const getPhoneNumberError = (phoneNumber: string): string | null => {
+  try {
+    phoneNumberSchema.parse(phoneNumber);
+    return null;
+  } catch {
+    return 'validation.invalidPhoneNumber';
   }
 }; 
