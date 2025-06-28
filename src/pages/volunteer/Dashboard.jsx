@@ -567,8 +567,37 @@ const Dashboard = () => {
     }
   };
 
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+    
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+    
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+    
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+    
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+    
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
+
   useEffect(() => {
-    document.documentElement.dir = currentLanguage === "he" ? "rtl" : "ltr";
+    applyLanguageDirection(currentLanguage);
   }, [currentLanguage]);
 
   // Sync currentLanguage with i18n.language
@@ -1211,7 +1240,7 @@ const Dashboard = () => {
               localStorage.setItem('language', 'en');
               await i18n.changeLanguage('en');
               setCurrentLanguage('en');
-              document.documentElement.dir = 'ltr';
+              applyLanguageDirection('en');
               setShowLangOptions(false);
               // Force re-render by updating data
               setDataLoaded(prev => ({ ...prev, recentActivity: false, upcomingSessions: false }));
@@ -1226,7 +1255,7 @@ const Dashboard = () => {
               localStorage.setItem('language', 'he');
               await i18n.changeLanguage('he');
               setCurrentLanguage('he');
-              document.documentElement.dir = 'rtl';
+              applyLanguageDirection('he');
               setShowLangOptions(false);
               // Force re-render by updating data
               setDataLoaded(prev => ({ ...prev, recentActivity: false, upcomingSessions: false }));
