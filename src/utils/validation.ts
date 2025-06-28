@@ -102,13 +102,13 @@ export const formatPhoneNumber = (phoneNumber: string): string => {
 
   // Format based on length and prefix
   if (cleanNumber.length === 10 && cleanNumber.startsWith('05')) {
-    // Format: 05X-XXX-XXXX
-    return `${cleanNumber.slice(0, 3)}-${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6)}`;
+    // Format: 05XXXXXXX (no dashes)
+    return cleanNumber;
   }
 
   if (cleanNumber.length === 9 && /^0[23489]/.test(cleanNumber)) {
-    // Format: 0XX-XXX-XXX
-    return `${cleanNumber.slice(0, 3)}-${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6)}`;
+    // Format: 0XXXXXXXX (no dashes)
+    return cleanNumber;
   }
 
   // Return original if not valid

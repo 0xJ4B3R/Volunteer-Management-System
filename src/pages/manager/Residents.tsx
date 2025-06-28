@@ -43,6 +43,92 @@ import { useResidents, useAddResident, useUpdateResident, useDeleteResident, Res
 import DataTableSkeleton from "@/components/skeletons/DataTableSkeleton";
 import { validatePhoneNumber, getPhoneNumberError, formatPhoneNumber } from "@/utils/validation";
 
+// Full name validation functions
+const validateFullName = (name: string): boolean => {
+  if (!name || name.trim().length === 0) return false;
+  
+  // Allow English letters, Hebrew letters, spaces, hyphens, and apostrophes
+  // Hebrew Unicode range: \u0590-\u05FF (includes Hebrew letters)
+  // English letters: a-z, A-Z
+  const nameRegex = /^[a-zA-Z\u0590-\u05FF\s'-]+$/;
+  
+  return nameRegex.test(name.trim());
+};
+
+const getFullNameError = (name: string): string | null => {
+  if (!name || name.trim().length === 0) {
+    return 'errors.fullNameRequired';
+  }
+  
+  if (name.trim().length < 2) {
+    return 'errors.fullNameTooShort';
+  }
+  
+  if (name.trim().length > 50) {
+    return 'errors.fullNameTooLong';
+  }
+  
+  if (!validateFullName(name)) {
+    return 'errors.fullNameInvalid';
+  }
+  
+  return null;
+};
+
+// Birth date validation function
+const validateBirthDate = (dateString: string): boolean => {
+  if (!dateString) return false;
+  
+  const birthDate = new Date(dateString);
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const birthYear = birthDate.getFullYear();
+  
+  // Check if it's a valid date
+  if (isNaN(birthDate.getTime())) return false;
+  
+  // Check year range (1900 to current year minus 16)
+  if (birthYear < 1900 || birthYear > currentYear - 16) return false;
+  
+  // Check if birth date is not in the future
+  if (birthDate > currentDate) return false;
+  
+  return true;
+};
+
+const getBirthDateError = (dateString: string): string | null => {
+  if (!dateString || dateString.trim().length === 0) {
+    return 'errors.birthDateRequired';
+  }
+  
+  if (!validateBirthDate(dateString)) {
+    const birthDate = new Date(dateString);
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const birthYear = birthDate.getFullYear();
+    
+    if (isNaN(birthDate.getTime())) {
+      return 'errors.birthDateInvalid';
+    }
+    
+    if (birthYear < 1900) {
+      return 'errors.birthDateTooOld';
+    }
+    
+    if (birthYear > currentYear - 16) {
+      return 'errors.birthDateTooYoung';
+    }
+    
+    if (birthDate > currentDate) {
+      return 'errors.birthDateFuture';
+    }
+    
+    return 'errors.birthDateInvalid';
+  }
+  
+  return null;
+};
+
 // Helper functions to map between English and Hebrew values
 const getLanguageMapping = () => {
   const englishLanguages = [
@@ -361,6 +447,14 @@ const ManagerResidents = () => {
   const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
   const [editPhoneNumberError, setEditPhoneNumberError] = useState<string | null>(null);
 
+  // Full name validation states
+  const [fullNameError, setFullNameError] = useState<string | null>(null);
+  const [editFullNameError, setEditFullNameError] = useState<string | null>(null);
+
+  // Birth date validation states
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
+  const [editBirthDateError, setEditBirthDateError] = useState<string | null>(null);
+
   // Firestore hooks
   const { residents, loading: residentsLoading, error: residentsError } = useResidents();
   const { addResident, loading: addingResident, error: addError } = useAddResident();
@@ -402,6 +496,22 @@ const ManagerResidents = () => {
     try {
       if (!newResident.fullName || !newResident.birthDate) {
         alert(t('residents:errors.fillRequiredFields'));
+        return;
+      }
+
+      // Validate full name
+      if (!validateFullName(newResident.fullName)) {
+        const error = getFullNameError(newResident.fullName);
+        setFullNameError(error);
+        alert(error ? t(error, { ns: 'residents' }) : t('residents:errors.invalidFullName'));
+        return;
+      }
+
+      // Validate birth date
+      if (!validateBirthDate(newResident.birthDate)) {
+        const error = getBirthDateError(newResident.birthDate);
+        setBirthDateError(error);
+        alert(error ? t(error, { ns: 'residents' }) : t('residents:errors.invalidBirthDate'));
         return;
       }
 
@@ -456,6 +566,22 @@ const ManagerResidents = () => {
     try {
       if (!selectedResident.fullName || !selectedResident.birthDate) {
         alert(t('residents:errors.fillRequiredFields'));
+        return;
+      }
+
+      // Validate full name
+      if (!validateFullName(selectedResident.fullName)) {
+        const error = getFullNameError(selectedResident.fullName);
+        setEditFullNameError(error);
+        alert(error ? t(error, { ns: 'residents' }) : t('residents:errors.invalidFullName'));
+        return;
+      }
+
+      // Validate birth date
+      if (!validateBirthDate(selectedResident.birthDate)) {
+        const error = getBirthDateError(selectedResident.birthDate);
+        setEditBirthDateError(error);
+        alert(error ? t(error, { ns: 'residents' }) : t('residents:errors.invalidBirthDate'));
         return;
       }
 
@@ -551,6 +677,37 @@ const ManagerResidents = () => {
       } else {
         setNewResident({ ...newResident, phoneNumber: formatted });
       }
+    }
+  };
+
+  // Full name validation handlers
+  const handleFullNameChange = (value: string, isEdit: boolean = false) => {
+    const error = getFullNameError(value);
+    if (isEdit) {
+      setEditFullNameError(error);
+    } else {
+      setFullNameError(error);
+    }
+  };
+
+  const handleFullNameBlur = (value: string, isEdit: boolean = false) => {
+    if (value.trim()) {
+      const trimmedValue = value.trim();
+      if (isEdit && selectedResident) {
+        setSelectedResident({ ...selectedResident, fullName: trimmedValue });
+      } else {
+        setNewResident({ ...newResident, fullName: trimmedValue });
+      }
+    }
+  };
+
+  // Birth date validation handlers
+  const handleBirthDateChange = (value: string, isEdit: boolean = false) => {
+    const error = getBirthDateError(value);
+    if (isEdit) {
+      setEditBirthDateError(error);
+    } else {
+      setBirthDateError(error);
     }
   };
 
@@ -1639,6 +1796,9 @@ const ManagerResidents = () => {
               createdAt: Timestamp.now(),
               notes: null
             });
+            // Clear validation errors
+            setFullNameError(null);
+            setBirthDateError(null);
             setPhoneNumberError(null);
           } else {
             setNewResident({
@@ -1669,6 +1829,9 @@ const ManagerResidents = () => {
               createdAt: Timestamp.now(),
               notes: null
             });
+            // Clear validation errors
+            setFullNameError(null);
+            setBirthDateError(null);
             setPhoneNumberError(null);
           }
         }}
@@ -1695,9 +1858,17 @@ const ManagerResidents = () => {
                     id="fullName"
                     placeholder={t('residents:forms.enterFullName')}
                     value={newResident.fullName}
-                    onChange={(e) => setNewResident({ ...newResident, fullName: e.target.value })}
-                    className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    onChange={(e) => {
+                      setNewResident({ ...newResident, fullName: e.target.value });
+                      handleFullNameChange(e.target.value, false);
+                    }}
+                    onBlur={(e) => handleFullNameBlur(e.target.value, false)}
+                    className={cn(
+                      "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                      fullNameError ? "border-red-500 focus:border-red-500" : ""
+                    )}
                   />
+                  {fullNameError && <p className="text-sm text-red-600 mt-1">{t(fullNameError, { ns: 'residents' })}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber" className="text-sm font-medium text-slate-700">{t('residents:forms.phoneNumber')}</Label>
@@ -1723,9 +1894,16 @@ const ManagerResidents = () => {
                     id="birthDate"
                     type="date"
                     value={newResident.birthDate}
-                    onChange={(e) => setNewResident({ ...newResident, birthDate: e.target.value })}
-                    className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    onChange={(e) => {
+                      setNewResident({ ...newResident, birthDate: e.target.value });
+                      handleBirthDateChange(e.target.value, false);
+                    }}
+                    className={cn(
+                      "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                      birthDateError ? "border-red-500 focus:border-red-500" : ""
+                    )}
                   />
+                  {birthDateError && <p className="text-sm text-red-600 mt-1">{t(birthDateError, { ns: 'residents' })}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gender" className="text-sm font-medium text-slate-700">{t('residents:forms.genderRequired')}</Label>
@@ -1987,12 +2165,12 @@ const ManagerResidents = () => {
             <div className="flex justify-center w-full">
               <Button
                 onClick={async () => {
-                  if (!newResident.fullName || !newResident.birthDate || !newResident.gender || isCreatingInstant || addingResident) return;
+                  if (!newResident.fullName || !newResident.birthDate || !newResident.gender || !!fullNameError || !!birthDateError || !!phoneNumberError || isCreatingInstant || addingResident) return;
                   setIsCreatingInstant(true);
                   await handleCreateResident();
                   setIsCreatingInstant(false);
                 }}
-                disabled={!newResident.fullName || !newResident.birthDate || !newResident.gender || isCreatingInstant || addingResident}
+                disabled={!newResident.fullName || !newResident.birthDate || !newResident.gender || !!fullNameError || !!birthDateError || !!phoneNumberError || isCreatingInstant || addingResident}
                 className="w-[200px] transition-all duration-200 mx-auto bg-primary hover:bg-primary/90 relative"
               >
                 {isCreatingInstant || addingResident ? (
@@ -2012,7 +2190,15 @@ const ManagerResidents = () => {
       </Dialog>
 
       {/* Edit Resident Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open);
+        if (!open) {
+          // Clear validation errors
+          setEditFullNameError(null);
+          setEditBirthDateError(null);
+          setEditPhoneNumberError(null);
+        }
+      }}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
           <DialogHeader className="border-b border-slate-300 pb-3" dir={isRTL ? 'rtl' : 'ltr'}>
             <DialogTitle className="text-slate-900">{t('residents:dialogs.editResident')}</DialogTitle>
@@ -2036,9 +2222,17 @@ const ManagerResidents = () => {
                       id="edit-fullName"
                       placeholder={t('residents:forms.enterFullName')}
                       value={selectedResident.fullName}
-                      onChange={(e) => setSelectedResident({ ...selectedResident, fullName: e.target.value })}
-                      className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      onChange={(e) => {
+                        setSelectedResident({ ...selectedResident, fullName: e.target.value });
+                        handleFullNameChange(e.target.value, true);
+                      }}
+                      onBlur={(e) => handleFullNameBlur(e.target.value, true)}
+                      className={cn(
+                        "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                        editFullNameError ? "border-red-500 focus:border-red-500" : ""
+                      )}
                     />
+                    {editFullNameError && <p className="text-sm text-red-600 mt-1">{t(editFullNameError, { ns: 'residents' })}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-phoneNumber" className="text-sm font-medium text-slate-700">{t('residents:forms.phoneNumber')}</Label>
@@ -2064,9 +2258,16 @@ const ManagerResidents = () => {
                       id="edit-birthDate"
                       type="date"
                       value={selectedResident.birthDate}
-                      onChange={(e) => setSelectedResident({ ...selectedResident, birthDate: e.target.value })}
-                      className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      onChange={(e) => {
+                        setSelectedResident({ ...selectedResident, birthDate: e.target.value });
+                        handleBirthDateChange(e.target.value, true);
+                      }}
+                      className={cn(
+                        "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                        editBirthDateError ? "border-red-500 focus:border-red-500" : ""
+                      )}
                     />
+                    {editBirthDateError && <p className="text-sm text-red-600 mt-1">{t(editBirthDateError, { ns: 'residents' })}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-gender" className="text-sm font-medium text-slate-700">{t('residents:forms.genderRequired')}</Label>
@@ -2332,12 +2533,12 @@ const ManagerResidents = () => {
             <div className="flex justify-center w-full">
               <Button
                 onClick={async () => {
-                  if (!selectedResident?.fullName || !selectedResident?.birthDate || !selectedResident?.gender || isEditingInstant || updatingResident) return;
+                  if (!selectedResident?.fullName || !selectedResident?.birthDate || !selectedResident?.gender || !!editFullNameError || !!editBirthDateError || !!editPhoneNumberError || isEditingInstant || updatingResident) return;
                   setIsEditingInstant(true);
                   await handleEditResident();
                   setIsEditingInstant(false);
                 }}
-                disabled={!selectedResident?.fullName || !selectedResident?.birthDate || !selectedResident?.gender || isEditingInstant || updatingResident}
+                disabled={!selectedResident?.fullName || !selectedResident?.birthDate || !selectedResident?.gender || !!editFullNameError || !!editBirthDateError || !!editPhoneNumberError || isEditingInstant || updatingResident}
                 className="w-[200px] transition-all duration-200 mx-auto bg-primary hover:bg-primary/90 relative"
               >
                 {isEditingInstant || updatingResident ? (

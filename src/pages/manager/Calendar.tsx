@@ -2014,10 +2014,18 @@ const ManagerCalendar = () => {
       );
       let updatedApprovedVolunteers = [...session.approvedVolunteers];
       let updatedStatus = session.status;
+      let updatedResidentIds = [...session.residentIds];
 
       if (action === 'approve') {
         const newParticipant: ParticipantId = { id: volunteerId, type: 'volunteer' };
         updatedApprovedVolunteers = [...updatedApprovedVolunteers, newParticipant];
+        
+        // Check if volunteer request has an assigned resident that should be added to residentIds
+        const volunteerRequest = session.volunteerRequests.find(v => v.volunteerId === volunteerId);
+        if (volunteerRequest?.assignedResidentId && !updatedResidentIds.includes(volunteerRequest.assignedResidentId)) {
+          updatedResidentIds = [...updatedResidentIds, volunteerRequest.assignedResidentId];
+        }
+        
         // Update status based on approved volunteers count
         if (updatedApprovedVolunteers.length >= session.maxCapacity) {
           updatedStatus = "full";
@@ -2031,7 +2039,7 @@ const ManagerCalendar = () => {
           // Create new appointment
           const newAppointment: Omit<Appointment, 'id'> = {
             calendarSlotId: sessionId,
-            residentIds: session.residentIds,
+            residentIds: updatedResidentIds,
             volunteerIds: [newParticipant],
             status: "upcoming",
             createdAt: Timestamp.fromDate(new Date()),
@@ -2052,13 +2060,13 @@ const ManagerCalendar = () => {
               date: session.date,
               startTime: session.startTime,
               endTime: session.endTime,
-              residentIds: session.residentIds,
+              residentIds: updatedResidentIds,
               status: (isPastSession ? 'completed' : (isOngoingSession ? 'inProgress' : 'upcoming')) as AppointmentStatus,
             };
             await addAppointmentToHistory(volunteerId, entry, 'volunteer');
 
             // Also add to history for residents
-            for (const rId of session.residentIds) {
+            for (const rId of updatedResidentIds) {
               const residentEntry = {
                 appointmentId: newAppointmentId,
                 date: session.date,
@@ -2071,14 +2079,14 @@ const ManagerCalendar = () => {
             }
 
             // Update residents' appointmentHistory with new volunteerIds
-            for (const rId of session.residentIds) {
+            for (const rId of updatedResidentIds) {
               await updateAppointmentVolunteerIdsInHistory(rId, newAppointmentId, updatedApprovedVolunteers);
             }
 
             // Update volunteers' appointmentHistory with new residentIds
             for (const v of updatedApprovedVolunteers) {
               if (v.type === 'volunteer') {
-                await updateAppointmentResidentIdsInHistory(v.id, newAppointmentId, session.residentIds);
+                await updateAppointmentResidentIdsInHistory(v.id, newAppointmentId, updatedResidentIds);
               }
             }
           }
@@ -2086,6 +2094,7 @@ const ManagerCalendar = () => {
           // Update existing appointment
           await updateAppointment(appointment.id, {
             volunteerIds: updatedApprovedVolunteers,
+            residentIds: updatedResidentIds,
             updatedAt: Timestamp.fromDate(new Date())
           });
 
@@ -2099,20 +2108,34 @@ const ManagerCalendar = () => {
             date: session.date,
             startTime: session.startTime,
             endTime: session.endTime,
-            residentIds: session.residentIds,
+            residentIds: updatedResidentIds,
             status: (isPastSession ? 'completed' : (isOngoingSession ? 'inProgress' : 'upcoming')) as AppointmentStatus,
           };
           await addAppointmentToHistory(volunteerId, entry, 'volunteer');
 
+          // If a new resident was added, add them to appointmentHistory
+          const newResidentId = volunteerRequest?.assignedResidentId;
+          if (newResidentId && !session.residentIds.includes(newResidentId)) {
+            const residentEntry = {
+              appointmentId: appointment.id,
+              date: session.date,
+              startTime: session.startTime,
+              endTime: session.endTime,
+              volunteerIds: updatedApprovedVolunteers,
+              status: (isPastSession ? 'completed' : (isOngoingSession ? 'inProgress' : 'upcoming')) as AppointmentStatus,
+            };
+            await addAppointmentToHistory(newResidentId, residentEntry, 'resident');
+          }
+
           // Update volunteers' appointmentHistory with new residentIds
           for (const v of updatedApprovedVolunteers) {
             if (v.type === 'volunteer') {
-              await updateAppointmentResidentIdsInHistory(v.id, appointment.id, session.residentIds);
+              await updateAppointmentResidentIdsInHistory(v.id, appointment.id, updatedResidentIds);
             }
           }
 
           // Update residents' appointmentHistory with new volunteerIds
-          for (const rId of session.residentIds) {
+          for (const rId of updatedResidentIds) {
             await updateAppointmentVolunteerIdsInHistory(rId, appointment.id, updatedApprovedVolunteers);
           }
         }
@@ -2140,6 +2163,7 @@ const ManagerCalendar = () => {
       const updateData: Partial<CalendarSlotUI> = {
         volunteerRequests: updatedVolunteerRequests,
         approvedVolunteers: updatedApprovedVolunteers,
+        residentIds: updatedResidentIds,
         status: updatedStatus,
         isOpen: updatedStatus !== 'full' && updatedStatus !== 'canceled'
       };
@@ -2153,6 +2177,7 @@ const ManagerCalendar = () => {
             ...prev,
             volunteerRequests: updatedVolunteerRequests,
             approvedVolunteers: updatedApprovedVolunteers,
+            residentIds: updatedResidentIds,
             status: updatedStatus,
             isOpen: updatedStatus !== 'full' && updatedStatus !== 'canceled'
           };

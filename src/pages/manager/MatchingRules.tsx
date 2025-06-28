@@ -464,28 +464,11 @@ const ManagerMatchingRules = () => {
 
   // Check authentication
   useEffect(() => {
-    // For development/testing purposes, we'll bypass the authentication check
-    // This allows the page to be accessed without redirecting to login
-    return;
-
-    // Original authentication code (commented out)
-    /*
-    const userData = localStorage.getItem("userData");
-    if (!userData) {
+    const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+    if (!user.id || user.role !== "manager") {
       navigate("/login");
       return;
     }
-
-    try {
-      const { role } = JSON.parse(userData);
-      if (role !== "manager") {
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      // Don't redirect on parsing error, just log it
-    }
-    */
   }, [navigate]);
 
   const handleValueChange = (rule: MatchingRuleUI, value: any) => {

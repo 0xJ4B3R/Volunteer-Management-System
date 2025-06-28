@@ -42,7 +42,173 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 // Utilities
 import { cn } from "@/lib/utils";
-import { validatePhoneNumber, getPhoneNumberError, formatPhoneNumber } from "@/utils/validation";
+import { validatePhoneNumber, getPhoneNumberError, formatPhoneNumber, validateUsername, validatePassword } from "@/utils/validation";
+
+// Full name validation functions
+const validateFullName = (name: string): boolean => {
+  if (!name || name.trim().length === 0) return false;
+  
+  // Allow English letters, Hebrew letters, spaces, hyphens, and apostrophes
+  // Hebrew Unicode range: \u0590-\u05FF (includes Hebrew letters)
+  // English letters: a-z, A-Z
+  const nameRegex = /^[a-zA-Z\u0590-\u05FF\s'-]+$/;
+  
+  return nameRegex.test(name.trim());
+};
+
+const getFullNameError = (name: string): string | null => {
+  if (!name || name.trim().length === 0) {
+    return 'errors.fullNameRequired';
+  }
+  
+  if (name.trim().length < 2) {
+    return 'errors.fullNameTooShort';
+  }
+  
+  if (name.trim().length > 50) {
+    return 'errors.fullNameTooLong';
+  }
+  
+  if (!validateFullName(name)) {
+    return 'errors.fullNameInvalid';
+  }
+  
+  return null;
+};
+
+// Username validation function
+const getUsernameError = (username: string): string | null => {
+  if (!username || username.trim().length === 0) {
+    return 'errors.usernameRequired';
+  }
+  
+  if (username.trim().length < 3) {
+    return 'errors.usernameTooShort';
+  }
+  
+  if (username.trim().length > 20) {
+    return 'errors.usernameTooLong';
+  }
+  
+  if (!validateUsername(username)) {
+    return 'errors.usernameInvalid';
+  }
+  
+  return null;
+};
+
+// Password validation function
+const getPasswordError = (password: string): string | null => {
+  if (!password || password.trim().length === 0) {
+    return 'errors.passwordRequired';
+  }
+  
+  if (password.length < 8) {
+    return 'errors.passwordTooShort';
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    return 'errors.passwordNoUppercase';
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    return 'errors.passwordNoLowercase';
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    return 'errors.passwordNoNumber';
+  }
+  
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return 'errors.passwordNoSpecialChar';
+  }
+  
+  if (!validatePassword(password)) {
+    return 'errors.passwordInvalid';
+  }
+  
+  return null;
+};
+
+// Password hashing function
+const createHash = async (password: string): Promise<string> => {
+  try {
+    if (crypto && crypto.subtle && crypto.subtle.digest) {
+      const msgUint8 = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    }
+  } catch (error) {
+    // Fall through to JavaScript implementation
+  }
+  
+  // Fallback SHA-256 implementation
+  const sha256 = async (message: string): Promise<string> => {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
+  
+  return await sha256(password);
+};
+
+// Birth date validation function
+const validateBirthDate = (dateString: string): boolean => {
+  if (!dateString) return false;
+  
+  const birthDate = new Date(dateString);
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const birthYear = birthDate.getFullYear();
+  
+  // Check if it's a valid date
+  if (isNaN(birthDate.getTime())) return false;
+  
+  // Check year range (1900 to current year minus 16)
+  if (birthYear < 1900 || birthYear > currentYear - 16) return false;
+  
+  // Check if birth date is not in the future
+  if (birthDate > currentDate) return false;
+  
+  return true;
+};
+
+const getBirthDateError = (dateString: string): string | null => {
+  if (!dateString || dateString.trim().length === 0) {
+    return 'errors.birthDateRequired';
+  }
+  
+  if (!validateBirthDate(dateString)) {
+    const birthDate = new Date(dateString);
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const birthYear = birthDate.getFullYear();
+    
+    if (isNaN(birthDate.getTime())) {
+      return 'errors.birthDateInvalid';
+    }
+    
+    if (birthYear < 1900) {
+      return 'errors.birthDateTooOld';
+    }
+    
+    if (birthYear > currentYear - 16) {
+      return 'errors.birthDateTooYoung';
+    }
+    
+    if (birthDate > currentDate) {
+      return 'errors.birthDateFuture';
+    }
+    
+    return 'errors.birthDateInvalid';
+  }
+  
+  return null;
+};
 
 // UI Components
 import { Input } from "@/components/ui/input";
@@ -446,6 +612,20 @@ const ManagerVolunteers = () => {
   const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
   const [editPhoneNumberError, setEditPhoneNumberError] = useState<string | null>(null);
 
+  // Full name validation states
+  const [fullNameError, setFullNameError] = useState<string | null>(null);
+  const [editFullNameError, setEditFullNameError] = useState<string | null>(null);
+
+  // Username validation states
+  const [editUsernameError, setEditUsernameError] = useState<string | null>(null);
+
+  // Password validation states
+  const [editPasswordError, setEditPasswordError] = useState<string | null>(null);
+
+  // Birth date validation states
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
+  const [editBirthDateError, setEditBirthDateError] = useState<string | null>(null);
+
   // Firestore hooks
   const { volunteers, loading: volunteersLoading, error: volunteersError } = useVolunteers();
   const { users, loading: usersLoading } = useUsers();
@@ -518,6 +698,68 @@ const ManagerVolunteers = () => {
       } else {
         setNewVolunteer({ ...newVolunteer, phoneNumber: formatted });
       }
+    }
+  };
+
+  // Full name validation handlers
+  const handleFullNameChange = (value: string, isEdit: boolean = false) => {
+    const error = getFullNameError(value);
+    if (isEdit) {
+      setEditFullNameError(error);
+    } else {
+      setFullNameError(error);
+    }
+  };
+
+  const handleFullNameBlur = (value: string, isEdit: boolean = false) => {
+    if (value.trim()) {
+      const trimmedValue = value.trim();
+      if (isEdit && selectedVolunteer) {
+        setSelectedVolunteer({ ...selectedVolunteer, fullName: trimmedValue });
+      } else {
+        setNewVolunteer({ ...newVolunteer, fullName: trimmedValue });
+      }
+    }
+  };
+
+  // Username validation handlers
+  const handleUsernameChange = (value: string) => {
+    const error = getUsernameError(value);
+    setEditUsernameError(error);
+  };
+
+  const handleUsernameBlur = (value: string) => {
+    if (value.trim()) {
+      const trimmedValue = value.trim();
+      setEditedUsername(trimmedValue);
+    }
+  };
+
+  // Password validation handlers
+  const handlePasswordChange = (value: string) => {
+    // Only validate if password is not empty
+    if (value.trim()) {
+      const error = getPasswordError(value);
+      setEditPasswordError(error);
+    } else {
+      setEditPasswordError(null);
+    }
+  };
+
+  const handlePasswordBlur = (value: string) => {
+    if (value.trim()) {
+      const trimmedValue = value.trim();
+      setEditedPassword(trimmedValue);
+    }
+  };
+
+  // Birth date validation handlers
+  const handleBirthDateChange = (value: string, isEdit: boolean = false) => {
+    const error = getBirthDateError(value);
+    if (isEdit) {
+      setEditBirthDateError(error);
+    } else {
+      setBirthDateError(error);
     }
   };
 
@@ -629,6 +871,30 @@ const ManagerVolunteers = () => {
         return;
       }
 
+      // Validate full name
+      if (!validateFullName(newVolunteer.fullName)) {
+        const error = getFullNameError(newVolunteer.fullName);
+        setFullNameError(error);
+        toast({
+          title: t('volunteers:errors.invalidFullName'),
+          description: error ? t(error, { ns: 'volunteers' }) : t('volunteers:errors.invalidFullNameDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate birth date
+      if (!validateBirthDate(newVolunteer.birthDate)) {
+        const error = getBirthDateError(newVolunteer.birthDate);
+        setBirthDateError(error);
+        toast({
+          title: t('volunteers:errors.invalidBirthDate'),
+          description: error ? t(error, { ns: 'volunteers' }) : t('volunteers:errors.invalidBirthDateDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Validate phone number
       if (!validatePhoneNumber(newVolunteer.phoneNumber)) {
         const error = getPhoneNumberError(newVolunteer.phoneNumber);
@@ -723,6 +989,54 @@ const ManagerVolunteers = () => {
   const handleEditVolunteer = async () => {
     if (!selectedVolunteer) return;
     try {
+      // Validate full name
+      if (!validateFullName(selectedVolunteer.fullName)) {
+        const error = getFullNameError(selectedVolunteer.fullName);
+        setEditFullNameError(error);
+        toast({
+          title: t('volunteers:errors.invalidFullName'),
+          description: error ? t(error, { ns: 'volunteers' }) : t('volunteers:errors.invalidFullNameDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate username
+      if (!validateUsername(editedUsername)) {
+        const error = getUsernameError(editedUsername);
+        setEditUsernameError(error);
+        toast({
+          title: t('volunteers:errors.invalidUsername'),
+          description: error ? t(error, { ns: 'volunteers' }) : t('volunteers:errors.invalidUsernameDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate password only if a new one is entered
+      if (editedPassword.trim() && !validatePassword(editedPassword)) {
+        const error = getPasswordError(editedPassword);
+        setEditPasswordError(error);
+        toast({
+          title: t('volunteers:errors.invalidPassword'),
+          description: error ? t(error, { ns: 'volunteers' }) : t('volunteers:errors.invalidPasswordDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate birth date
+      if (!validateBirthDate(selectedVolunteer.birthDate)) {
+        const error = getBirthDateError(selectedVolunteer.birthDate);
+        setEditBirthDateError(error);
+        toast({
+          title: t('volunteers:errors.invalidBirthDate'),
+          description: error ? t(error, { ns: 'volunteers' }) : t('volunteers:errors.invalidBirthDateDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Validate phone number
       if (!validatePhoneNumber(selectedVolunteer.phoneNumber)) {
         const error = getPhoneNumberError(selectedVolunteer.phoneNumber);
@@ -739,12 +1053,20 @@ const ManagerVolunteers = () => {
       const { id, createdAt, ...updateData } = selectedVolunteer;
       await updateVolunteer(id, updateData);
 
-      // Update user data (username and password)
+      // Update user data (username and password only if password is provided)
       if (selectedVolunteer.userId) {
-        await updateUser(selectedVolunteer.userId, {
-          username: editedUsername,
-          passwordHash: editedPassword
-        });
+        const updateData: any = {
+          username: editedUsername
+        };
+        
+        // Only update password if a new one is provided
+        if (editedPassword.trim()) {
+          // Hash the new password before updating
+          const hashedPassword = await createHash(editedPassword);
+          updateData.passwordHash = hashedPassword;
+        }
+        
+        await updateUser(selectedVolunteer.userId, updateData);
       }
 
       setIsEditDialogOpen(false);
@@ -1241,7 +1563,7 @@ const ManagerVolunteers = () => {
               setSelectedVolunteer(volunteer);
               const user = users.find(u => u.id === volunteer.userId);
               setEditedUsername(user?.username || "");
-              setEditedPassword(user?.passwordHash || "");
+              setEditedPassword(""); // Don't show the hashed password
               setIsEditDialogOpen(true);
             }}
             className="text-primary hover:text-primary/90 hover:bg-primary/5"
@@ -1277,7 +1599,7 @@ const ManagerVolunteers = () => {
           setSelectedVolunteer(volunteer);
           const user = users.find(u => u.id === volunteer.userId);
           setEditedUsername(user?.username || "");
-          setEditedPassword(user?.passwordHash || "");
+          setEditedPassword(""); // Don't show the hashed password
           setIsEditDialogOpen(true);
         }
       }
@@ -1770,7 +2092,7 @@ const ManagerVolunteers = () => {
                                     setSelectedVolunteer(volunteer);
                                     const user = users.find(u => u.id === volunteer.userId);
                                     setEditedUsername(user?.username || "");
-                                    setEditedPassword(user?.passwordHash || "");
+                                    setEditedPassword(""); // Don't show the hashed password
                                     setIsEditDialogOpen(true);
                                   }}
                                   className="bg-gray-100 border border-gray-400/75 hover:bg-gray-200 hover:border-gray-400 flex items-center space-x-2"
@@ -1878,6 +2200,10 @@ const ManagerVolunteers = () => {
               reasonForVolunteering: null,
               availability: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] },
             });
+            // Clear validation errors
+            setFullNameError(null);
+            setBirthDateError(null);
+            setPhoneNumberError(null);
           } else {
             setNewVolunteer({
               fullName: "",
@@ -1896,6 +2222,10 @@ const ManagerVolunteers = () => {
               reasonForVolunteering: null,
               availability: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] },
             });
+            // Clear validation errors
+            setFullNameError(null);
+            setBirthDateError(null);
+            setPhoneNumberError(null);
           }
         }}
       >
@@ -1921,9 +2251,17 @@ const ManagerVolunteers = () => {
                     id="fullName"
                     placeholder={t('forms.enterFullName')}
                     value={newVolunteer.fullName}
-                    onChange={(e) => setNewVolunteer({ ...newVolunteer, fullName: e.target.value })}
-                    className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    onChange={(e) => {
+                      setNewVolunteer({ ...newVolunteer, fullName: e.target.value });
+                      handleFullNameChange(e.target.value, false);
+                    }}
+                    onBlur={(e) => handleFullNameBlur(e.target.value, false)}
+                    className={cn(
+                      "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                      fullNameError ? "border-red-500 focus:border-red-500" : ""
+                    )}
                   />
+                  {fullNameError && <p className="text-sm text-red-600 mt-1">{t(fullNameError, { ns: 'volunteers' })}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -1951,9 +2289,16 @@ const ManagerVolunteers = () => {
                     id="birthDate"
                     type="date"
                     value={newVolunteer.birthDate}
-                    onChange={(e) => setNewVolunteer({ ...newVolunteer, birthDate: e.target.value })}
-                    className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    onChange={(e) => {
+                      setNewVolunteer({ ...newVolunteer, birthDate: e.target.value });
+                      handleBirthDateChange(e.target.value, false);
+                    }}
+                    className={cn(
+                      "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                      birthDateError ? "border-red-500 focus:border-red-500" : ""
+                    )}
                   />
+                  {birthDateError && <p className="text-sm text-red-600 mt-1">{t(birthDateError, { ns: 'volunteers' })}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -2232,12 +2577,12 @@ const ManagerVolunteers = () => {
             <div className="flex justify-center w-full">
               <Button
                 onClick={async () => {
-                  if (!newVolunteer.fullName || !newVolunteer.phoneNumber || !newVolunteer.birthDate || isCreatingInstant || isCreating) return;
+                  if (!newVolunteer.fullName || !newVolunteer.phoneNumber || !newVolunteer.birthDate || !!fullNameError || !!birthDateError || !!phoneNumberError || isCreatingInstant || isCreating) return;
                   setIsCreatingInstant(true);
                   await handleCreateVolunteer();
                   setIsCreatingInstant(false);
                 }}
-                disabled={!newVolunteer.fullName || !newVolunteer.phoneNumber || !newVolunteer.birthDate || isCreatingInstant || isCreating}
+                disabled={!newVolunteer.fullName || !newVolunteer.phoneNumber || !newVolunteer.birthDate || !!fullNameError || !!birthDateError || !!phoneNumberError || isCreatingInstant || isCreating}
                 className="w-[200px] transition-all duration-200 mx-auto bg-primary hover:bg-primary/90 relative">
                 {isCreatingInstant || isCreating ? (
                   <>
@@ -2259,6 +2604,12 @@ const ManagerVolunteers = () => {
         setIsEditDialogOpen(open);
         if (!open) {
           setShowPassword(false);
+          // Clear validation errors
+          setEditFullNameError(null);
+          setEditUsernameError(null);
+          setEditPasswordError(null);
+          setEditBirthDateError(null);
+          setEditPhoneNumberError(null);
         }
       }}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -2283,13 +2634,19 @@ const ManagerVolunteers = () => {
                     <Input
                       id="edit-username"
                       value={editedUsername}
-                      onChange={(e) => setEditedUsername(e.target.value)}
+                      onChange={(e) => {
+                        setEditedUsername(e.target.value);
+                        handleUsernameChange(e.target.value);
+                      }}
+                      onBlur={(e) => handleUsernameBlur(e.target.value)}
                       className={cn(
                         "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                        isRTL && "text-right"
+                        isRTL && "text-right",
+                        editUsernameError ? "border-red-500 focus:border-red-500" : ""
                       )}
                       dir="ltr"
                     />
+                    {editUsernameError && <p className="text-sm text-red-600 mt-1">{t(editUsernameError, { ns: 'volunteers' })}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -2298,13 +2655,18 @@ const ManagerVolunteers = () => {
                       <Input
                         id="edit-password"
                         type={showPassword ? "text" : "password"}
+                        placeholder={t('forms.enterNewPassword')}
                         value={editedPassword}
-                        onChange={(e) => setEditedPassword(e.target.value)}
-                        className={cn("h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0", isRTL ? "pl-10" : "pr-10")}
-                        style={{
-                          fontSize: showPassword ? '14px' : '18px',
-                          letterSpacing: showPassword ? 'normal' : '0.1em'
+                        onChange={(e) => {
+                          setEditedPassword(e.target.value);
+                          handlePasswordChange(e.target.value);
                         }}
+                        onBlur={(e) => handlePasswordBlur(e.target.value)}
+                        className={cn(
+                          "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                          isRTL ? "pl-10" : "pr-10",
+                          editPasswordError ? "border-red-500 focus:border-red-500" : ""
+                        )}
                         dir="ltr"
                       />
                       <Button
@@ -2321,6 +2683,7 @@ const ManagerVolunteers = () => {
                         )}
                       </Button>
                     </div>
+                    {editPasswordError && <p className="text-sm text-red-600 mt-1">{t(editPasswordError, { ns: 'volunteers' })}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -2329,7 +2692,17 @@ const ManagerVolunteers = () => {
                       id="edit-fullName"
                       placeholder={t('forms.enterFullName')}
                       value={selectedVolunteer.fullName}
-                      onChange={(e) => setSelectedVolunteer({ ...selectedVolunteer, fullName: e.target.value })} className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      onChange={(e) => {
+                        setSelectedVolunteer({ ...selectedVolunteer, fullName: e.target.value });
+                        handleFullNameChange(e.target.value, true);
+                      }}
+                      onBlur={(e) => handleFullNameBlur(e.target.value, true)}
+                      className={cn(
+                        "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                        editFullNameError ? "border-red-500 focus:border-red-500" : ""
+                      )}
+                    />
+                    {editFullNameError && <p className="text-sm text-red-600 mt-1">{t(editFullNameError, { ns: 'volunteers' })}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -2357,7 +2730,16 @@ const ManagerVolunteers = () => {
                       id="edit-birthDate"
                       type="date"
                       value={selectedVolunteer.birthDate}
-                      onChange={(e) => setSelectedVolunteer({ ...selectedVolunteer, birthDate: e.target.value })} className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      onChange={(e) => {
+                        setSelectedVolunteer({ ...selectedVolunteer, birthDate: e.target.value });
+                        handleBirthDateChange(e.target.value, true);
+                      }}
+                      className={cn(
+                        "h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                        editBirthDateError ? "border-red-500 focus:border-red-500" : ""
+                      )}
+                    />
+                    {editBirthDateError && <p className="text-sm text-red-600 mt-1">{t(editBirthDateError, { ns: 'volunteers' })}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -2633,7 +3015,7 @@ const ManagerVolunteers = () => {
             <div className="flex justify-center w-full">
               <Button
                 onClick={handleEditVolunteer}
-                disabled={!selectedVolunteer?.fullName || !selectedVolunteer?.phoneNumber || !selectedVolunteer?.birthDate || isEditing}
+                disabled={!selectedVolunteer?.fullName || !selectedVolunteer?.phoneNumber || !selectedVolunteer?.birthDate || !!editFullNameError || !!editUsernameError || !!editPasswordError || !!editBirthDateError || !!editPhoneNumberError || isEditing}
                 className="w-[200px] transition-all duration-200 mx-auto bg-primary hover:bg-primary/90 relative">
                 {isEditing ? (
                   <>

@@ -17,9 +17,31 @@
     "currentPasswordPlaceholder": "הזן את הסיסמה הנוכחית שלך",
     "newPasswordPlaceholder": "הזן סיסמה חדשה",
     "confirmPasswordPlaceholder": "אשר את הסיסמה החדשה",
-    "passwordRequirement": "הסיסמה צריכה להכיל לפחות 8 תווים",
+    "passwordRequirement": "הסיסמה חייבת להכיל לפחות 8 תווים עם אות גדולה, קטנה, ספרה ותו מיוחד",
     "updating": "מעדכן סיסמה...",
     "update": "עדכן סיסמה",
+    "errors": {
+      "passwordRequired": "סיסמה נדרשת",
+      "passwordTooShort": "הסיסמה חייבת להכיל לפחות 8 תווים",
+      "passwordNoUppercase": "הסיסמה חייבת להכיל לפחות אות גדולה אחת באנגלית",
+      "passwordNoLowercase": "הסיסמה חייבת להכיל לפחות אות קטנה אחת באנגלית",
+      "passwordNoNumber": "הסיסמה חייבת להכיל לפחות ספרה אחת",
+      "passwordNoSpecialChar": "הסיסמה חייבת להכיל לפחות תו מיוחד אחד",
+      "passwordInvalid": "הסיסמה לא עומדת בדרישות האבטחה",
+      "passwordsDoNotMatch": "הסיסמאות אינן תואמות",
+      "samePassword": "הסיסמה החדשה לא יכולה להיות זהה לסיסמה הנוכחית",
+      "samePasswordDescription": "אנא בחר סיסמה אחרת",
+      "incorrectCurrentPassword": "הסיסמה הנוכחית שגויה",
+      "incorrectCurrentPasswordDescription": "אנא הכנס את הסיסמה הנוכחית הנכונה",
+      "validationFailed": "אימות נכשל",
+      "validationFailedDescription": "אנא תקן את השגיאות המסומנות לפני השליחה",
+      "changePasswordFailed": "שינוי סיסמה נכשל",
+      "changePasswordFailedDescription": "אירעה שגיאה בעת שינוי הסיסמה. אנא נסה שוב."
+    },
+    "success": {
+      "passwordChanged": "הסיסמה שונתה בהצלחה",
+      "passwordChangedDescription": "הסיסמה שלך עודכנה בצורה מאובטחת"
+    },
     "securityTips": {
       "title": "טיפים לאבטחת סיסמה",
       "tip1": "השתמש בלפחות 8 תווים עם שילוב של אותיות, מספרים וסמלים",

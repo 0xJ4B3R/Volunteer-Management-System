@@ -15,8 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import { cn } from "@/lib/utils";
+import { validatePassword } from "@/utils/validation";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 // Constants
 const MOBILE_BREAKPOINT = 1024;
@@ -29,10 +33,70 @@ interface PasswordFormData {
   confirmPassword: string;
 }
 
+// Password validation function
+const getPasswordError = (password: string): string | null => {
+  if (!password || password.trim().length === 0) {
+    return 'passwordSettings.errors.passwordRequired';
+  }
+
+  if (password.length < 8) {
+    return 'passwordSettings.errors.passwordTooShort';
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return 'passwordSettings.errors.passwordNoUppercase';
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return 'passwordSettings.errors.passwordNoLowercase';
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return 'passwordSettings.errors.passwordNoNumber';
+  }
+
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return 'passwordSettings.errors.passwordNoSpecialChar';
+  }
+
+  if (!validatePassword(password)) {
+    return 'passwordSettings.errors.passwordInvalid';
+  }
+
+  return null;
+};
+
+// Password hashing function
+const createHash = async (password: string): Promise<string> => {
+  try {
+    if (crypto && crypto.subtle && crypto.subtle.digest) {
+      const msgUint8 = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    }
+  } catch (error) {
+    // Fall through to JavaScript implementation
+  }
+
+  // Fallback SHA-256 implementation
+  const sha256 = async (message: string): Promise<string> => {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
+
+  return await sha256(password);
+};
+
 const ManagerSettings = () => {
   const navigate = useNavigate();
   const { t } = useTranslation(['settings', 'common']);
   const { language, isRTL, changeLanguage, dir } = useLanguage();
+  const { toast } = useToast();
 
   // State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -52,6 +116,13 @@ const ManagerSettings = () => {
   });
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
+  // Password validation states
+  const [passwordErrors, setPasswordErrors] = useState({
+    currentPassword: null as string | null,
+    newPassword: null as string | null,
+    confirmPassword: null as string | null
+  });
+
   // Language form state
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [isLanguageLoading, setIsLanguageLoading] = useState(false);
@@ -59,6 +130,24 @@ const ManagerSettings = () => {
   // Utility Functions
   const updatePasswordForm = (field: keyof PasswordFormData, value: string) => {
     setPasswordForm(prev => ({ ...prev, [field]: value }));
+
+    // Validate password on change
+    if (field === 'currentPassword') {
+      const error = !value ? 'passwordSettings.errors.passwordRequired' : null;
+      setPasswordErrors(prev => ({ ...prev, currentPassword: error }));
+    } else if (field === 'newPassword') {
+      const error = getPasswordError(value);
+      setPasswordErrors(prev => ({ ...prev, newPassword: error }));
+
+      // Also validate confirm password if it exists
+      if (passwordForm.confirmPassword) {
+        const confirmError = value !== passwordForm.confirmPassword ? 'passwordSettings.errors.passwordsDoNotMatch' : null;
+        setPasswordErrors(prev => ({ ...prev, confirmPassword: confirmError }));
+      }
+    } else if (field === 'confirmPassword') {
+      const error = value !== passwordForm.newPassword ? 'passwordSettings.errors.passwordsDoNotMatch' : null;
+      setPasswordErrors(prev => ({ ...prev, confirmPassword: error }));
+    }
   };
 
   const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
@@ -76,6 +165,11 @@ const ManagerSettings = () => {
       new: false,
       confirm: false
     });
+    setPasswordErrors({
+      currentPassword: null,
+      newPassword: null,
+      confirmPassword: null
+    });
   };
 
   // Event Handlers
@@ -84,14 +178,107 @@ const ManagerSettings = () => {
     setIsPasswordLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, LOADING_DURATION));
+      // Validate all fields
+      const currentPasswordError = !passwordForm.currentPassword ? 'passwordSettings.errors.passwordRequired' : null;
+      const newPasswordError = getPasswordError(passwordForm.newPassword);
+      const confirmPasswordError = passwordForm.newPassword !== passwordForm.confirmPassword ? 'passwordSettings.errors.passwordsDoNotMatch' : null;
+
+      if (currentPasswordError || newPasswordError || confirmPasswordError) {
+        setPasswordErrors({
+          currentPassword: currentPasswordError,
+          newPassword: newPasswordError,
+          confirmPassword: confirmPasswordError
+        });
+
+        toast({
+          title: t('passwordSettings.errors.validationFailed'),
+          description: t('passwordSettings.errors.validationFailedDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if new password is different from current password
+      if (passwordForm.currentPassword === passwordForm.newPassword) {
+        setPasswordErrors(prev => ({ ...prev, newPassword: 'passwordSettings.errors.samePassword' }));
+        toast({
+          title: t('passwordSettings.errors.samePassword'),
+          description: t('passwordSettings.errors.samePasswordDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Get current user
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.id) {
+        throw new Error("User not found");
+      }
+
+      // Find user document by username
+      const usersQuery = query(collection(db, "users"), where("username", "==", user.username));
+      const userSnapshot = await getDocs(usersQuery);
+
+      if (userSnapshot.empty) {
+        throw new Error("User document not found");
+      }
+
+      const userDoc = userSnapshot.docs[0];
+      const userData = userDoc.data();
+      const storedPasswordHash = userData.passwordHash;
+
+      if (!storedPasswordHash) {
+        throw new Error("No password set for this user");
+      }
+
+      // Verify current password
+      const isPlainTextPassword = storedPasswordHash.length < 30;
+      let passwordMatches = false;
+
+      if (isPlainTextPassword) {
+        passwordMatches = passwordForm.currentPassword === storedPasswordHash;
+      } else {
+        const currentPasswordHash = await createHash(passwordForm.currentPassword);
+        passwordMatches = currentPasswordHash === storedPasswordHash;
+      }
+
+      if (!passwordMatches) {
+        setPasswordErrors(prev => ({ ...prev, currentPassword: 'passwordSettings.errors.incorrectCurrentPassword' }));
+        toast({
+          title: t('passwordSettings.errors.incorrectCurrentPassword'),
+          description: t('passwordSettings.errors.incorrectCurrentPasswordDescription'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Hash new password
+      const newPasswordHash = await createHash(passwordForm.newPassword);
+
+      // Update password in Firestore
+      const userRef = doc(db, "users", userDoc.id);
+      await updateDoc(userRef, {
+        passwordHash: newPasswordHash,
+        lastPasswordChange: new Date()
+      });
+
+      // Reset form and show success
       resetPasswordForm();
-      console.log("Password changed successfully");
-      // Add success notification here
+
+      toast({
+        title: t('passwordSettings.success.passwordChanged'),
+        description: t('passwordSettings.success.passwordChangedDescription'),
+        variant: "default"
+      });
+
     } catch (error) {
       console.error("Error changing password:", error);
-      // Add error notification here
+
+      toast({
+        title: t('passwordSettings.errors.changePasswordFailed'),
+        description: error instanceof Error ? error.message : t('passwordSettings.errors.changePasswordFailedDescription'),
+        variant: "destructive"
+      });
     } finally {
       setIsPasswordLoading(false);
     }
@@ -162,55 +349,69 @@ const ManagerSettings = () => {
     label: string,
     placeholder: string,
     requirement?: string
-  ) => (
-    <div className="space-y-2">
-      <Label htmlFor={field} className={cn(
-        "text-sm font-medium text-slate-700",
-        isRTL && "text-right"
-      )}>
-        {label}
-      </Label>
-      <div className="relative">
-        <Input
-          id={field}
-          type={showPasswords[field === 'currentPassword' ? 'current' : field === 'newPassword' ? 'new' : 'confirm'] ? "text" : "password"}
-          placeholder={placeholder}
-          className={cn(
-            "focus:outline-none focus-visible:ring-0",
-            isRTL ? "pl-10 text-right" : "pr-10"
-          )}
-          value={passwordForm[field]}
-          onChange={(e) => updatePasswordForm(field, e.target.value)}
-          required
-          dir="ltr"
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "absolute top-1/2 transform -translate-y-1/2 h-8 w-8 hover:bg-slate-100 focus:outline-none focus-visible:ring-0",
-            isRTL ? "left-1" : "right-1"
-          )}
-          onClick={() => togglePasswordVisibility(field === 'currentPassword' ? 'current' : field === 'newPassword' ? 'new' : 'confirm')}
-        >
-          {showPasswords[field === 'currentPassword' ? 'current' : field === 'newPassword' ? 'new' : 'confirm'] ? (
-            <EyeOff className="h-4 w-4 text-slate-500" />
-          ) : (
-            <Eye className="h-4 w-4 text-slate-500" />
-          )}
-        </Button>
-      </div>
-      {requirement && (
-        <p className={cn(
-          "text-xs text-slate-500",
+  ) => {
+    const error = passwordErrors[field];
+    const passwordType = field === 'currentPassword' ? 'current' : field === 'newPassword' ? 'new' : 'confirm';
+
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={field} className={cn(
+          "text-sm font-medium text-slate-700",
           isRTL && "text-right"
         )}>
-          {requirement}
-        </p>
-      )}
-    </div>
-  );
+          {label}
+        </Label>
+        <div className="relative">
+          <Input
+            id={field}
+            type={showPasswords[passwordType] ? "text" : "password"}
+            placeholder={placeholder}
+            className={cn(
+              "focus:outline-none focus-visible:ring-0",
+              isRTL ? "pl-10 text-right" : "pr-10",
+              error ? "border-red-500 focus:border-red-500" : ""
+            )}
+            value={passwordForm[field]}
+            onChange={(e) => updatePasswordForm(field, e.target.value)}
+            required
+            dir="ltr"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "absolute top-1/2 transform -translate-y-1/2 h-8 w-8 hover:bg-slate-100 focus:outline-none focus-visible:ring-0",
+              isRTL ? "left-1" : "right-1"
+            )}
+            onClick={() => togglePasswordVisibility(passwordType)}
+          >
+            {showPasswords[passwordType] ? (
+              <EyeOff className="h-4 w-4 text-slate-500" />
+            ) : (
+              <Eye className="h-4 w-4 text-slate-500" />
+            )}
+          </Button>
+        </div>
+        {error && (
+          <p className={cn(
+            "text-sm text-red-600",
+            isRTL && "text-right"
+          )}>
+            {t(error)}
+          </p>
+        )}
+        {requirement && !error && (
+          <p className={cn(
+            "text-xs text-slate-500",
+            isRTL && "text-right"
+          )}>
+            {requirement}
+          </p>
+        )}
+      </div>
+    );
+  };
 
   const renderLoadingSpinner = () => (
     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -418,7 +619,15 @@ const ManagerSettings = () => {
                     <div className="pt-2">
                       <Button
                         type="submit"
-                        disabled={isPasswordLoading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+                        disabled={
+                          isPasswordLoading ||
+                          !passwordForm.currentPassword ||
+                          !passwordForm.newPassword ||
+                          !passwordForm.confirmPassword ||
+                          !!passwordErrors.currentPassword ||
+                          !!passwordErrors.newPassword ||
+                          !!passwordErrors.confirmPassword
+                        }
                         className="w-full sm:w-auto focus:outline-none focus-visible:ring-0"
                       >
                         {isPasswordLoading ? (

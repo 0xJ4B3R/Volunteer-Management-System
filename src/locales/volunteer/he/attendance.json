@@ -21,6 +21,7 @@
     "minutesLeft": "{{count}} דקות נותרו בתקופת החסד",
     "sessionTiming": "תזמון הפגישה",
     "sessionEnded": "הפגישה הסתיימה",
+    "cannotConfirm": "לא ניתן לאשר נוכחות לפגישות שכבר הסתיימו.",
     "autoMarkedAbsent": "הפגישה הסתיימה ואתה סומנת כנעדר אוטומטית.",
     "confirmTitle": "אנא אשר את נוכחותך",
     "confirmMessage": "נוכחותך צריכה להיות מאושרת לפגישה זו.",

@@ -21,6 +21,7 @@
     "minutesLeft": "{{count}} minutes left in grace period",
     "sessionTiming": "Session Timing",
     "sessionEnded": "Session Ended",
+    "cannotConfirm": "Attendance cannot be confirmed for sessions that have already ended.",
     "autoMarkedAbsent": "This session has ended and you have been automatically marked as absent.",
     "confirmTitle": "Please confirm your attendance",
     "confirmMessage": "Your attendance needs to be confirmed for this session.",

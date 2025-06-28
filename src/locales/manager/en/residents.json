@@ -185,7 +185,20 @@
     "loadingError": "Error loading residents:",
     "cannotDeleteWithSessions": "Cannot delete a resident with at least one session.",
     "invalidPhoneNumber": "Invalid Phone Number",
-    "invalidPhoneNumberDescription": "Phone number must be either 10 digits starting with 05 or 9 digits starting with 02, 03, 04, 08, or 09"
+    "invalidPhoneNumberDescription": "Phone number must be either 10 digits starting with 05 or 9 digits starting with 02, 03, 04, 08, or 09",
+    "invalidFullName": "Invalid Full Name",
+    "invalidFullNameDescription": "Full name can only contain English letters, Hebrew letters, spaces, hyphens, and apostrophes",
+    "fullNameRequired": "Full name is required",
+    "fullNameTooShort": "Full name must be at least 2 characters long",
+    "fullNameTooLong": "Full name cannot exceed 50 characters",
+    "fullNameInvalid": "Full name can only contain English letters, Hebrew letters, spaces, hyphens, and apostrophes",
+    "invalidBirthDate": "Invalid Birth Date",
+    "invalidBirthDateDescription": "Please enter a valid birth date within the acceptable range",
+    "birthDateRequired": "Birth date is required",
+    "birthDateInvalid": "Please enter a valid birth date",
+    "birthDateTooOld": "Birth year must be 1900 or later",
+    "birthDateTooYoung": "Person must be at least 16 years old",
+    "birthDateFuture": "Birth date cannot be in the future"
   },
   "success": {
     "residentCreated": "Resident created successfully",

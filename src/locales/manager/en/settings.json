@@ -17,9 +17,31 @@
     "currentPasswordPlaceholder": "Enter your current password",
     "newPasswordPlaceholder": "Enter your new password",
     "confirmPasswordPlaceholder": "Confirm your new password",
-    "passwordRequirement": "Password should be at least 8 characters long",
+    "passwordRequirement": "Password must be at least 8 characters with uppercase, lowercase, number, and special character",
     "updating": "Updating Password...",
     "update": "Update Password",
+    "errors": {
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least 8 characters long",
+      "passwordNoUppercase": "Password must contain at least one uppercase letter",
+      "passwordNoLowercase": "Password must contain at least one lowercase letter",
+      "passwordNoNumber": "Password must contain at least one number",
+      "passwordNoSpecialChar": "Password must contain at least one special character",
+      "passwordInvalid": "Password does not meet security requirements",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "samePassword": "New password cannot be the same as current password",
+      "samePasswordDescription": "Please choose a different password",
+      "incorrectCurrentPassword": "Current password is incorrect",
+      "incorrectCurrentPasswordDescription": "Please enter your correct current password",
+      "validationFailed": "Validation Failed",
+      "validationFailedDescription": "Please fix the highlighted errors before submitting",
+      "changePasswordFailed": "Password Change Failed",
+      "changePasswordFailedDescription": "An error occurred while changing your password. Please try again."
+    },
+    "success": {
+      "passwordChanged": "Password Changed Successfully",
+      "passwordChangedDescription": "Your password has been updated securely"
+    },
     "securityTips": {
       "title": "Password Security Tips",
       "tip1": "Use at least 8 characters with a mix of letters, numbers, and symbols",

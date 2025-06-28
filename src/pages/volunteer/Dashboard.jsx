@@ -112,6 +112,21 @@ const Dashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const langToggleRef = useRef(null);
 
+  // Check authentication
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.username) {
+        window.location.href = "/login";
+      } else if (user.role !== "volunteer") {
+        window.location.href = "/manager";
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      window.location.href = "/login";
+    }
+  }, []);
+
   // Preset color combinations for cards - Elder-friendly with warm, soft tones and high contrast
   const colorPresets = [
     { primary: '#2563eb', secondary: '#1e40af', bg: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)' }, // Soft blue
@@ -803,21 +818,40 @@ const Dashboard = () => {
                       <div className="dash-upcoming-item-header">
                         <div className="dash-upcoming-item-content">
                           <div
-                            className="dash-upcoming-detail"
                             style={{
                               display: 'flex',
                               alignItems: 'center',
                               gap: '1rem',
-                              padding: '1.5rem'
+                              padding: '1.5rem',
+                              borderRadius: '1rem',
+                              background: 'linear-gradient(135deg, rgba(79, 120, 80, 0.08) 0%, rgba(79, 120, 80, 0.12) 100%)',
+                              border: '2px solid rgba(79, 120, 80, 0.15)',
+                              boxShadow: '0 2px 8px rgba(79, 120, 80, 0.1)',
+                              position: 'relative',
+                              overflow: 'hidden'
                             }}
                           >
-                            <Calendar
+                            <div
                               style={{
-                                color: '#6b7280',
-                                width: '2rem',
-                                height: '2rem'
+                                width: '3rem',
+                                height: '3rem',
+                                borderRadius: '0.75rem',
+                                background: 'linear-gradient(135deg, #4f7850, #416a42)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 4px 12px rgba(79, 120, 80, 0.3)'
                               }}
-                            />
+                            >
+                              <Calendar
+                                style={{
+                                  color: 'white',
+                                  width: '1.5rem',
+                                  height: '1.5rem',
+                                  filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))'
+                                }}
+                              />
+                            </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', flex: 1 }}>
                               <span style={{
                                 fontWeight: '700',
@@ -835,6 +869,19 @@ const Dashboard = () => {
                                 {t('dashboard.upcoming.noSessionsMessage')}
                               </span>
                             </div>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-1px',
+                                right: '-1px',
+                                width: '2rem',
+                                height: '2rem',
+                                background: 'linear-gradient(135deg, rgba(79, 120, 80, 0.1), rgba(79, 120, 80, 0.05))',
+                                borderRadius: '0 1rem 0 1rem',
+                                borderLeft: '2px solid rgba(79, 120, 80, 0.2)',
+                                borderBottom: '2px solid rgba(79, 120, 80, 0.2)'
+                              }}
+                            />
                           </div>
                         </div>
                       </div>

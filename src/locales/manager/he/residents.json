@@ -168,7 +168,20 @@
     "loadingError": "שגיאה בטעינת דיירים:",
     "cannotDeleteWithSessions": "לא ניתן למחוק דייר עם לפחות פגישה אחת.",
     "invalidPhoneNumber": "מספר טלפון לא תקין",
-    "invalidPhoneNumberDescription": "מספר הטלפון חייב להיות 10 ספרות המתחילות ב-05 או 9 ספרות המתחילות ב-02, 03, 04, 08, או 09"
+    "invalidPhoneNumberDescription": "מספר הטלפון חייב להיות 10 ספרות המתחילות ב-05 או 9 ספרות המתחילות ב-02, 03, 04, 08, או 09",
+    "invalidFullName": "שם מלא לא תקין",
+    "invalidFullNameDescription": "שם מלא יכול להכיל רק אותיות בעברית, אותיות באנגלית, רווחים, מקפים ואפוסטרופים",
+    "fullNameRequired": "שם מלא נדרש",
+    "fullNameTooShort": "שם מלא חייב להיות באורך של לפחות 2 תווים",
+    "fullNameTooLong": "שם מלא לא יכול לחרוג מ-50 תווים",
+    "fullNameInvalid": "שם מלא יכול להכיל רק אותיות בעברית, אותיות באנגלית, רווחים, מקפים ואפוסטרופים",
+    "invalidBirthDate": "תאריך לידה לא תקין",
+    "invalidBirthDateDescription": "אנא הכנס תאריך לידה תקין בטווח המקובל",
+    "birthDateRequired": "תאריך לידה נדרש",
+    "birthDateInvalid": "אנא הכנס תאריך לידה תקין",
+    "birthDateTooOld": "שנת הלידה חייבת להיות 1900 או מאוחר יותר",
+    "birthDateTooYoung": "הגיל חייב להיות לפחות 16 שנים",
+    "birthDateFuture": "תאריך הלידה לא יכול להיות בעתיד"
   },
   "success": {
     "residentCreated": "הדייר נוצר בהצלחה",

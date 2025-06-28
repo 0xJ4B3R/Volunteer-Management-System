@@ -6,7 +6,7 @@ import { Home, ArrowLeft, Search, Globe } from "lucide-react";
 import './styles/NotFound.css';
 
 const NotFound = () => {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('not-found');
   const [showLangOptions, setShowLangOptions] = useState(false);
   const location = useLocation();
 
@@ -78,21 +78,21 @@ const NotFound = () => {
         </button>
         {showLangOptions && (
           <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={() => { 
+            <button onClick={() => {
               localStorage.setItem('language', 'en');
               i18n.changeLanguage('en').then(() => {
                 document.documentElement.dir = 'ltr';
               });
-              setShowLangOptions(false); 
+              setShowLangOptions(false);
             }}>
               English
             </button>
-            <button onClick={() => { 
+            <button onClick={() => {
               localStorage.setItem('language', 'he');
               i18n.changeLanguage('he').then(() => {
                 document.documentElement.dir = 'rtl';
               });
-              setShowLangOptions(false); 
+              setShowLangOptions(false);
             }}>
               עברית
             </button>
@@ -103,4 +103,4 @@ const NotFound = () => {
   );
 };
 
-export default NotFound;
+export default NotFound; 

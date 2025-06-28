@@ -60,6 +60,12 @@ function getAge(dateString?: string): number | null {
 }
 
 function toWeight(raw: unknown): number {
+  // Handle boolean values from toggle rules
+  if (typeof raw === 'boolean') {
+    return raw ? 5 : 0; // Give enabled toggles a reasonable weight of 5, disabled gets 0
+  }
+  
+  // Handle numeric values from weight rules
   const n = Number(raw);
   return Number.isFinite(n) ? Math.min(10, Math.max(0, n)) : 0;
 }

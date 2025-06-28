@@ -12,6 +12,9 @@ import "./styles/Calendar.css";
 // Import proper Firestore hooks and types
 import { useCalendarSlots, useUpdateCalendarSlot } from "@/hooks/useFirestoreCalendar";
 import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import { useResidents } from "@/hooks/useFirestoreResidents";
+import { useMatchingRules } from "@/hooks/useMatchingRules";
+import { matchVolunteersToResidents } from "@/utils/matchingAlgorithm";
 import { Timestamp, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -208,6 +211,8 @@ const VolunteerCalendar = () => {
   const { slots: calendarSlots, loading: isLoading, error } = useCalendarSlots();
   const { updateCalendarSlot } = useUpdateCalendarSlot();
   const { volunteers } = useVolunteers();
+  const { residents } = useResidents();
+  const { rules: matchingRules } = useMatchingRules();
 
   const [viewMode, setViewMode] = useState("week");
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
@@ -334,6 +339,47 @@ const VolunteerCalendar = () => {
 
       console.log("Found volunteer record:", volunteer);
 
+      // Check if slot has no residents assigned and run matching algorithm
+      let matchScore = null;
+      let assignedResidentId = null;
+
+      if (slot.residentIds && slot.residentIds.length === 0 && residents.length > 0 && matchingRules.length > 0) {
+        console.log("No residents assigned to slot, running matching algorithm...");
+
+        // Convert UI types to backend types for matching algorithm (following MatchingRules.tsx pattern)
+        const convertedVolunteer = { ...volunteer, createdAt: Timestamp.fromDate(new Date(volunteer.createdAt)) };
+        const convertedResidents = residents.map(r => ({ ...r, createdAt: Timestamp.fromDate(new Date(r.createdAt)) }));
+        const convertedRules = matchingRules.map(rule => ({ ...rule, updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) }));
+
+        // Run matching algorithm one volunteer against each resident (matching MatchingRules.tsx pattern)
+        const matchResults = convertedResidents.map(resident => {
+          const matchResult = matchVolunteersToResidents([convertedVolunteer], [resident], convertedRules)[0];
+          return {
+            volunteerId: convertedVolunteer.id,
+            volunteerName: convertedVolunteer.fullName,
+            residentId: resident.id,
+            residentName: resident.fullName,
+            score: matchResult?.score ?? 0,
+            factors: matchResult?.factors ?? [],
+          };
+        });
+
+        if (matchResults.length > 0) {
+          // Find the best match by sorting scores in descending order
+          const bestMatch = matchResults.sort((a, b) => b.score - a.score)[0];
+
+          if (bestMatch) {
+            matchScore = bestMatch.score;
+            assignedResidentId = bestMatch.residentId;
+            console.log("Best resident match found:", {
+              residentId: assignedResidentId,
+              residentName: bestMatch.residentName,
+              score: matchScore
+            });
+          }
+        }
+      }
+
       // Use direct Firebase update with arrayUnion (matching TestVolunteerRequests pattern)
       const slotRef = doc(db, "calendar_slots", slot.id);
 
@@ -345,7 +391,8 @@ const VolunteerCalendar = () => {
           approvedAt: null,
           rejectedAt: null,
           rejectedReason: null,
-          matchScore: null,
+          matchScore: matchScore,
+          assignedResidentId: assignedResidentId,
           assignedBy: "ai"
         })
       });
@@ -1065,10 +1112,10 @@ const VolunteerCalendar = () => {
                                                 ? "#fee2e2"
                                                 : "#fef3c7",
                                           border: `1px solid ${userApprovalStatus === "approved"
-                                              ? "#10b981"
-                                              : userApprovalStatus === "rejected"
-                                                ? "#ef4444"
-                                                : "#f59e0b"
+                                            ? "#10b981"
+                                            : userApprovalStatus === "rejected"
+                                              ? "#ef4444"
+                                              : "#f59e0b"
                                             }`
                                         }}
                                       >
