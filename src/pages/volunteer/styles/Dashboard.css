@@ -377,7 +377,6 @@
   border-radius: 1.25rem;
   padding: 2rem;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .dash-activity-title,
@@ -401,6 +400,12 @@
   padding-bottom: 1rem;
 }
 
+.dash-activity-item:last-child {
+  padding-bottom: 0.5rem;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
 .dash-activity-content {
   display: flex;
   align-items: center;
@@ -421,6 +426,11 @@
   position: relative;
   overflow: hidden;
   background: inherit;
+}
+
+[dir="rtl"] .dash-activity-icon-wrapper {
+  margin-right: 0;
+  margin-left: 0.5rem;
 }
 
 .dash-activity-icon-wrapper::before {

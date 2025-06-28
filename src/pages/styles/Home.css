@@ -4,11 +4,20 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-padding-top: 120px; /* Account for header height + extra space */
+}
+
 .homepage {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   line-height: 1.6;
   color: #333;
   overflow-x: hidden;
+}
+
+/* Hebrew font optimization */
+.homepage[dir="rtl"] {
+  font-family: 'Segoe UI', 'Noto Sans Hebrew', 'David Libre', 'Frank Ruehl CLM', 'Arial Hebrew', 'Tahoma', sans-serif;
 }
 
 /* Header */
@@ -29,21 +38,36 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 1rem 2rem 1rem 2rem;
-  background: url('/Logo.png');
-  background-size: 70px 70px;
-  background-repeat: no-repeat;
-  background-position: 30px center;
+  padding: 0.75rem 2rem;
   direction: ltr;
+  min-height: 100px;
 }
 
 .logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-left: 30px;
-  color: #416a42;
+  display: flex;
+  align-items: center;
   text-decoration: none;
-  padding-left: 55px;
+  margin-left: 30px;
+  gap: 1rem;
+}
+
+.logo-image {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-text {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #416a42;
+}
+
+/* Enhanced Hebrew logo text */
+.homepage[dir="rtl"] .logo-text {
+  font-family: 'Segoe UI', 'Noto Sans Hebrew', 'David Libre', 'Frank Ruehl CLM', 'Arial Hebrew', 'Tahoma', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 .nav-links {
   display: flex;
@@ -58,6 +82,14 @@
   font-weight: 500;
   transition: color 0.3s ease;
   cursor: pointer;
+}
+
+/* Enhanced Hebrew navigation styling */
+.homepage[dir="rtl"] .nav-links a {
+  font-family: 'Segoe UI', 'Noto Sans Hebrew', 'David Libre', 'Frank Ruehl CLM', 'Arial Hebrew', 'Tahoma', sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
 }
 
 .nav-links a:hover {
@@ -125,6 +157,14 @@
   margin-bottom: 1.5rem;
   line-height: 1.2;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  font-family: 'Segoe UI', 'Noto Sans Hebrew', 'David Libre', 'Frank Ruehl CLM', 'Arial Hebrew', 'Tahoma', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.homepage[dir="rtl"] .hero h1 {
+  font-family: 'Noto Sans Hebrew', 'David Libre', 'Frank Ruehl CLM', 'Arial Hebrew', 'Tahoma', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .hero p {
@@ -177,51 +217,6 @@
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-3px);
-}
-
-/* Features Section */
-.features {
-  padding: 5rem 2rem;
-  background: #f2f4f6;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 4rem;
-}
-
-.section-header h2 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 1rem;
-}
-
-.features {
-  padding: 5rem 2rem;
-  background: #f2f4f6;
-}
-
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 4rem;
-}
-
-.section-header h2 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 1rem;
 }
 
 /* Features Section */
@@ -317,8 +312,20 @@
   }
 
   .nav {
-    padding: 1rem;
-    background-position: 15px center;
+    padding: 0.5rem 1rem;
+    min-height: 90px;
+  }
+  
+  .logo {
+    margin-left: 15px;
+  }
+  
+  .logo-image {
+    height: 65px;
+  }
+  
+  .logo-text {
+    font-size: 1.6rem;
   }
 }
 

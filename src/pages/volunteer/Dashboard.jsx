@@ -570,23 +570,23 @@ const Dashboard = () => {
   // Robust language direction management
   const applyLanguageDirection = (lang) => {
     const dir = lang === 'he' ? 'rtl' : 'ltr';
-    
+
     // 1. Set the dir attribute on html element
     document.documentElement.setAttribute('dir', dir);
     document.documentElement.setAttribute('lang', lang);
-    
+
     // 2. Remove any stale RTL/LTR classes
     document.body.classList.remove('rtl', 'ltr');
     document.documentElement.classList.remove('rtl', 'ltr');
-    
+
     // 3. Add the correct direction class
     document.body.classList.add(dir);
     document.documentElement.classList.add(dir);
-    
+
     // 4. Set CSS direction property explicitly
     document.body.style.direction = dir;
     document.documentElement.style.direction = dir;
-    
+
     // 5. Remove any conflicting inline styles
     const rootElements = document.querySelectorAll('[style*="direction"]');
     rootElements.forEach(el => {
@@ -702,7 +702,7 @@ const Dashboard = () => {
     <Layout>
       <div className="dash-dashboard-container">
         <div className="dash-dashboard-wrapper">
-          <div className="dash-dashboard-header">
+          <div className="dash-dashboard-header" style={{ paddingTop: '1rem' }}>
             <p className="dash-dashboard-greeting">
               {getGreeting()}, {userData.name}! 👋
             </p>
@@ -917,7 +917,7 @@ const Dashboard = () => {
                             </div>
                             <div
                               className="dash-activity-details"
-                              style={i18n.language === 'he' ? { paddingRight: '1rem' } : { paddingLeft: '1rem' }}
+                              style={i18n.language === 'he' ? { paddingRight: '0.5rem' } : { paddingLeft: '0.5rem' }}
                             >
                               <p className="dash-activity-text" style={{ fontSize: '1.07rem', fontWeight: 600 }}>
                                 {text}
@@ -1017,7 +1017,6 @@ const Dashboard = () => {
                   borderRadius: '1.5rem',
                   padding: '2rem',
                   boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
                   position: 'relative',
                   overflow: 'hidden'
                 }}
@@ -1118,7 +1117,6 @@ const Dashboard = () => {
                   borderRadius: '1.5rem',
                   padding: '2rem',
                   boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
                   position: 'relative',
                   overflow: 'hidden'
                 }}

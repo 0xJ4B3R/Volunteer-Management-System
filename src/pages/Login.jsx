@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getDocs, query, where } from "firebase/firestore";
 import { usersRef } from '@/services/firestore';
 import { useNavigate } from 'react-router-dom';
@@ -18,12 +18,67 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showLangOptions, setShowLangOptions] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const langToggleRef = useRef(null);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+    
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+    
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+    
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+    
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+    
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
+
   useEffect(() => {
-    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
-  }, [i18n.language]);
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
+
+  // Sync currentLanguage with i18n.language
+  useEffect(() => {
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
+    }
+  }, [i18n.language, currentLanguage]);
+
+  // Handle click outside language toggle to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
+      }
+    };
+
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -222,27 +277,27 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       {/* Language selector - bottom-right / bottom left according to language */}
-      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
         <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-          <Globe size={35} />
+          <Globe className="lang-icon" />
         </button>
         {showLangOptions && (
           <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={() => { 
+            <button onClick={async () => {
               localStorage.setItem('language', 'en');
-              i18n.changeLanguage('en').then(() => {
-                document.documentElement.dir = 'ltr';
-              });
-              setShowLangOptions(false); 
+              await i18n.changeLanguage('en');
+              setCurrentLanguage('en');
+              applyLanguageDirection('en');
+              setShowLangOptions(false);
             }}>
               English
             </button>
-            <button onClick={() => { 
+            <button onClick={async () => {
               localStorage.setItem('language', 'he');
-              i18n.changeLanguage('he').then(() => {
-                document.documentElement.dir = 'rtl';
-              });
-              setShowLangOptions(false); 
+              await i18n.changeLanguage('he');
+              setCurrentLanguage('he');
+              applyLanguageDirection('he');
+              setShowLangOptions(false);
             }}>
               עברית
             </button>

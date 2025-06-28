@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Phone, CheckCircle2, Lock, Star, BadgeCheck, Plus, X, Eye, EyeOff, Globe, Hand, UserCheck, Hammer, HeartHandshake, ThumbsUp, Award, ShieldCheck, Users, Languages, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
@@ -122,7 +122,9 @@ function Profile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLangOptions, setShowLangOptions] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
   const [animateHours, setAnimateHours] = useState(false);
+  const langToggleRef = useRef(null);
   
   // Professional input states
   const [showSkillInput, setShowSkillInput] = useState(false);
@@ -286,9 +288,62 @@ function Profile() {
     }
   }, [userProfile]);
 
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+    
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+    
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+    
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+    
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+    
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
+
   useEffect(() => {
-    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
-  }, [i18n.language]);
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
+
+  // Sync currentLanguage with i18n.language
+  useEffect(() => {
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
+    }
+  }, [i18n.language, currentLanguage]);
+
+  // Handle click outside language toggle to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
+      }
+    };
+
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
 
   // Professional skill adding function
   const handleAddSkill = async () => {
@@ -708,26 +763,30 @@ function Profile() {
     <Layout>
       <div className="profile-page" dir={i18n.language === "he" ? "rtl" : "ltr"}>
         {/* Language toggle */}
-        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
           <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-            <Globe size={35} />
+            <Globe className="lang-icon" />
           </button>
           {showLangOptions && (
             <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-                              <button onClick={() => { 
-                  localStorage.setItem('language', 'en');
-                  i18n.changeLanguage('en').then(() => {
-                    document.documentElement.dir = 'ltr';
-                  });
-                  setShowLangOptions(false); 
-                }}>English</button>
-                <button onClick={() => { 
-                  localStorage.setItem('language', 'he');
-                  i18n.changeLanguage('he').then(() => {
-                    document.documentElement.dir = 'rtl';
-                  });
-                  setShowLangOptions(false); 
-                }}>עברית</button>
+              <button onClick={async () => {
+                localStorage.setItem('language', 'en');
+                await i18n.changeLanguage('en');
+                setCurrentLanguage('en');
+                applyLanguageDirection('en');
+                setShowLangOptions(false);
+              }}>
+                English
+              </button>
+              <button onClick={async () => {
+                localStorage.setItem('language', 'he');
+                await i18n.changeLanguage('he');
+                setCurrentLanguage('he');
+                applyLanguageDirection('he');
+                setShowLangOptions(false);
+              }}>
+                עברית
+              </button>
             </div>
           )}
         </div>

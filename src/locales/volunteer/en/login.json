@@ -1,6 +1,6 @@
 {
   "login_title": "Sign In",
-  "login_subtitle": "Welcome to the Volunteer Management System. Please enter your credentials to access your account.",
+  "login_subtitle": "Welcome to the Volunteer Management System",
   "username": "Username",
   "password": "Password",
   "login_button": "Sign In",
