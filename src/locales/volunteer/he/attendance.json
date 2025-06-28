@@ -58,7 +58,14 @@
       "grace-period": "תקופת חסד",
       "present": "נוכח",
       "absent": "נעדר",
-      "late": "איחור"
+      "late": "איחור",
+      "completed": "הושלם",
+      "ended": "הסתיים",
+      "in-progress": "בתהליך",
+      "upcoming": "קרוב",
+      "approved": "מאושר",
+      "pending": "ממתין",
+      "rejected": "נדחה"
     },
     "historyItem": {
       "title": "{{title}}",

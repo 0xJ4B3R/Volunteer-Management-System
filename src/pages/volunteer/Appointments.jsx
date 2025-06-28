@@ -43,6 +43,7 @@ export default function Appointments() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [showLangOptions, setShowLangOptions] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
   const [currentUser, setCurrentUser] = useState(null);
   const [currentVolunteer, setCurrentVolunteer] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
@@ -61,10 +62,45 @@ export default function Appointments() {
     }, 5000);
   };
 
-  // Set RTL/LTR based on language
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
+
   useEffect(() => {
-    document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
-  }, [i18n.language]);
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
+
+  // Sync currentLanguage with i18n.language
+  useEffect(() => {
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
+    }
+  }, [i18n.language, currentLanguage]);
 
   // Handle click outside language toggle to close dropdown
   useEffect(() => {
@@ -103,13 +139,13 @@ export default function Appointments() {
   // Find current volunteer record when user and volunteers data is available
   useEffect(() => {
     if (currentUser && volunteers.length > 0) {
-      const volunteer = volunteers.find(v => 
-        v.userId === currentUser.id || 
+      const volunteer = volunteers.find(v =>
+        v.userId === currentUser.id ||
         v.userId === currentUser.uid ||
         v.fullName === currentUser.username // Fallback if linked by name
       );
       setCurrentVolunteer(volunteer);
-      
+
       if (!volunteer) {
         console.warn("Could not find volunteer record for user:", currentUser);
       }
@@ -131,7 +167,7 @@ export default function Appointments() {
       .map(appointmentEntry => {
         // Find the corresponding slot for additional details
         const slot = slots.find(s => s.id === appointmentEntry.appointmentId);
-        
+
         return {
           id: appointmentEntry.appointmentId,
           appointmentId: appointmentEntry.appointmentId,
@@ -163,19 +199,19 @@ export default function Appointments() {
     const pendingRequestSlots = slots
       .filter(slot => {
         // Check if current volunteer has a request for this slot
-        const hasVolunteerRequest = slot.volunteerRequests?.some(vr => 
+        const hasVolunteerRequest = slot.volunteerRequests?.some(vr =>
           vr.volunteerId === currentVolunteer.id
         );
-        
+
         // Only include if there's no corresponding appointment in history yet
-        const hasAppointmentInHistory = currentVolunteer.appointmentHistory?.some(appointment => 
+        const hasAppointmentInHistory = currentVolunteer.appointmentHistory?.some(appointment =>
           appointment.appointmentId === slot.id
         );
-        
+
         return hasVolunteerRequest && !hasAppointmentInHistory;
       })
       .map(slot => {
-        const volunteerRequest = slot.volunteerRequests?.find(vr => 
+        const volunteerRequest = slot.volunteerRequests?.find(vr =>
           vr.volunteerId === currentVolunteer.id
         );
 
@@ -213,11 +249,11 @@ export default function Appointments() {
         // Sort by date, then by time
         const dateA = new Date(a.rawData.date);
         const dateB = new Date(b.rawData.date);
-        
+
         if (dateA.getTime() !== dateB.getTime()) {
           return dateA.getTime() - dateB.getTime();
         }
-        
+
         // If same date, sort by start time
         const timeA = timeToMinutes(a.rawData.startTime);
         const timeB = timeToMinutes(b.rawData.startTime);
@@ -233,11 +269,11 @@ export default function Appointments() {
     return userAppointments.filter((a) => {
       const dateObj = new Date(a.rawData.date);
       const now = new Date();
-      
+
       if (tab === "upcoming") {
         // Only show appointments from appointmentHistory (confirmed appointments)
         // that are not completed and are in the future
-        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment => 
+        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment =>
           appointment.appointmentId === a.appointmentId
         );
         // Check for AppointmentStatus values
@@ -247,7 +283,7 @@ export default function Appointments() {
       }
       if (tab === "past") {
         // Show completed appointments from appointmentHistory
-        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment => 
+        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment =>
           appointment.appointmentId === a.appointmentId
         );
         // Check for AppointmentStatus values
@@ -275,7 +311,7 @@ export default function Appointments() {
     console.log("=== CANCEL DEBUG ===");
     console.log("appointmentId:", appointmentId);
     console.log("currentVolunteer:", currentVolunteer);
-    
+
     if (!currentVolunteer) {
       showNotification("Volunteer data not available", "error");
       return;
@@ -285,20 +321,20 @@ export default function Appointments() {
       // Find the appointment to get slot data
       const appointment = userAppointments.find(a => a.id === appointmentId);
       console.log("Found appointment:", appointment);
-      
+
       if (!appointment) {
         showNotification("Appointment not found", "error");
         return;
       }
 
       // Find the corresponding slot
-      const slot = slots.find(s => 
-        s.id === appointment.rawData.calendarSlotId || 
+      const slot = slots.find(s =>
+        s.id === appointment.rawData.calendarSlotId ||
         s.appointmentId === appointmentId ||
         s.id === appointmentId // For pending requests, the slot ID is used as appointment ID
       );
       console.log("Found slot:", slot);
-      
+
       if (!slot) {
         showNotification("Slot not found", "error");
         return;
@@ -306,39 +342,39 @@ export default function Appointments() {
 
       // Remove the volunteer request from the slot
       const slotRef = doc(db, "calendar_slots", slot.id);
-      
+
       // Find the volunteer request to remove
       console.log("Looking for volunteer request with volunteerId:", currentVolunteer.id);
       console.log("Slot volunteerRequests:", slot.volunteerRequests);
-      
-      const volunteerRequestToRemove = slot.volunteerRequests?.find(vr => 
+
+      const volunteerRequestToRemove = slot.volunteerRequests?.find(vr =>
         vr.volunteerId === currentVolunteer.id
       );
-      
+
       console.log("volunteerRequestToRemove:", volunteerRequestToRemove);
-      
+
       if (volunteerRequestToRemove) {
         console.log("Attempting to remove request from slot:", slot.id);
-        
+
         // Filter out the volunteer request
-        const updatedVolunteerRequests = slot.volunteerRequests.filter(vr => 
+        const updatedVolunteerRequests = slot.volunteerRequests.filter(vr =>
           vr.volunteerId !== currentVolunteer.id
         );
-        
+
         console.log("Original requests:", slot.volunteerRequests.length);
         console.log("Updated requests:", updatedVolunteerRequests.length);
-        
+
         await updateDoc(slotRef, {
           volunteerRequests: updatedVolunteerRequests
         });
-        
+
         showNotification("Request canceled successfully!", "success");
       } else {
         showNotification("No pending request found to cancel", "error");
       }
-      
+
       if (selected && selected.id === appointmentId) setSelected(null);
-      
+
     } catch (error) {
       console.error("Error canceling appointment:", error);
       showNotification("Error canceling request. Please try again.", "error");
@@ -376,7 +412,7 @@ export default function Appointments() {
   // Get status tag with appropriate styling
   const getStatusTag = (appointment) => {
     const status = appointment.status;
-    
+
     const getStatusClass = (status) => {
       switch (status) {
         // VolunteerRequestStatus values
@@ -391,7 +427,7 @@ export default function Appointments() {
         default: return "status-default";
       }
     };
-    
+
     return (
       <div className={`tag session ${getStatusClass(status)}`}>
         {appointment.sessionType}
@@ -404,7 +440,7 @@ export default function Appointments() {
       <div className="profile-page">
         {/* Notification Toast */}
         {notification.show && (
-          <div 
+          <div
             className={`notification-toast ${notification.type}`}
             style={{
               position: 'fixed',
@@ -417,8 +453,8 @@ export default function Appointments() {
               fontSize: '0.875rem',
               fontWeight: '500',
               boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-              backgroundColor: notification.type === 'error' ? '#ef4444' : 
-                             notification.type === 'success' ? '#10b981' : '#3b82f6',
+              backgroundColor: notification.type === 'error' ? '#ef4444' :
+                notification.type === 'success' ? '#10b981' : '#3b82f6',
               transform: 'translateX(0)',
               transition: 'all 0.3s ease',
               maxWidth: '300px',
@@ -448,7 +484,7 @@ export default function Appointments() {
             </div>
           </div>
         )}
-        
+
         {loading ? (
           <LoadingScreen />
         ) : (
@@ -457,7 +493,7 @@ export default function Appointments() {
               <h1 className="profile-title">{t("appointments.title")}</h1>
               <p className="profile-subtitle">{t("appointments.subtitle")}</p>
             </div>
-            
+
             <div className={`profile-tabs ${i18n.language === "he" ? "rtl-tabs" : ""}`}>
               <div className="tabs">
                 {["past", "upcoming", "pending"].map((key) => (
@@ -467,7 +503,7 @@ export default function Appointments() {
                 ))}
               </div>
             </div>
-              
+
             <div className="profile-overview">
               <div className="controls-row">
                 <div className="search-bar">
@@ -475,15 +511,15 @@ export default function Appointments() {
                   <input placeholder={t("appointments.search")} value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
               </div>
-              
+
               <div className="appointments-list">
                 {filtered.length === 0 ? (
                   <div className="note">{t("appointments.noAppointments")}</div>
                 ) : (
                   filtered.map((a) => (
-                    <div 
-                      className="appointment-card session" 
-                      key={a.id} 
+                    <div
+                      className="appointment-card session"
+                      key={a.id}
                       onClick={() => setSelected(a)}
                       style={{
                         borderLeftColor: "#4b5563"
@@ -513,10 +549,10 @@ export default function Appointments() {
                 )}
               </div>
             </div>
-              
+
             {selected && (
-              <div 
-                className="modal-overlay" 
+              <div
+                className="modal-overlay"
                 onClick={() => setSelected(null)}
                 style={{
                   position: 'fixed',
@@ -532,8 +568,8 @@ export default function Appointments() {
                   padding: '1rem'
                 }}
               >
-                <div 
-                  className="modal-content appointments-modal" 
+                <div
+                  className="modal-content appointments-modal"
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     maxWidth: '28rem',
@@ -547,7 +583,7 @@ export default function Appointments() {
                 >
                   {/* Modal Header */}
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <h2 
+                    <h2
                       style={{
                         fontSize: '1.125rem',
                         fontWeight: 'bold',
@@ -558,10 +594,10 @@ export default function Appointments() {
                     >
                       {t("appointments.modal.title")}
                     </h2>
-                    
+
                     {/* Session Type Badge */}
                     <div style={{ marginBottom: '1rem' }}>
-                      <span 
+                      <span
                         style={{
                           backgroundColor: "#6b7280",
                           color: 'white',
@@ -575,8 +611,8 @@ export default function Appointments() {
                         {selected.sessionType}
                       </span>
                     </div>
-                      
-                    <div 
+
+                    <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -593,7 +629,7 @@ export default function Appointments() {
                       </span>
                     </div>
                   </div>
-                    
+
                   {/* Modal Body */}
                   <div style={{ marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -601,7 +637,7 @@ export default function Appointments() {
                         <span style={{ fontWeight: '500', color: '#374151' }}>
                           {t("appointments.modal.time")}:
                         </span>
-                        <span 
+                        <span
                           style={{
                             backgroundColor: '#f3f4f6',
                             borderRadius: '0.25rem',
@@ -613,20 +649,20 @@ export default function Appointments() {
                           {formatTime(selected.time)}
                         </span>
                       </div>
-                        
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontWeight: '500', color: '#374151' }}>
                           {t("appointments.modal.category")}:
                         </span>
                         <span style={{ color: '#6b7280' }}>{selected.location}</span>
                       </div>
-                        
+
                       {selected.note && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <span style={{ fontWeight: '500', color: '#374151' }}>
                             {t("appointments.modal.note")}:
                           </span>
-                          <span 
+                          <span
                             style={{
                               color: '#6b7280',
                               fontStyle: 'italic',
@@ -651,24 +687,24 @@ export default function Appointments() {
                             backgroundColor:
                               // VolunteerRequestStatus values
                               selected.status === "approved" ? "#d1fae5" :
-                              selected.status === "pending"  ? "#fef3c7" :
-                              selected.status === "rejected" ? "#fee2e2" :
-                              // AppointmentStatus values
-                              selected.status === "completed" ? "#dbeafe" :
-                              selected.status === "upcoming" ? "#f0f9ff" :
-                              selected.status === "inProgress" ? "#fef7cd" :
-                              selected.status === "canceled" ? "#fee2e2" : "#f3f4f6",
+                                selected.status === "pending" ? "#fef3c7" :
+                                  selected.status === "rejected" ? "#fee2e2" :
+                                    // AppointmentStatus values
+                                    selected.status === "completed" ? "#dbeafe" :
+                                      selected.status === "upcoming" ? "#f0f9ff" :
+                                        selected.status === "inProgress" ? "#fef7cd" :
+                                          selected.status === "canceled" ? "#fee2e2" : "#f3f4f6",
                             border: `1px solid ${
                               // VolunteerRequestStatus values
                               selected.status === "approved" ? "#10b981" :
-                              selected.status === "pending"  ? "#f59e0b" :
-                              selected.status === "rejected" ? "#ef4444" :
-                              // AppointmentStatus values
-                              selected.status === "completed" ? "#3b82f6" :
-                              selected.status === "upcoming" ? "#0ea5e9" :
-                              selected.status === "inProgress" ? "#eab308" :
-                              selected.status === "canceled" ? "#dc2626" : "#d1d5db"
-                            }`
+                                selected.status === "pending" ? "#f59e0b" :
+                                  selected.status === "rejected" ? "#ef4444" :
+                                    // AppointmentStatus values
+                                    selected.status === "completed" ? "#3b82f6" :
+                                      selected.status === "upcoming" ? "#0ea5e9" :
+                                        selected.status === "inProgress" ? "#eab308" :
+                                          selected.status === "canceled" ? "#dc2626" : "#d1d5db"
+                              }`
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -677,17 +713,17 @@ export default function Appointments() {
                               color:
                                 // VolunteerRequestStatus values
                                 selected.status === "approved" ? "#065f46" :
-                                selected.status === "pending"  ? "#92400e" :
-                                selected.status === "rejected" ? "#991b1b" :
-                                // AppointmentStatus values
-                                selected.status === "completed" ? "#1e40af" :
-                                selected.status === "upcoming" ? "#0c4a6e" :
-                                selected.status === "inProgress" ? "#a16207" :
-                                selected.status === "canceled" ? "#7f1d1d" : "#374151"
+                                  selected.status === "pending" ? "#92400e" :
+                                    selected.status === "rejected" ? "#991b1b" :
+                                      // AppointmentStatus values
+                                      selected.status === "completed" ? "#1e40af" :
+                                        selected.status === "upcoming" ? "#0c4a6e" :
+                                          selected.status === "inProgress" ? "#a16207" :
+                                            selected.status === "canceled" ? "#7f1d1d" : "#374151"
                             }}>
                               {/* Show appropriate label based on status type */}
-                              {["pending", "approved", "rejected"].includes(selected.status) 
-                                ? t("appointments.requestStatusLabel") 
+                              {["pending", "approved", "rejected"].includes(selected.status)
+                                ? t("appointments.requestStatusLabel")
                                 : t("appointments.statusLabel")
                               } {t(`appointments.status.${selected.status}`)}
                             </span>
@@ -704,13 +740,12 @@ export default function Appointments() {
                             borderRadius: "0.5rem",
                             backgroundColor:
                               selected.attendanceStatus === "present" ? "#d1fae5" :
-                              selected.attendanceStatus === "late"  ? "#fef3c7" :
-                              selected.attendanceStatus === "absent" ? "#fee2e2" : "#f3f4f6",
-                            border: `1px solid ${
-                              selected.attendanceStatus === "present" ? "#10b981" :
-                              selected.attendanceStatus === "late"  ? "#f59e0b" :
-                              selected.attendanceStatus === "absent" ? "#ef4444" : "#d1d5db"
-                            }`
+                                selected.attendanceStatus === "late" ? "#fef3c7" :
+                                  selected.attendanceStatus === "absent" ? "#fee2e2" : "#f3f4f6",
+                            border: `1px solid ${selected.attendanceStatus === "present" ? "#10b981" :
+                                selected.attendanceStatus === "late" ? "#f59e0b" :
+                                  selected.attendanceStatus === "absent" ? "#ef4444" : "#d1d5db"
+                              }`
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -718,8 +753,8 @@ export default function Appointments() {
                               fontWeight: 500,
                               color:
                                 selected.attendanceStatus === "present" ? "#065f46" :
-                                selected.attendanceStatus === "late"  ? "#92400e" :
-                                selected.attendanceStatus === "absent" ? "#991b1b" : "#374151"
+                                  selected.attendanceStatus === "late" ? "#92400e" :
+                                    selected.attendanceStatus === "absent" ? "#991b1b" : "#374151"
                             }}>
                               {t("appointments.attendanceLabel")} {t(`appointments.attendance.${selected.attendanceStatus}`)}
                             </span>
@@ -728,7 +763,7 @@ export default function Appointments() {
                       )}
                     </div>
                   </div>
-                    
+
                   {/* Modal Footer */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button
@@ -763,20 +798,20 @@ export default function Appointments() {
         </button>
         {showLangOptions && (
           <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={() => {
+            <button onClick={async () => {
               localStorage.setItem('language', 'en');
-              i18n.changeLanguage('en').then(() => {
-                document.documentElement.dir = 'ltr';
-              });
+              await i18n.changeLanguage('en');
+              setCurrentLanguage('en');
+              applyLanguageDirection('en');
               setShowLangOptions(false);
             }}>
               English
             </button>
-            <button onClick={() => {
+            <button onClick={async () => {
               localStorage.setItem('language', 'he');
-              i18n.changeLanguage('he').then(() => {
-                document.documentElement.dir = 'rtl';
-              });
+              await i18n.changeLanguage('he');
+              setCurrentLanguage('he');
+              applyLanguageDirection('he');
               setShowLangOptions(false);
             }}>
               עברית
@@ -786,4 +821,4 @@ export default function Appointments() {
       </div>
     </Layout>
   );
-}
+} 

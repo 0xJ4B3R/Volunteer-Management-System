@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award, 
-  FileText, CheckCircle2, XCircle, History, CalendarDays, 
-  CalendarClock, ChevronRight 
+import {
+  Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award,
+  FileText, CheckCircle2, XCircle, History, CalendarDays,
+  CalendarClock, ChevronRight
 } from 'lucide-react';
-import { 
-  collection, getDocs, query, where, orderBy, limit, doc, 
-  updateDoc, addDoc, Timestamp 
+import {
+  collection, getDocs, query, where, orderBy, limit, doc,
+  updateDoc, addDoc, Timestamp
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,62 +16,62 @@ import LoadingScreen from '@/components/volunteer/InnerLS';
 import './styles/Attendance.css';
 
 // Import proper Firestore collection references
-import { 
-  calendar_slotsRef, 
-  attendanceRef, 
+import {
+  calendar_slotsRef,
+  attendanceRef,
   volunteersRef,
   docToObject
 } from '@/services/firestore';
 
 // Constants
-  const RECORDS_PER_PAGE = 5;
+const RECORDS_PER_PAGE = 5;
 
 // Helper Functions
-  const parseTimeString = (timeStr) => {
-    if (!timeStr) return null;
-    
-    const [time, period] = timeStr.trim().split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-    
-    if (period?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-    if (period?.toLowerCase() === 'am' && hours === 12) hours = 0;
-    
-    const today = new Date();
-    const timeDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes || 0);
-    
-    return timeDate;
-  };
+const parseTimeString = (timeStr) => {
+  if (!timeStr) return null;
+
+  const [time, period] = timeStr.trim().split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+
+  if (period?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
+  if (period?.toLowerCase() === 'am' && hours === 12) hours = 0;
+
+  const today = new Date();
+  const timeDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes || 0);
+
+  return timeDate;
+};
 
 const getHoursFromTimeRange = (startTime, endTime) => {
   if (!startTime || !endTime) {
     console.log('Missing time data:', { startTime, endTime });
     return 0;
   }
-  
+
   const parseTime = (timeStr) => {
     if (!timeStr) return 0;
-    
+
     // Handle different time formats
     let time = timeStr.trim();
     let period = '';
-    
+
     // Check if it has AM/PM
     if (time.includes('AM') || time.includes('PM')) {
       const parts = time.split(' ');
       time = parts[0];
       period = parts[1];
     }
-    
+
     // Parse hours and minutes
     const [hours, minutes] = time.split(':').map(Number);
-    
+
     if (isNaN(hours) || isNaN(minutes)) {
       console.log('Invalid time format:', timeStr);
       return 0;
     }
-    
+
     let totalHours = hours;
-    
+
     // Handle AM/PM conversion
     if (period) {
       if (period.toLowerCase() === 'pm' && hours !== 12) {
@@ -80,7 +80,7 @@ const getHoursFromTimeRange = (startTime, endTime) => {
         totalHours = 0;
       }
     }
-    
+
     return totalHours + (minutes || 0) / 60;
   };
 
@@ -97,18 +97,18 @@ const getHoursFromTimeRange = (startTime, endTime) => {
   }
 };
 
-  const getAttendanceStatus = (startTime, endTime) => {
-    const now = new Date();
-    const sessionStart = parseTimeString(startTime);
-    const sessionEnd = parseTimeString(endTime);
-    
+const getAttendanceStatus = (startTime, endTime) => {
+  const now = new Date();
+  const sessionStart = parseTimeString(startTime);
+  const sessionEnd = parseTimeString(endTime);
+
   if (!sessionStart || !sessionEnd) return 'present';
-    
-    if (now > sessionEnd) {
+
+  if (now > sessionEnd) {
     return 'ended';
-    } else if (now > sessionStart) {
+  } else if (now > sessionStart) {
     return 'in-progress';
-    } else {
+  } else {
     return 'upcoming';
   }
 };
@@ -197,63 +197,63 @@ const useTodaySessions = (username, userId) => {
         });
 
         // Check attendance records and build sessions
-          const sessionsWithAttendance = await Promise.all(
+        const sessionsWithAttendance = await Promise.all(
           todayAppointments.map(async (appointment) => {
-              try {
+            try {
               // Check if attendance already exists
-                const existingAttendanceQuery = query(
-                  attendanceRef,
+              const existingAttendanceQuery = query(
+                attendanceRef,
                 where('appointmentId', '==', appointment.appointmentId),
                 where('volunteerId.id', '==', userId)
-                );
-                
-                const existingAttendanceSnapshot = await getDocs(existingAttendanceQuery);
-                
-                if (!existingAttendanceSnapshot.empty) {
+              );
+
+              const existingAttendanceSnapshot = await getDocs(existingAttendanceQuery);
+
+              if (!existingAttendanceSnapshot.empty) {
                 return null; // Skip if attendance already exists
-                }
-              } catch (attendanceError) {
+              }
+            } catch (attendanceError) {
               // Fallback check
               const allAttendanceSnapshot = await getDocs(attendanceRef);
-                const existingRecord = allAttendanceSnapshot.docs.find(doc => {
-                  const data = doc.data();
+              const existingRecord = allAttendanceSnapshot.docs.find(doc => {
+                const data = doc.data();
                 return (data.appointmentId === appointment.appointmentId) &&
-                       (data.volunteerId?.id === userId || data.volunteerId === userId);
-                });
-                
-                if (existingRecord) {
-                  return null;
-                }
+                  (data.volunteerId?.id === userId || data.volunteerId === userId);
+              });
+
+              if (existingRecord) {
+                return null;
               }
-              
+            }
+
             // Get calendar slot data for this appointment
             const calendarSlot = calendarData[appointment.appointmentId];
-            
-              return {
+
+            return {
               id: appointment.appointmentId,
               time: `${appointment.startTime} - ${appointment.endTime}`,
               residents: appointment.residentIds || calendarSlot?.residentIds || [],
               description: calendarSlot?.notes || 'Volunteer session with residents',
-                status: 'not_confirmed',
+              status: 'not_confirmed',
               sessionType: calendarSlot?.isCustom ? calendarSlot.customLabel : 'General Session',
               date: appointment.date,
               appointmentId: appointment.appointmentId,
               startTime: appointment.startTime,
               endTime: appointment.endTime
-              };
-            })
-          );
+            };
+          })
+        );
 
-          const availableSessions = sessionsWithAttendance.filter(session => session !== null);
-          
+        const availableSessions = sessionsWithAttendance.filter(session => session !== null);
+
         // Sort by start time
-          availableSessions.sort((a, b) => {
-            const timeA = parseTimeString(a.startTime);
-            const timeB = parseTimeString(b.startTime);
-            return timeA - timeB;
-          });
+        availableSessions.sort((a, b) => {
+          const timeA = parseTimeString(a.startTime);
+          const timeB = parseTimeString(b.startTime);
+          return timeA - timeB;
+        });
 
-          setTodaySessions(availableSessions);
+        setTodaySessions(availableSessions);
       } catch (error) {
         console.error('Error fetching today\'s sessions:', error);
         setTodaySessions([]);
@@ -280,7 +280,7 @@ const useAttendanceHistory = (username, userId) => {
     try {
       const calendarSnapshot = await getDocs(calendar_slotsRef);
       const calendarData = {};
-      
+
       calendarSnapshot.docs.forEach(doc => {
         const data = docToObject(doc);
         const appointmentId = data.appointmentId || doc.id;
@@ -292,7 +292,7 @@ const useAttendanceHistory = (username, userId) => {
 
       const enrichedHistory = records.map(record => {
         const appointmentData = calendarData[record.appointmentId];
-        
+
         console.log('Enriching appointmentHistory record:', {
           recordId: record.id,
           appointmentId: record.appointmentId,
@@ -307,14 +307,14 @@ const useAttendanceHistory = (username, userId) => {
             time: record.time
           }
         });
-        
+
         let recordDate;
         if (record.date) {
           recordDate = new Date(record.date);
         } else {
           recordDate = new Date();
         }
-        
+
         // Calculate hours - try multiple sources
         let hours = 0;
         if (appointmentData?.startTime && appointmentData?.endTime) {
@@ -331,17 +331,17 @@ const useAttendanceHistory = (username, userId) => {
             console.log('Hours from time string:', hours);
           }
         }
-        
+
         return {
           id: record.id,
           date: recordDate.toISOString().split('T')[0],
-          title: appointmentData?.customLabel || 
-                 appointmentData?.sessionType || 
-                 appointmentData?.notes || 
-                 'Volunteer Session',
-          time: appointmentData ? 
-                `${appointmentData.startTime} - ${appointmentData.endTime}` : 
-                record.time || 'Time not available',
+          title: appointmentData?.customLabel ||
+            appointmentData?.sessionType ||
+            appointmentData?.notes ||
+            'Volunteer Session',
+          time: appointmentData ?
+            `${appointmentData.startTime} - ${appointmentData.endTime}` :
+            record.time || 'Time not available',
           status: record.status || 'completed',
           hours: hours,
           notes: record.notes || '',
@@ -349,7 +349,7 @@ const useAttendanceHistory = (username, userId) => {
           source: 'appointmentHistory'
         };
       });
-      
+
       return enrichedHistory;
     } catch (error) {
       console.error('Error enriching history data:', error);
@@ -364,21 +364,21 @@ const useAttendanceHistory = (username, userId) => {
       // ONLY fetch from volunteer's appointmentHistory
       const volunteerSnapshot = await getDocs(volunteersRef);
       let appointmentHistoryRecords = [];
-      
+
       const volunteer = volunteerSnapshot.docs
         .map(doc => docToObject(doc))
         .find(v => v.userId === userId || v.userId === username);
-      
+
       if (volunteer && volunteer.appointmentHistory) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         console.log('Fetching history from volunteer appointmentHistory:', {
           volunteerId: volunteer.id,
           appointmentHistoryCount: volunteer.appointmentHistory.length,
           appointmentHistory: volunteer.appointmentHistory
         });
-        
+
         appointmentHistoryRecords = volunteer.appointmentHistory
           .filter(appointment => {
             // Filter out upcoming sessions - only include past/completed sessions
@@ -407,14 +407,14 @@ const useAttendanceHistory = (username, userId) => {
 
       setAllUserRecords(appointmentHistoryRecords);
       setTotalHistoryCount(appointmentHistoryRecords.length);
-      
+
       const initialRecords = appointmentHistoryRecords.slice(0, RECORDS_PER_PAGE);
       setHasMoreHistory(appointmentHistoryRecords.length > RECORDS_PER_PAGE);
       setHistoryPage(0);
-      
+
       const enrichedHistory = await enrichHistoryData(initialRecords);
       setAttendanceHistory(enrichedHistory);
-      
+
     } catch (error) {
       console.error('Error fetching attendance history:', error);
     }
@@ -424,25 +424,25 @@ const useAttendanceHistory = (username, userId) => {
     if (historyLoading || !hasMoreHistory) return;
 
     setHistoryLoading(true);
-    
+
     try {
       const nextPage = historyPage + 1;
       const startIndex = nextPage * RECORDS_PER_PAGE;
       const endIndex = startIndex + RECORDS_PER_PAGE;
-      
+
       const nextPageRecords = allUserRecords.slice(startIndex, endIndex);
-      
+
       if (nextPageRecords.length > 0) {
         const enrichedNewRecords = await enrichHistoryData(nextPageRecords);
-        
+
         setAttendanceHistory(prev => [...prev, ...enrichedNewRecords]);
         setHistoryPage(nextPage);
-        
+
         setHasMoreHistory(endIndex < allUserRecords.length);
       } else {
         setHasMoreHistory(false);
       }
-      
+
     } catch (error) {
       console.error('Error loading more history:', error);
     } finally {
@@ -456,7 +456,7 @@ const useAttendanceHistory = (username, userId) => {
     }
   }, [userId, username]);
 
-        return {
+  return {
     attendanceHistory,
     historyLoading,
     hasMoreHistory,
@@ -469,95 +469,95 @@ const useAttendanceHistory = (username, userId) => {
 // Components
 const NotificationToast = ({ notification, onClose }) => {
   if (!notification.show) return null;
-    
-    return (
-          <div 
-            className={`notification-toast ${notification.type}`}
-            style={{
-              position: 'fixed',
-              top: '20px',
-              right: '20px',
-              zIndex: 9999,
-              padding: '1rem 1.5rem',
-              borderRadius: '0.5rem',
-              color: 'white',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-              backgroundColor: notification.type === 'error' ? '#ef4444' : 
-                             notification.type === 'success' ? '#10b981' : 
-                             notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
-              transform: 'translateX(0)',
-              transition: 'all 0.3s ease',
-              maxWidth: '300px',
-              wordWrap: 'break-word'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {notification.type === 'error' && <span>❌</span>}
-              {notification.type === 'success' && <span>✅</span>}
-              {notification.type === 'warning' && <span>⚠️</span>}
-              {notification.type === 'info' && <span>ℹ️</span>}
-              <span>{notification.message}</span>
-              <button
+
+  return (
+    <div
+      className={`notification-toast ${notification.type}`}
+      style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 9999,
+        padding: '1rem 1.5rem',
+        borderRadius: '0.5rem',
+        color: 'white',
+        fontSize: '0.875rem',
+        fontWeight: '500',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+        backgroundColor: notification.type === 'error' ? '#ef4444' :
+          notification.type === 'success' ? '#10b981' :
+            notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
+        transform: 'translateX(0)',
+        transition: 'all 0.3s ease',
+        maxWidth: '300px',
+        wordWrap: 'break-word'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {notification.type === 'error' && <span>❌</span>}
+        {notification.type === 'success' && <span>✅</span>}
+        {notification.type === 'warning' && <span>⚠️</span>}
+        {notification.type === 'info' && <span>ℹ️</span>}
+        <span>{notification.message}</span>
+        <button
           onClick={onClose}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'white',
-                  fontSize: '1.2rem',
-                  cursor: 'pointer',
-                  marginLeft: 'auto',
-                  padding: '0',
-                  lineHeight: '1'
-                }}
-              >
-                ×
-              </button>
-            </div>
-          </div>
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'white',
+            fontSize: '1.2rem',
+            cursor: 'pointer',
+            marginLeft: 'auto',
+            padding: '0',
+            lineHeight: '1'
+          }}
+        >
+          ×
+        </button>
+      </div>
+    </div>
   );
 };
 
-const LanguageToggle = ({ i18n, showLangOptions, setShowLangOptions, langToggleRef }) => {
+const LanguageToggle = ({ i18n, showLangOptions, setShowLangOptions, langToggleRef, setCurrentLanguage, applyLanguageDirection }) => {
   return (
     <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
-          <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+      <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
         <Globe className="lang-icon" />
-          </button>
-          {showLangOptions && (
-            <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-                              <button onClick={() => { 
-                  localStorage.setItem('language', 'en');
-                  i18n.changeLanguage('en').then(() => {
-                    document.documentElement.dir = 'ltr';
-                  });
-                  setShowLangOptions(false); 
+      </button>
+      {showLangOptions && (
+        <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+          <button onClick={async () => {
+            localStorage.setItem('language', 'en');
+            await i18n.changeLanguage('en');
+            setCurrentLanguage('en');
+            applyLanguageDirection('en');
+            setShowLangOptions(false);
           }}>
             English
           </button>
-                <button onClick={() => { 
-                  localStorage.setItem('language', 'he');
-                  i18n.changeLanguage('he').then(() => {
-                    document.documentElement.dir = 'rtl';
-                  });
-                  setShowLangOptions(false); 
+          <button onClick={async () => {
+            localStorage.setItem('language', 'he');
+            await i18n.changeLanguage('he');
+            setCurrentLanguage('he');
+            applyLanguageDirection('he');
+            setShowLangOptions(false);
           }}>
             עברית
           </button>
-            </div>
-          )}
         </div>
+      )}
+    </div>
   );
 };
 
 const SessionCard = ({ session, index, onConfirm, onCancel, t, loadingState }) => {
   const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-  
+
   const getSessionTimeStatus = () => {
     const now = new Date();
     const sessionStart = parseTimeString(session.startTime);
-    
+
     switch (attendanceStatus) {
       case 'ended':
         return {
@@ -618,92 +618,92 @@ const SessionCard = ({ session, index, onConfirm, onCancel, t, loadingState }) =
 
   return (
     <div className="session-card">
-                        <div className="session-card-content">
-                          <div className="session-card-header">
-                            <h3 className="session-card-title">
+      <div className="session-card-content">
+        <div className="session-card-header">
+          <h3 className="session-card-title">
             {t('attendance.sessionNumber', { number: index + 1 })}
-                            </h3>
-                            <span className="session-time-badge">{session.time}</span>
-                          </div>
+          </h3>
+          <span className="session-time-badge">{session.time}</span>
+        </div>
 
         <div className="detail-divider"></div>
 
-                          <div className="session-details">
-                          </div>
+        <div className="session-details">
+        </div>
 
-                          <div className="status-section">
-                            <div className="status-row">
-                              <span className="status-label">{t('attendance.status')}:</span>
+        <div className="status-section">
+          <div className="status-row">
+            <span className="status-label">{t('attendance.status')}:</span>
             <span className={`status-badge ${getStatusClass(session.status)}`}>
               {getStatusText(session.status)}
-                              </span>
-                            </div>
+            </span>
+          </div>
 
           {timeStatus && (
-                                  <div className={`alert-box alert-${timeStatus.type}`}>
-                                    <AlertCircle className="alert-icon" />
-                                    <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.sessionTiming')}</p>
-                                      <p className="alert-message">{timeStatus.message}</p> 
-                                    </div>
-                                  </div>
+            <div className={`alert-box alert-${timeStatus.type}`}>
+              <AlertCircle className="alert-icon" />
+              <div className="alert-content">
+                <p className="alert-title">{t('attendance.sessionTiming')}</p>
+                <p className="alert-message">{timeStatus.message}</p>
+              </div>
+            </div>
           )}
 
           {!canConfirm ? (
-                                  <div className="status-message status-error">
-                                    <div className="status-message-header">
-                                      <XCircle className="status-message-icon" />
-                                      <p className="status-message-title">{t('attendance.sessionEnded')}</p>
-                                    </div>
+            <div className="status-message status-error">
+              <div className="status-message-header">
+                <XCircle className="status-message-icon" />
+                <p className="status-message-title">{t('attendance.sessionEnded')}</p>
+              </div>
               <p className="status-message-text">{t('attendance.cannotConfirm')}</p>
-                                  </div>
+            </div>
           ) : (
-                                <>
-                                  <div className="alert-box alert-warning">
-                                    <AlertCircle className="alert-icon" />
-                                    <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.confirmTitle')}</p>
-                                      <p className="alert-message">{t('attendance.confirmMessage')}</p>
-                                    </div>
-                                  </div>
+            <>
+              <div className="alert-box alert-warning">
+                <AlertCircle className="alert-icon" />
+                <div className="alert-content">
+                  <p className="alert-title">{t('attendance.confirmTitle')}</p>
+                  <p className="alert-message">{t('attendance.confirmMessage')}</p>
+                </div>
+              </div>
 
-                                  <div className="action-buttons">
-                                    <button
-                                      onClick={() => onCancel(session.id)}
-                                      className="btn btn-cancel"
-                                      disabled={loadingState}
-                                    >
-                                      {loadingState === 'cancelling' ? (
-                                        <>
-                                          <div className="loading-spinner"></div>
-                                          <span className="btn-text">{t('attendance.cancelling')}</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                      <X className="btn-icon" />
-                                      <span className="btn-text">{t('attendance.unableToAttend')}</span>
-                                        </>
-                                      )}
-                                    </button>
-                                    <button
-                                      onClick={() => onConfirm(session.id)}
-                                      className="btn btn-confirm"
-                                      disabled={loadingState}
-                                    >
-                                      {loadingState === 'confirming' ? (
-                                        <>
-                                          <div className="loading-spinner"></div>
-                                          <span className="btn-text">{t('attendance.confirming')}</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                      <Check className="btn-icon" />
-                                          <span className="btn-text">{t('attendance.confirm')}</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                </>
+              <div className="action-buttons">
+                <button
+                  onClick={() => onCancel(session.id)}
+                  className="btn btn-cancel"
+                  disabled={loadingState}
+                >
+                  {loadingState === 'cancelling' ? (
+                    <>
+                      <div className="loading-spinner"></div>
+                      <span className="btn-text">{t('attendance.cancelling')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <X className="btn-icon" />
+                      <span className="btn-text">{t('attendance.unableToAttend')}</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => onConfirm(session.id)}
+                  className="btn btn-confirm"
+                  disabled={loadingState}
+                >
+                  {loadingState === 'confirming' ? (
+                    <>
+                      <div className="loading-spinner"></div>
+                      <span className="btn-text">{t('attendance.confirming')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="btn-icon" />
+                      <span className="btn-text">{t('attendance.confirm')}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -742,8 +742,8 @@ const HistoryItem = ({ session, t, i18n }) => {
           <span className={`status-badge ${getStatusClass(session.status)}`}>
             {getStatusText(session.status)}
           </span>
-                          </div>
-        
+        </div>
+
         <div className="history-item-details">
           <div className="history-detail">
             <CalendarDays className="history-detail-icon" />
@@ -753,11 +753,11 @@ const HistoryItem = ({ session, t, i18n }) => {
               day: 'numeric',
               year: 'numeric'
             })}</span>
-                        </div>
+          </div>
           <div className="history-detail">
             <Clock className="history-detail-icon" />
             <span>{session.time}</span>
-                      </div>
+          </div>
         </div>
 
         {(session.status === 'present' || session.status === 'completed') && (
@@ -765,7 +765,7 @@ const HistoryItem = ({ session, t, i18n }) => {
             <div className="metric-item">
               <TrendingUp className="metric-icon" />
               <span className="metric-text">
-                {session.hours < 1 
+                {session.hours < 1
                   ? t('attendance.minutesCompleted', { minutes: Math.round(session.hours * 60) })
                   : t('attendance.hoursCompleted', { hours: session.hours.toFixed(1) })
                 }
@@ -790,6 +790,7 @@ const Attendance = () => {
   const { t, i18n } = useTranslation('attendance');
   const [activeTab, setActiveTab] = useState('Today');
   const [showLangOptions, setShowLangOptions] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
   const [loadingStates, setLoadingStates] = useState({});
   const langToggleRef = useRef(null);
 
@@ -797,19 +798,54 @@ const Attendance = () => {
   const { username, userId } = useAuth();
   const { notification, showNotification } = useNotifications();
   const { todaySessions, setTodaySessions, loading } = useTodaySessions(username, userId);
-  const { 
-    attendanceHistory, 
-    historyLoading, 
-    hasMoreHistory, 
-    totalHistoryCount, 
-    loadMoreHistory, 
-    refreshHistory 
+  const {
+    attendanceHistory,
+    historyLoading,
+    hasMoreHistory,
+    totalHistoryCount,
+    loadMoreHistory,
+    refreshHistory
   } = useAttendanceHistory(username, userId);
 
-  // Set RTL/LTR based on language
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
+
   useEffect(() => {
-    document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
-  }, [i18n.language]);
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
+
+  // Sync currentLanguage with i18n.language
+  useEffect(() => {
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
+    }
+  }, [i18n.language, currentLanguage]);
 
   // Handle click outside language toggle to close dropdown
   useEffect(() => {
@@ -839,7 +875,7 @@ const Attendance = () => {
     try {
       const [startTime, endTime] = session.time.split(' - ');
       const attendanceStatus = getAttendanceStatus(startTime, endTime);
-      
+
       if (attendanceStatus === 'ended') {
         showNotification('Cannot confirm attendance - the session has already ended.', 'error');
         return;
@@ -852,7 +888,7 @@ const Attendance = () => {
         where('volunteerId.id', '==', userId)
       );
       const existingSnapshot = await getDocs(existingQuery);
-      
+
       if (!existingSnapshot.empty) {
         showNotification('Attendance already recorded for this session.', 'warning');
         setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
@@ -871,11 +907,11 @@ const Attendance = () => {
 
       console.log('Creating attendance record:', attendanceData);
       await addDoc(attendanceRef, attendanceData);
-      
-      showNotification('Attendance confirmed successfully!', 'success');      
+
+      showNotification('Attendance confirmed successfully!', 'success');
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       await refreshHistory();
-      
+
     } catch (error) {
       console.error('Error confirming attendance:', error);
       showNotification('Error confirming attendance. Please try again.', 'error');
@@ -900,7 +936,7 @@ const Attendance = () => {
         where('volunteerId.id', '==', userId)
       );
       const existingSnapshot = await getDocs(existingQuery);
-      
+
       if (!existingSnapshot.empty) {
         showNotification('Attendance already recorded for this session.', 'warning');
         setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
@@ -919,11 +955,11 @@ const Attendance = () => {
 
       console.log('Creating attendance record:', attendanceData);
       await addDoc(attendanceRef, attendanceData);
-      
-      showNotification('Marked as unable to attend.', 'info');  
+
+      showNotification('Marked as unable to attend.', 'info');
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       await refreshHistory();
-      
+
     } catch (error) {
       console.error('Error cancelling attendance:', error);
       showNotification('Error cancelling attendance. Please try again.', 'error');
@@ -935,22 +971,22 @@ const Attendance = () => {
 
   // Calculate stats
   const stats = useMemo(() => ({
-    totalHours: attendanceHistory.reduce((sum, session) => 
+    totalHours: attendanceHistory.reduce((sum, session) =>
       sum + ((session.status === 'present' || session.status === 'completed') ? session.hours : 0), 0
     ),
-    completedSessions: attendanceHistory.filter(session => 
+    completedSessions: attendanceHistory.filter(session =>
       session.status === 'present' || session.status === 'completed'
     ).length,
-    attendanceRate: attendanceHistory.length > 0 
+    attendanceRate: attendanceHistory.length > 0
       ? ((attendanceHistory.filter(session => session.status === 'present' || session.status === 'completed').length / attendanceHistory.length) * 100).toFixed(1)
       : 0,
     thisMonthHours: attendanceHistory
       .filter(session => {
         const sessionDate = new Date(session.date);
         const now = new Date();
-        return sessionDate.getMonth() === now.getMonth() && 
-               sessionDate.getFullYear() === now.getFullYear() &&
-               (session.status === 'present' || session.status === 'completed');
+        return sessionDate.getMonth() === now.getMonth() &&
+          sessionDate.getFullYear() === now.getFullYear() &&
+          (session.status === 'present' || session.status === 'completed');
       })
       .reduce((sum, session) => sum + session.hours, 0)
   }), [attendanceHistory]);
@@ -974,16 +1010,16 @@ const Attendance = () => {
   return (
     <Layout>
       <div className="attendance-container" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
-        <NotificationToast 
-          notification={notification} 
-          onClose={() => showNotification("", "")} 
+        <NotificationToast
+          notification={notification}
+          onClose={() => showNotification("", "")}
         />
 
         <div className="attendance-wrapper">
           {/* Header */}
-          <div className="attendance-header">
-            <h1 className="attendance-title">{t('attendance.title')}</h1>
-            <p className="attendance-subtitle">{t('attendance.subtitle')}</p>
+          <div className="profile-header">
+            <h1 className="profile-title">{t('attendance.title')}</h1>
+            <p className="profile-subtitle">{t('attendance.subtitle')}</p>
           </div>
 
           {/* Tab Navigation */}
@@ -1075,11 +1111,11 @@ const Attendance = () => {
                         i18n={i18n}
                       />
                     ))}
-                    
+
                     {/* Load More Button */}
                     {hasMoreHistory && (
                       <div className="load-more">
-                        <button 
+                        <button
                           className={`load-more-btn ${historyLoading ? 'loading' : ''}`}
                           onClick={loadMoreHistory}
                           disabled={historyLoading}
@@ -1101,7 +1137,7 @@ const Attendance = () => {
                         </p>
                       </div>
                     )}
-                    
+
                     {!hasMoreHistory && attendanceHistory.length >= RECORDS_PER_PAGE && (
                       <div className="load-more">
                         <p className="all-loaded-text">
@@ -1120,14 +1156,16 @@ const Attendance = () => {
           )}
         </div>
       </div>
-      <LanguageToggle 
+      <LanguageToggle
         i18n={i18n}
         showLangOptions={showLangOptions}
         setShowLangOptions={setShowLangOptions}
         langToggleRef={langToggleRef}
+        setCurrentLanguage={setCurrentLanguage}
+        applyLanguageDirection={applyLanguageDirection}
       />
     </Layout>
   );
 };
 
-export default Attendance;
+export default Attendance; 

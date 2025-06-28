@@ -58,7 +58,14 @@
       "grace-period": "Grace Period",
       "present": "Present",
       "absent": "Absent",
-      "late": "Late"
+      "late": "Late",
+      "completed": "Completed",
+      "ended": "Ended",
+      "in-progress": "In Progress",
+      "upcoming": "Upcoming",
+      "approved": "Approved",
+      "pending": "Pending",
+      "rejected": "Rejected"
     },
     "historyItem": {
       "title": "{{title}}",

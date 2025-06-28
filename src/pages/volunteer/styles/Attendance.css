@@ -28,6 +28,24 @@
   font-size: 1rem;
 }
 
+/* Profile Header (matching Appointments.css) */
+.profile-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.profile-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #305531;
+  margin-bottom: 0.5rem;
+}
+
+.profile-subtitle {
+  font-size: 1rem;
+  color: #305531;
+}
+
 /* Tab Navigation */
 .tab-navigation {
   display: flex;
@@ -550,8 +568,13 @@
 }
 
 @keyframes float-particles {
-  0% { transform: translateY(0) rotate(0deg); }
-  100% { transform: translateY(-100px) rotate(360deg); }
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+  }
 }
 
 .monthly-summary-title {
@@ -607,7 +630,7 @@
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
   transform: rotate(45deg);
   transition: all 0.6s ease;
   opacity: 0;
@@ -1203,8 +1226,15 @@
 
 /* Animation for counting numbers */
 @keyframes countUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .monthly-stat-value {
@@ -1339,8 +1369,15 @@
 }
 
 @keyframes pulse-warning {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .grace-period-countdown {
@@ -1372,8 +1409,15 @@
 }
 
 @keyframes countdown-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 .countdown-time {
@@ -1419,8 +1463,15 @@
 }
 
 @keyframes gentle-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.9; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
 }
 
 .time-status-indicator.late {
@@ -1464,8 +1515,15 @@
 }
 
 @keyframes progress-warning {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .session-progress-fill.late {
@@ -1510,8 +1568,13 @@
 }
 
 @keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Empty State */
@@ -1977,15 +2040,15 @@
   .session-card {
     border: 2px solid #000;
   }
-  
+
   .alert-box {
     border: 2px solid #000;
   }
-  
+
   .monthly-summary {
     border: 2px solid #000;
   }
-  
+
   .history-item {
     border: 2px solid #000;
   }
@@ -1993,12 +2056,13 @@
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   .session-progress-fill,
   .countdown-circle,
   .time-status-indicator.grace-period {
     animation: none;
   }
-  
+
   .session-card:active,
   .btn:active {
     transform: none;
@@ -2011,18 +2075,18 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   .btn {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     min-height: 44px;
   }
-  
+
   .tab-button {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   .upcoming-session-item {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -2041,8 +2105,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Disabled Button States */
@@ -2095,10 +2164,10 @@
     height: 0.875rem;
     margin-right: 0.375rem;
   }
-  
+
   .btn.loading::after {
     width: 0.875rem;
     height: 0.875rem;
     margin: -0.4375rem 0 0 -0.4375rem;
   }
-}
+} 

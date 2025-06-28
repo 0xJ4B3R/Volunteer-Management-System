@@ -1,7 +1,7 @@
 import { Calendar, CalendarDays, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
@@ -28,16 +28,16 @@ const getSessionBorderColor = () => {
 // Utility: Only allow sign up for today or future events
 const isEventAvailable = (eventDate) => {
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(0, 0, 0, 0);
   const eventDay = new Date(eventDate);
-  eventDay.setHours(0,0,0,0);
+  eventDay.setHours(0, 0, 0, 0);
   return eventDay >= today;
 };
 
 // Updated utility: Convert 24-hour time string to minutes for sorting
 const timeToMinutes = (timeStr) => {
   if (!timeStr) return 0;
-  
+
   // Handle 24-hour format
   const timeParts = timeStr.split(':');
   if (timeParts.length === 2) {
@@ -45,7 +45,7 @@ const timeToMinutes = (timeStr) => {
     const minutes = parseInt(timeParts[1], 10);
     return hours * 60 + minutes;
   }
-  
+
   // Fallback for single number like "9" or "13"
   const hours = parseInt(timeStr, 10);
   return hours * 60;
@@ -65,18 +65,18 @@ const calculateTimePosition = (timeStr) => {
   const minutes = timeToMinutes(timeStr);
   const startOfDay = 9 * 60; // 9 AM in minutes (540 minutes)
   const pixelsPerHour = 50; // Pixels per hour - adjust this for spacing
-  
+
   if (minutes < startOfDay) {
     return 0; // Before 9 AM, place at top
   }
-  
+
   return ((minutes - startOfDay) / 60) * pixelsPerHour;
 };
 
 // Position slots by actual time
 const positionSlotsByTime = (slotsForDay) => {
   const sortedSlots = sortSlotsByTime(slotsForDay);
-  
+
   // Group slots that have the exact same start time for stacking
   const timeGroups = {};
   sortedSlots.forEach(slot => {
@@ -84,13 +84,13 @@ const positionSlotsByTime = (slotsForDay) => {
     if (!timeGroups[key]) timeGroups[key] = [];
     timeGroups[key].push(slot);
   });
-  
+
   // Create positioned slots with calculated top positions
   const positionedSlots = [];
-  
+
   Object.entries(timeGroups).forEach(([time, slots]) => {
     const basePosition = calculateTimePosition(time);
-    
+
     slots.forEach((slot, stackIndex) => {
       positionedSlots.push({
         ...slot,
@@ -100,35 +100,35 @@ const positionSlotsByTime = (slotsForDay) => {
       });
     });
   });
-  
+
   return positionedSlots;
 };
 
 // Utility: Check user approval status for a slot
 const getUserApprovalStatus = (slot, currentUser, pendingRequests = new Set(), volunteers = []) => {
   if (!currentUser) return null;
-  
+
   // Check if we have a local pending request first
   if (pendingRequests.has(slot.id)) {
     return "pending";
   }
-  
+
   if (!slot.volunteerRequests) return null;
-  
+
   // Find the volunteer record that corresponds to this user
-  const volunteer = volunteers.find(v => 
-    v.userId === currentUser.id || 
-    v.userId === currentUser.uid || 
+  const volunteer = volunteers.find(v =>
+    v.userId === currentUser.id ||
+    v.userId === currentUser.uid ||
     v.id === currentUser.id ||
     v.id === currentUser.uid
   );
-  
+
   if (!volunteer) return null;
-  
-  const userRequest = slot.volunteerRequests.find(vr => 
+
+  const userRequest = slot.volunteerRequests.find(vr =>
     vr.volunteerId === volunteer.id
   );
-  
+
   return userRequest ? userRequest.status : null;
 };
 
@@ -137,10 +137,65 @@ const VolunteerCalendar = () => {
 
   const { t, i18n } = useTranslation('calendar');
   const [showLangOptions, setShowLangOptions] = useState(false);
-  
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const langToggleRef = useRef(null);
+
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
+
   useEffect(() => {
-    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
-  }, [i18n.language]);
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
+
+  // Sync currentLanguage with i18n.language
+  useEffect(() => {
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
+    }
+  }, [i18n.language, currentLanguage]);
+
+  // Handle click outside language toggle to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
+      }
+    };
+
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
 
   // Current date state for navigation
   const [currentDate, setCurrentDate] = useState(() => {
@@ -153,7 +208,7 @@ const VolunteerCalendar = () => {
   const { slots: calendarSlots, loading: isLoading, error } = useCalendarSlots();
   const { updateCalendarSlot } = useUpdateCalendarSlot();
   const { volunteers } = useVolunteers();
-  
+
   const [viewMode, setViewMode] = useState("week");
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
@@ -180,30 +235,30 @@ const VolunteerCalendar = () => {
   useEffect(() => {
     if (calendarSlots.length > 0 && currentUser && volunteers.length > 0) {
       const updatedPendingRequests = new Set();
-      
+
       // Find the volunteer record that corresponds to this user
-      const volunteer = volunteers.find(v => 
-        v.userId === currentUser.id || 
-        v.userId === currentUser.uid || 
+      const volunteer = volunteers.find(v =>
+        v.userId === currentUser.id ||
+        v.userId === currentUser.uid ||
         v.id === currentUser.id ||
         v.id === currentUser.uid
       );
-      
+
       if (volunteer) {
         pendingRequests.forEach(slotId => {
           const slot = calendarSlots.find(s => s.id === slotId);
           if (slot) {
-            const hasRealRequest = slot.volunteerRequests?.some(vr => 
+            const hasRealRequest = slot.volunteerRequests?.some(vr =>
               vr.volunteerId === volunteer.id
             );
-            
+
             // Keep in pending if no real request found yet
             if (!hasRealRequest) {
               updatedPendingRequests.add(slotId);
             }
           }
         });
-        
+
         if (updatedPendingRequests.size !== pendingRequests.size) {
           setPendingRequests(updatedPendingRequests);
         }
@@ -263,25 +318,25 @@ const VolunteerCalendar = () => {
       console.log("Attempting to sign up user:", currentUser.username, "for slot:", slot.id);
       console.log("Current user object:", currentUser);
       console.log("User ID fields - id:", currentUser.id, "uid:", currentUser.uid, "username:", currentUser.username);
-      
+
       // Find the volunteer record that corresponds to this user
-      const volunteer = volunteers.find(v => 
-        v.userId === currentUser.id || 
-        v.userId === currentUser.uid || 
+      const volunteer = volunteers.find(v =>
+        v.userId === currentUser.id ||
+        v.userId === currentUser.uid ||
         v.id === currentUser.id ||
         v.id === currentUser.uid
       );
-      
+
       if (!volunteer) {
         console.error("Could not find volunteer record for user:", currentUser);
         throw new Error("Volunteer record not found. Please contact support.");
       }
-      
+
       console.log("Found volunteer record:", volunteer);
-      
+
       // Use direct Firebase update with arrayUnion (matching TestVolunteerRequests pattern)
       const slotRef = doc(db, "calendar_slots", slot.id);
-      
+
       await updateDoc(slotRef, {
         volunteerRequests: arrayUnion({
           volunteerId: volunteer.id,
@@ -294,13 +349,13 @@ const VolunteerCalendar = () => {
           assignedBy: "ai"
         })
       });
-      
+
       // Add to local pending requests for immediate UI feedback
       setPendingRequests(prev => new Set([...prev, slot.id]));
-      
+
       console.log("Successfully submitted request for session");
       // Note: Success feedback will be visible when the component re-renders with updated data
-      
+
     } catch (error) {
       console.error("Error signing up for session:", error);
       alert(t("Failed to submit request") + ": " + error.message);
@@ -344,7 +399,7 @@ const VolunteerCalendar = () => {
       const slotDate = new Date(slot.date);
       return !isNaN(slotDate.getTime());
     });
-    
+
     if (viewMode === "week") {
       const weekDates = getWeekDates();
       const startDate = weekDates[0];
@@ -354,7 +409,7 @@ const VolunteerCalendar = () => {
         slotDate.setHours(0, 0, 0, 0);
         return slotDate >= startDate && slotDate <= endDate;
       });
-    } 
+    }
     else if (viewMode === "month") {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
@@ -363,12 +418,12 @@ const VolunteerCalendar = () => {
         return slotDate.getFullYear() === year && slotDate.getMonth() === month;
       });
     }
-    
+
     // Check the isOpen property correctly
     if (showOnlyAvailable) {
       filtered = filtered.filter(slot => slot.isOpen === true);
     }
-    
+
     return filtered;
   };
 
@@ -393,9 +448,9 @@ const VolunteerCalendar = () => {
   // Render session slot with improved stacking
   const renderSessionSlot = (slot, stackIdx = 0, totalInStack = 1) => {
     const borderColor = getSessionBorderColor();
-    const hasUserRequest = slot.volunteerRequests?.some(vr => 
-      vr.volunteerId === currentUser?.uid || 
-      vr.volunteerId === currentUser?.id || 
+    const hasUserRequest = slot.volunteerRequests?.some(vr =>
+      vr.volunteerId === currentUser?.uid ||
+      vr.volunteerId === currentUser?.id ||
       vr.volunteerId === currentUser?.username
     );
     const hasPendingRequests = slot.volunteerRequests?.some(vr => vr.status === "pending");
@@ -448,7 +503,7 @@ const VolunteerCalendar = () => {
                 {t("SessionStatus.approved")}
               </div>
             )}
-            
+
             {userApprovalStatus === "pending" && (
               <div className="pending-badge" style={{
                 position: "absolute",
@@ -465,7 +520,7 @@ const VolunteerCalendar = () => {
                 {t("SessionStatus.pending")}
               </div>
             )}
-            
+
             {userApprovalStatus === "rejected" && (
               <div className="rejected-badge" style={{
                 position: "absolute",
@@ -482,7 +537,7 @@ const VolunteerCalendar = () => {
                 {t("SessionStatus.rejected")}
               </div>
             )}
-            
+
             <div className="time-slot-header">
               <span className="start-time">{slot.startTime}</span>
             </div>
@@ -514,7 +569,7 @@ const VolunteerCalendar = () => {
                 {slot.startTime} - {slot.endTime}
               </span>
             </div>
-            
+
             {/* Show current status if user has signed up */}
             {userApprovalStatus && (
               <div className="mt-4 p-3 rounded-lg" style={{
@@ -522,14 +577,14 @@ const VolunteerCalendar = () => {
                 border: `1px solid ${userApprovalStatus === "approved" ? "#10b981" : userApprovalStatus === "rejected" ? "#ef4444" : "#f59e0b"}`
               }}>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium" style={{ 
-                    color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
+                  <span className="font-medium" style={{
+                    color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e"
                   }}>
                     {t("SessionStatus.label")}: {
-                      userApprovalStatus === "approved" 
-                        ? t("SessionStatus.approved") + " ✅" 
-                        : userApprovalStatus === "rejected" 
-                          ? t("SessionStatus.rejected") + " ❌" 
+                      userApprovalStatus === "approved"
+                        ? t("SessionStatus.approved") + " ✅"
+                        : userApprovalStatus === "rejected"
+                          ? t("SessionStatus.rejected") + " ❌"
                           : t("SessionStatus.pendingApproval") + " ⏳"
                     }
                   </span>
@@ -541,9 +596,9 @@ const VolunteerCalendar = () => {
             <button
               type="button"
               disabled={
-                !slot.isOpen || 
-                !isEventAvailable(new Date(slot.date)) || 
-                signupLoading || 
+                !slot.isOpen ||
+                !isEventAvailable(new Date(slot.date)) ||
+                signupLoading ||
                 userApprovalStatus
               }
               style={
@@ -601,12 +656,12 @@ const VolunteerCalendar = () => {
                       <ChevronLeft className="h-5 w-5" />
                     )}
                   </button>
-                  
+
                   {/* Date display */}
                   <div className="current-date-display">
                     {formatDateDisplay()}
                   </div>
-                  
+
                   {/* Next button - always on the right */}
                   <button
                     onClick={navigateNext}
@@ -620,7 +675,7 @@ const VolunteerCalendar = () => {
                       <ChevronRight className="h-5 w-5" />
                     )}
                   </button>
-                  
+
                   {/* Today button */}
                   <button
                     onClick={goToToday}
@@ -633,18 +688,16 @@ const VolunteerCalendar = () => {
               <div className="calendar-controls">
                 <div className="view-mode-tabs">
                   <button
-                    className={`tab-trigger flex items-center ${
-                      i18n.language === "he" ? "flex-row-reverse" : "flex-row"
-                    } gap-1 ${viewMode === "week" ? "active" : ""}`}
+                    className={`tab-trigger flex items-center ${i18n.language === "he" ? "flex-row-reverse" : "flex-row"
+                      } gap-1 ${viewMode === "week" ? "active" : ""}`}
                     onClick={() => setViewMode("week")}
                   >
                     <Calendar className="h-4 w-4" />
                     <span>{t("Week")}</span>
                   </button>
                   <button
-                    className={`tab-trigger flex items-center ${
-                      i18n.language === "he" ? "flex-row-reverse" : "flex-row"
-                    } gap-1 ${viewMode === "month" ? "active" : ""}`}
+                    className={`tab-trigger flex items-center ${i18n.language === "he" ? "flex-row-reverse" : "flex-row"
+                      } gap-1 ${viewMode === "month" ? "active" : ""}`}
                     onClick={() => setViewMode("month")}
                   >
                     <CalendarDays className="h-4 w-4" />
@@ -688,7 +741,7 @@ const VolunteerCalendar = () => {
                         const slotDate = new Date(slot.date);
                         return slotDate.toDateString() === date.toDateString();
                       });
-                      
+
                       if (slotsForDay.length === 0) {
                         return (
                           <div key={index} className="week-day-column">
@@ -698,16 +751,16 @@ const VolunteerCalendar = () => {
                           </div>
                         );
                       }
-                      
+
                       const positionedSlots = positionSlotsByTime(slotsForDay);
-                      
+
                       return (
                         <div key={index} className="week-day-column">
                           <div className="day-time-container" style={{ position: "relative", minHeight: "600px" }}>
                             {positionedSlots.map((slot) => {
                               const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
                               const borderColor = getSessionBorderColor();
-                              
+
                               return (
                                 <Dialog key={slot.id}>
                                   <DialogTrigger asChild>
@@ -743,7 +796,7 @@ const VolunteerCalendar = () => {
                                           {t("SessionStatus.approved")}
                                         </div>
                                       )}
-                                      
+
                                       {userApprovalStatus === "pending" && (
                                         <div className="pending-badge" style={{
                                           position: "absolute",
@@ -760,7 +813,7 @@ const VolunteerCalendar = () => {
                                           {t("SessionStatus.pending")}
                                         </div>
                                       )}
-                                      
+
                                       {userApprovalStatus === "rejected" && (
                                         <div className="rejected-badge" style={{
                                           position: "absolute",
@@ -777,7 +830,7 @@ const VolunteerCalendar = () => {
                                           {t("SessionStatus.rejected")}
                                         </div>
                                       )}
-                                      
+
                                       <div className="time-slot-header">
                                         <span className="start-time">{slot.startTime}</span>
                                       </div>
@@ -820,7 +873,7 @@ const VolunteerCalendar = () => {
                                           {slot.startTime} - {slot.endTime}
                                         </span>
                                       </div>
-                                      
+
                                       {/* Show current status if user has signed up */}
                                       {userApprovalStatus && (
                                         <div className="mt-4 p-3 rounded-lg" style={{
@@ -828,14 +881,14 @@ const VolunteerCalendar = () => {
                                           border: `1px solid ${userApprovalStatus === "approved" ? "#10b981" : userApprovalStatus === "rejected" ? "#ef4444" : "#f59e0b"}`
                                         }}>
                                           <div className="flex items-center gap-2">
-                                            <span className="font-medium" style={{ 
-                                              color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e" 
+                                            <span className="font-medium" style={{
+                                              color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e"
                                             }}>
                                               {t("SessionStatus.label")}: {
-                                                userApprovalStatus === "approved" 
-                                                  ? t("SessionStatus.approved") + " ✅" 
-                                                  : userApprovalStatus === "rejected" 
-                                                    ? t("SessionStatus.rejected") + " ❌" 
+                                                userApprovalStatus === "approved"
+                                                  ? t("SessionStatus.approved") + " ✅"
+                                                  : userApprovalStatus === "rejected"
+                                                    ? t("SessionStatus.rejected") + " ❌"
                                                     : t("SessionStatus.pendingApproval") + " ⏳"
                                               }
                                             </span>
@@ -847,9 +900,9 @@ const VolunteerCalendar = () => {
                                       <button
                                         type="button"
                                         disabled={
-                                          !slot.isOpen || 
-                                          !isEventAvailable(new Date(slot.date)) || 
-                                          signupLoading || 
+                                          !slot.isOpen ||
+                                          !isEventAvailable(new Date(slot.date)) ||
+                                          signupLoading ||
                                           userApprovalStatus
                                         }
                                         style={
@@ -859,7 +912,7 @@ const VolunteerCalendar = () => {
                                         }
                                         onClick={() => handleSignUp(slot)}
                                       >
-                                        {signupLoading 
+                                        {signupLoading
                                           ? t("Submitting Request...")
                                           : userApprovalStatus === "approved"
                                             ? t("Already Approved")
@@ -893,7 +946,7 @@ const VolunteerCalendar = () => {
                   </div>
                   <div className="month-grid">
                     {/* Weekday headers */}
-                    {["sun","mon","tue","wed","thu","fri","sat"].map((key) => (
+                    {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((key) => (
                       <div key={key} className="month-weekday">
                         {t(`daysShort.${key}`)}
                       </div>
@@ -903,13 +956,13 @@ const VolunteerCalendar = () => {
                       const isToday = date && date.toDateString() === new Date().toDateString();
                       const slotsUnsorted = date
                         ? getFilteredSlots().filter(slot => {
-                            const slotDate = new Date(slot.date);
-                            return slotDate.toDateString() === date.toDateString();
-                          })
+                          const slotDate = new Date(slot.date);
+                          return slotDate.toDateString() === date.toDateString();
+                        })
                         : [];
-                        
+
                       const slots = sortSlotsByTime(slotsUnsorted);
-                        
+
                       return (
                         <div
                           key={idx}
@@ -919,7 +972,7 @@ const VolunteerCalendar = () => {
                           {slots.map((slot, slotIdx) => {
                             const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
                             const borderColor = getSessionBorderColor();
-                            
+
                             return (
                               <Dialog key={slot.id}>
                                 <DialogTrigger asChild>
@@ -935,38 +988,38 @@ const VolunteerCalendar = () => {
                                   >
                                     <span className="month-slot-type">Session</span>
                                     <span className="month-slot-time">{slot.startTime}</span>
-                                    
+
                                     {/* Show approval status indicator */}
                                     {userApprovalStatus === "approved" && (
-                                      <span style={{ 
-                                        display: "inline-block", 
-                                        width: "8px", 
-                                        height: "8px", 
-                                        borderRadius: "50%", 
-                                        backgroundColor: "#10b981", 
-                                        marginLeft: "4px" 
+                                      <span style={{
+                                        display: "inline-block",
+                                        width: "8px",
+                                        height: "8px",
+                                        borderRadius: "50%",
+                                        backgroundColor: "#10b981",
+                                        marginLeft: "4px"
                                       }}></span>
                                     )}
-                                    
+
                                     {userApprovalStatus === "pending" && (
-                                      <span style={{ 
-                                        display: "inline-block", 
-                                        width: "8px", 
-                                        height: "8px", 
-                                        borderRadius: "50%", 
-                                        backgroundColor: "#f59e0b", 
-                                        marginLeft: "4px" 
+                                      <span style={{
+                                        display: "inline-block",
+                                        width: "8px",
+                                        height: "8px",
+                                        borderRadius: "50%",
+                                        backgroundColor: "#f59e0b",
+                                        marginLeft: "4px"
                                       }}></span>
                                     )}
-                                    
+
                                     {userApprovalStatus === "rejected" && (
-                                      <span style={{ 
-                                        display: "inline-block", 
-                                        width: "8px", 
-                                        height: "8px", 
-                                        borderRadius: "50%", 
-                                        backgroundColor: "#ef4444", 
-                                        marginLeft: "4px" 
+                                      <span style={{
+                                        display: "inline-block",
+                                        width: "8px",
+                                        height: "8px",
+                                        borderRadius: "50%",
+                                        backgroundColor: "#ef4444",
+                                        marginLeft: "4px"
                                       }}></span>
                                     )}
                                   </div>
@@ -985,13 +1038,13 @@ const VolunteerCalendar = () => {
                                       <span>
                                         {new Date(slot.date).toLocaleDateString(i18n.language, {
                                           weekday: "short",
-                                          day:     "numeric",
-                                          month:   "short",
-                                          year:    "numeric"
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric"
                                         })}
                                       </span>
                                     </DialogDescription>
-                                  </DialogHeader>                                                    
+                                  </DialogHeader>
                                   <div className="space-y-3 mb-6">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-gray-700">{t("Time:")}</span>
@@ -999,7 +1052,7 @@ const VolunteerCalendar = () => {
                                         {slot.startTime} - {slot.endTime}
                                       </span>
                                     </div>
-                                    
+
                                     {/* Show current status if user has signed up */}
                                     {userApprovalStatus && (
                                       <div
@@ -1009,15 +1062,14 @@ const VolunteerCalendar = () => {
                                             userApprovalStatus === "approved"
                                               ? "#d1fae5"
                                               : userApprovalStatus === "rejected"
-                                              ? "#fee2e2"
-                                              : "#fef3c7",
-                                          border: `1px solid ${
-                                            userApprovalStatus === "approved"
+                                                ? "#fee2e2"
+                                                : "#fef3c7",
+                                          border: `1px solid ${userApprovalStatus === "approved"
                                               ? "#10b981"
                                               : userApprovalStatus === "rejected"
-                                              ? "#ef4444"
-                                              : "#f59e0b"
-                                          }`
+                                                ? "#ef4444"
+                                                : "#f59e0b"
+                                            }`
                                         }}
                                       >
                                         <div className="flex items-center gap-2">
@@ -1028,16 +1080,16 @@ const VolunteerCalendar = () => {
                                                 userApprovalStatus === "approved"
                                                   ? "#065f46"
                                                   : userApprovalStatus === "rejected"
-                                                  ? "#991b1b"
-                                                  : "#92400e"
+                                                    ? "#991b1b"
+                                                    : "#92400e"
                                             }}
                                           >
                                             {t("SessionStatus.label")}: {
                                               userApprovalStatus === "approved"
                                                 ? t("SessionStatus.approved") + " ✅"
                                                 : userApprovalStatus === "rejected"
-                                                ? t("SessionStatus.rejected") + " ❌"
-                                                : t("SessionStatus.pendingApproval") + " ⏳"
+                                                  ? t("SessionStatus.rejected") + " ❌"
+                                                  : t("SessionStatus.pendingApproval") + " ⏳"
                                             }
                                           </span>
                                         </div>
@@ -1048,9 +1100,9 @@ const VolunteerCalendar = () => {
                                     <button
                                       type="button"
                                       disabled={
-                                        !slot.isOpen || 
-                                        !isEventAvailable(new Date(slot.date)) || 
-                                        signupLoading || 
+                                        !slot.isOpen ||
+                                        !isEventAvailable(new Date(slot.date)) ||
+                                        signupLoading ||
                                         userApprovalStatus
                                       }
                                       style={
@@ -1060,7 +1112,7 @@ const VolunteerCalendar = () => {
                                       }
                                       onClick={() => handleSignUp(slot)}
                                     >
-                                      {signupLoading 
+                                      {signupLoading
                                         ? t("Submitting Request...")
                                         : userApprovalStatus === "approved"
                                           ? t("Already Approved")
@@ -1071,7 +1123,7 @@ const VolunteerCalendar = () => {
                                               : (!slot.isOpen || !isEventAvailable(new Date(slot.date)))
                                                 ? t("Not Available")
                                                 : t("Request to Join")}
-                                    </button>                         
+                                    </button>
                                   </div>
                                 </DialogContent>
                               </Dialog>
@@ -1086,27 +1138,27 @@ const VolunteerCalendar = () => {
             </div>
           </main>
         </div>
-        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
           <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-            <Globe size={35} />
+            <Globe className="lang-icon" />
           </button>
           {showLangOptions && (
             <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-              <button onClick={() => { 
+              <button onClick={async () => {
                 localStorage.setItem('language', 'en');
-                i18n.changeLanguage('en').then(() => {
-                  document.documentElement.dir = 'ltr';
-                });
-                setShowLangOptions(false); 
+                await i18n.changeLanguage('en');
+                setCurrentLanguage('en');
+                applyLanguageDirection('en');
+                setShowLangOptions(false);
               }}>
                 English
               </button>
-              <button onClick={() => { 
+              <button onClick={async () => {
                 localStorage.setItem('language', 'he');
-                i18n.changeLanguage('he').then(() => {
-                  document.documentElement.dir = 'rtl';
-                });
-                setShowLangOptions(false); 
+                await i18n.changeLanguage('he');
+                setCurrentLanguage('he');
+                applyLanguageDirection('he');
+                setShowLangOptions(false);
               }}>
                 עברית
               </button>
