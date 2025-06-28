@@ -228,7 +228,15 @@ const Dashboard = () => {
       const userId = localStorage.getItem('userId');
       const username = localStorage.getItem('username');
 
+      console.log('Dashboard - Authentication data:', {
+        userId,
+        username,
+        hasUserId: !!userId,
+        hasUsername: !!username
+      });
+
       if (!userId) {
+        console.log('Dashboard - No userId found, skipping volunteer data fetch');
         setDataLoaded(prev => ({ ...prev, volunteerData: true }));
         return;
       }
@@ -238,17 +246,35 @@ const Dashboard = () => {
       const q = query(volunteersRef, where("userId", "==", userId));
       const volunteerSnapshot = await getDocs(q);
 
+      console.log('Dashboard - Volunteer query result:', {
+        queryUserId: userId,
+        snapshotEmpty: volunteerSnapshot.empty,
+        docsCount: volunteerSnapshot.docs.length
+      });
+
       if (!volunteerSnapshot.empty) {
         const volunteerDoc = volunteerSnapshot.docs[0];
         const volunteerData = volunteerDoc.data();
 
+        console.log('Dashboard - Volunteer data found:', {
+          volunteerId: volunteerDoc.id,
+          volunteerData: {
+            fullName: volunteerData.fullName,
+            totalHours: volunteerData.totalHours,
+            totalSessions: volunteerData.totalSessions,
+            appointmentHistoryCount: volunteerData.appointmentHistory?.length || 0
+          }
+        });
+
         setUserData({
-          name: username || volunteerData.fullName || 'Volunteer',
+          name: volunteerData.fullName || username || 'Volunteer',
           totalHours: volunteerData.totalHours || 0,
           totalSessions: volunteerData.totalSessions || 0,
           previousHours: volunteerData.previousHours || 0,
           volunteerId: volunteerDoc.id
         });
+      } else {
+        console.log('Dashboard - No volunteer document found for userId:', userId);
       }
       setDataLoaded(prev => ({ ...prev, volunteerData: true }));
     } catch (error) {
@@ -266,92 +292,122 @@ const Dashboard = () => {
         return;
       }
 
-      const calendarSlotsRef = collection(db, "calendar_slots");
-      const q = query(calendarSlotsRef);
+      // Fetch volunteer data to get appointmentHistory
+      const volunteersRef = collection(db, "volunteers");
+      const volunteerSnapshot = await getDocs(volunteersRef);
+      
+      const volunteer = volunteerSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .find(v => v.userId === userId);
+      
+      console.log('Dashboard - Volunteer data:', {
+        userId,
+        volunteerFound: !!volunteer,
+        volunteerId: volunteer?.id,
+        appointmentHistoryCount: volunteer?.appointmentHistory?.length || 0,
+        appointmentHistory: volunteer?.appointmentHistory
+      });
+      
+      if (!volunteer || !volunteer.appointmentHistory) {
+        setUpcomingSessions([]);
+        setDataLoaded(prev => ({ ...prev, upcomingSessions: true }));
+        return;
+      }
 
-      const snapshot = await getDocs(q);
-      const sessions = [];
       const now = new Date();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
+      // Filter upcoming sessions from appointmentHistory
+      const upcomingSessionsData = volunteer.appointmentHistory
+        .filter(appointment => {
+          // Only include future appointments that are not completed/cancelled
+          const appointmentDate = new Date(appointment.date);
+          appointmentDate.setHours(0, 0, 0, 0);
+          
+          const isUpcoming = appointmentDate >= today && 
+                 appointment.status !== 'completed' && 
+                 appointment.status !== 'canceled';
+          
+          console.log('Dashboard - Filtering appointment:', {
+            appointmentId: appointment.appointmentId,
+            date: appointment.date,
+            appointmentDate: appointmentDate.toISOString(),
+            today: today.toISOString(),
+            status: appointment.status,
+            isUpcoming
+          });
+          
+          return isUpcoming;
+        })
+        .map(appointment => {
+          // Parse date and time
+          const appointmentDate = new Date(appointment.date);
+          const startTime = appointment.startTime || "Time TBD";
+          const endTime = appointment.endTime || "";
+          const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
 
-        // Check status first
-        if (data.status === "inProgress") {
+          // Format display date
+          const displayDate = appointmentDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+          });
 
-          // Check if volunteers array exists and current user is approved
-          if (data.volunteers && Array.isArray(data.volunteers)) {
-
-            const userVolunteer = data.volunteers.find(v => {
-              return v.id === userId && v.status === "approved";
-            });
-
-            if (userVolunteer) {
-
-              // Parse end time to determine if session has actually ended
-              const endTime = data.endTime;
-              let sessionEndDateTime;
-
-              if (data.date && endTime) {
-                sessionEndDateTime = parseTimeAndCombineWithDate(data.date, endTime);
-              } else {
-                // If no end time, use start time + 2 hours as fallback
-                const startTime = data.startTime;
-                if (data.date && startTime) {
-                  sessionEndDateTime = parseTimeAndCombineWithDate(data.date, startTime);
-                  sessionEndDateTime.setHours(sessionEndDateTime.getHours() + 2); // Add 2 hours
-                } else {
-                  // Fallback to just date
-                  try {
-                    const [year, month, day] = data.date.split('-');
-                    sessionEndDateTime = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                    sessionEndDateTime.setHours(23, 59, 59, 999); // End of day
-                  } catch (error) {
-                    sessionEndDateTime = new Date();
-                  }
-                }
-              }
-
-              // Only show sessions that haven't ended yet
-              if (sessionEndDateTime > now) {
-                const startTime = data.startTime || "Time TBD";
-                const endTimeStr = data.endTime || "";
-                const timeRange = endTimeStr ? `${startTime} - ${endTimeStr}` : startTime;
-
-                // Format display date
-                let displayDate;
-                try {
-                  const [year, month, day] = data.date.split('-');
-                  const sessionDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                  displayDate = sessionDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric'
-                  });
-                } catch (error) {
-                  displayDate = "Date TBD";
-                }
-
-                const session = {
-                  id: doc.id,
-                  title: data.customLabel || "Session",
-                  date: displayDate,
-                  time: timeRange,
-                  location: data.location || "Location TBD",
-                  fullDateTime: sessionEndDateTime
-                };
-
-                sessions.push(session);
-              }
-            }
+          // Create full datetime for sorting
+          let fullDateTime;
+          if (appointment.date && appointment.startTime) {
+            fullDateTime = parseTimeAndCombineWithDate(appointment.date, appointment.startTime);
+          } else {
+            fullDateTime = appointmentDate;
           }
+
+          return {
+            id: appointment.appointmentId,
+            title: "Volunteer Session", // Default title
+            date: displayDate,
+            time: timeRange,
+            location: "Session Location", // Default location
+            fullDateTime: fullDateTime,
+            appointmentId: appointment.appointmentId
+          };
+        });
+
+      // Sort by date/time (ascending - earliest first) and take first 3
+      upcomingSessionsData.sort((a, b) => {
+        // Ensure we're comparing valid dates
+        if (!a.fullDateTime || !b.fullDateTime) {
+          return 0;
         }
+        return a.fullDateTime.getTime() - b.fullDateTime.getTime();
+      });
+      const finalSessions = upcomingSessionsData.slice(0, 3);
+
+      // Enrich with calendar slot data if available
+      const calendarSlotsRef = collection(db, "calendar_slots");
+      const calendarSnapshot = await getDocs(calendarSlotsRef);
+      const calendarData = {};
+      
+      calendarSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        calendarData[doc.id] = data;
       });
 
-      // Sort by end date/time and take first 3
-      sessions.sort((a, b) => a.fullDateTime - b.fullDateTime);
+      // Enrich sessions with calendar data
+      const enrichedSessions = finalSessions.map(session => {
+        const calendarSlot = calendarData[session.appointmentId];
+        if (calendarSlot) {
+          return {
+            ...session,
+            title: calendarSlot.customLabel || "Volunteer Session",
+            location: calendarSlot.location || "Session Location"
+          };
+        }
+        return session;
+      });
 
-      setUpcomingSessions(sessions.slice(0, 3));
+      setUpcomingSessions(enrichedSessions);
+      console.log('Dashboard - Final upcoming sessions:', enrichedSessions);
       setDataLoaded(prev => ({ ...prev, upcomingSessions: true }));
     } catch (error) {
       console.error("Error fetching upcoming sessions:", error);
@@ -507,11 +563,30 @@ const Dashboard = () => {
         });
       }
 
-      // Sort activities by date/time (most recent first)
+      // Sort activities by date/time (descending - most recent first)
       activities.sort((a, b) => {
-        const aDate = new Date(a.displayDate + ' ' + a.displayTime);
-        const bDate = new Date(b.displayDate + ' ' + b.displayTime);
-        return bDate - aDate;
+        try {
+          // Try to parse the combined date and time
+          const aDate = new Date(a.displayDate + ' ' + a.displayTime);
+          const bDate = new Date(b.displayDate + ' ' + b.displayTime);
+          
+          // Check if dates are valid
+          if (isNaN(aDate.getTime()) || isNaN(bDate.getTime())) {
+            // Fallback: if date parsing fails, put level-up activities first
+            if (a.type === 'level-up') return -1;
+            if (b.type === 'level-up') return 1;
+            return 0;
+          }
+          
+          // Sort in descending order (most recent first)
+          return bDate.getTime() - aDate.getTime();
+        } catch (error) {
+          console.error('Error sorting activities:', error);
+          // Fallback: put level-up activities first
+          if (a.type === 'level-up') return -1;
+          if (b.type === 'level-up') return 1;
+          return 0;
+        }
       });
 
       // Take only the first 5 for display

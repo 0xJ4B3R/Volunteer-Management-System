@@ -1,32 +1,16 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { Clock3, MapPin, Search, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { doc, updateDoc, arrayRemove } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Appointments.css";
 import { Layout } from '@/components/volunteer/Layout';
 
 // Import proper Firestore hooks and types
-import { useAppointments } from "@/hooks/useFirestoreCalendar";
 import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
 import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
-import { useAttendanceByAppointment } from "@/hooks/useAttendance";
-
-// Utility: Get default color for sessions
-const getSessionColor = () => {
-  return "#6b7280";
-};
-
-// Utility: Get default border color for sessions
-const getSessionBorderColor = () => {
-  return "#4b5563";
-};
-
-const getSessionTypeClass = () => {
-  return "session";
-};
 
 // Helper function to convert time to minutes for sorting
 const timeToMinutes = (timeStr) => {
@@ -62,9 +46,9 @@ export default function Appointments() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentVolunteer, setCurrentVolunteer] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+  const langToggleRef = useRef(null);
 
   // Use proper Firestore hooks
-  const { appointments, loading: appointmentsLoading } = useAppointments();
   const { slots, loading: slotsLoading } = useCalendarSlots();
   const { volunteers, loading: volunteersLoading } = useVolunteers();
 
@@ -81,6 +65,23 @@ export default function Appointments() {
   useEffect(() => {
     document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
   }, [i18n.language]);
+
+  // Handle click outside language toggle to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
+      }
+    };
+
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
 
   // Check authentication and get current user
   useEffect(() => {
@@ -115,62 +116,50 @@ export default function Appointments() {
     }
   }, [currentUser, volunteers]);
 
-  // Memoized appointments filtering for current volunteer
+  // Memoized appointments from volunteer's appointmentHistory
   const userAppointments = useMemo(() => {
     if (!currentVolunteer || !slots.length) {
       return [];
     }
 
     console.log("Current volunteer:", currentVolunteer);
-    console.log("Appointments:", appointments);
+    console.log("Volunteer appointmentHistory:", currentVolunteer.appointmentHistory);
     console.log("Slots:", slots);
 
-    // Get appointments where volunteer is assigned
-    const assignedAppointments = appointments
-      .filter(appointment => {
-        // Check if current volunteer is assigned to this appointment
-        const isVolunteerAssigned = appointment.volunteerIds.some(vol => 
-          vol.id === currentVolunteer.id && vol.type === 'volunteer'
-        );
-        return isVolunteerAssigned;
-      })
-      .map(appointment => {
-        const slot = slots.find(s => s.id === appointment.calendarSlotId);
-        if (!slot) return null;
-
-        const volunteerRequest = slot.volunteerRequests?.find(vr => 
-          vr.volunteerId === currentVolunteer.id
-        );
-
+    // Get appointments from volunteer's appointmentHistory (confirmed appointments)
+    const historyAppointments = (currentVolunteer.appointmentHistory || [])
+      .map(appointmentEntry => {
+        // Find the corresponding slot for additional details
+        const slot = slots.find(s => s.id === appointmentEntry.appointmentId);
+        
         return {
-          id: appointment.id,
-          appointmentId: appointment.id,
-          date: formatFirebaseDate(slot.date),
-          day: getDayFromDate(slot.date),
-          time: `${slot.startTime} - ${slot.endTime}`,
-          location: slot.customLabel || "Session",
-          sessionType: slot.customLabel || "Session",
-          note: appointment.notes || slot.notes || "",
-          category: slot.isCustom ? "Custom" : "Regular",
-          status: volunteerRequest?.status || appointment.status,
-          appointmentStatus: appointment.status,
-          maxCapacity: slot.maxCapacity,
-          volunteerRequests: slot.volunteerRequests || [],
-          isOpen: slot.isOpen,
-          residentIds: appointment.residentIds || [],
+          id: appointmentEntry.appointmentId,
+          appointmentId: appointmentEntry.appointmentId,
+          date: formatFirebaseDate(appointmentEntry.date),
+          day: getDayFromDate(appointmentEntry.date),
+          time: `${appointmentEntry.startTime} - ${appointmentEntry.endTime}`,
+          location: slot?.customLabel || "Session",
+          sessionType: slot?.customLabel || "Session",
+          note: slot?.notes || "",
+          category: slot?.isCustom ? "Custom" : "Regular",
+          status: appointmentEntry.status || "upcoming",
+          appointmentStatus: appointmentEntry.status || "upcoming",
+          attendanceStatus: appointmentEntry.attendanceStatus,
+          maxCapacity: slot?.maxCapacity || 1,
+          volunteerRequests: slot?.volunteerRequests || [],
+          isOpen: slot?.isOpen ?? true,
+          residentIds: appointmentEntry.residentIds || [],
           rawData: {
-            ...appointment,
-            date: slot.date,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            status: appointment.status,
-            calendarSlotId: appointment.calendarSlotId
+            date: appointmentEntry.date,
+            startTime: appointmentEntry.startTime,
+            endTime: appointmentEntry.endTime,
+            status: appointmentEntry.status || "upcoming",
+            calendarSlotId: appointmentEntry.appointmentId
           }
         };
-      })
-      .filter(Boolean);
+      });
 
-    // Get slots with pending volunteer requests (not yet appointments)
+    // Get slots with pending volunteer requests (not yet in appointmentHistory)
     const pendingRequestSlots = slots
       .filter(slot => {
         // Check if current volunteer has a request for this slot
@@ -178,15 +167,12 @@ export default function Appointments() {
           vr.volunteerId === currentVolunteer.id
         );
         
-        // Only include if there's no corresponding appointment yet
-        const hasAppointment = appointments.some(appointment => 
-          appointment.calendarSlotId === slot.id &&
-          appointment.volunteerIds.some(vol => 
-            vol.id === currentVolunteer.id && vol.type === 'volunteer'
-          )
+        // Only include if there's no corresponding appointment in history yet
+        const hasAppointmentInHistory = currentVolunteer.appointmentHistory?.some(appointment => 
+          appointment.appointmentId === slot.id
         );
         
-        return hasVolunteerRequest && !hasAppointment;
+        return hasVolunteerRequest && !hasAppointmentInHistory;
       })
       .map(slot => {
         const volunteerRequest = slot.volunteerRequests?.find(vr => 
@@ -205,6 +191,7 @@ export default function Appointments() {
           category: slot.isCustom ? "Custom" : "Regular",
           status: volunteerRequest?.status || "pending",
           appointmentStatus: "pending",
+          attendanceStatus: null,
           maxCapacity: slot.maxCapacity,
           volunteerRequests: slot.volunteerRequests || [],
           isOpen: slot.isOpen,
@@ -220,7 +207,7 @@ export default function Appointments() {
       });
 
     // Combine both arrays and sort
-    return [...assignedAppointments, ...pendingRequestSlots]
+    return [...historyAppointments, ...pendingRequestSlots]
       .filter(Boolean) // Remove null entries
       .sort((a, b) => {
         // Sort by date, then by time
@@ -236,10 +223,10 @@ export default function Appointments() {
         const timeB = timeToMinutes(b.rawData.startTime);
         return timeA - timeB;
       });
-  }, [currentVolunteer, appointments, slots]);
+  }, [currentVolunteer, slots]);
 
   // Loading state
-  const loading = appointmentsLoading || slotsLoading || volunteersLoading;
+  const loading = slotsLoading || volunteersLoading;
 
   // Filter appointments by tab
   const tabAppointments = useMemo(() => {
@@ -248,24 +235,31 @@ export default function Appointments() {
       const now = new Date();
       
       if (tab === "upcoming") {
-        // Show appointments that are approved and not completed, or upcoming status
-        const isApproved = a.status === "approved";
-        const isNotCompleted = a.appointmentStatus !== "completed";
-        const isFuture = dateObj >= now || a.appointmentStatus === "upcoming";
-        return isApproved && isNotCompleted && isFuture;
+        // Only show appointments from appointmentHistory (confirmed appointments)
+        // that are not completed and are in the future
+        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment => 
+          appointment.appointmentId === a.appointmentId
+        );
+        // Check for AppointmentStatus values
+        const isNotCompleted = a.appointmentStatus !== "completed" && a.appointmentStatus !== "canceled";
+        const isFuture = dateObj >= now;
+        return isFromHistory && isNotCompleted && isFuture;
       }
       if (tab === "past") {
-        // Show completed appointments or past dates where user was approved
-        return a.appointmentStatus === "completed" || 
-               (a.status === "approved" && dateObj < now);
+        // Show completed appointments from appointmentHistory
+        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment => 
+          appointment.appointmentId === a.appointmentId
+        );
+        // Check for AppointmentStatus values
+        return isFromHistory && (a.appointmentStatus === "completed" || a.appointmentStatus === "canceled" || dateObj < now);
       }
       if (tab === "pending") {
-        // Show appointments where volunteer status is pending
+        // Show appointments where volunteer request status is pending (VolunteerRequestStatus)
         return a.status === "pending";
       }
       return false;
     });
-  }, [userAppointments, tab]);
+  }, [userAppointments, tab, currentVolunteer]);
 
   // Filter by search query
   const filtered = useMemo(() => {
@@ -326,7 +320,7 @@ export default function Appointments() {
       if (volunteerRequestToRemove) {
         console.log("Attempting to remove request from slot:", slot.id);
         
-        // Instead of arrayRemove, filter out the volunteer request
+        // Filter out the volunteer request
         const updatedVolunteerRequests = slot.volunteerRequests.filter(vr => 
           vr.volunteerId !== currentVolunteer.id
         );
@@ -385,16 +379,21 @@ export default function Appointments() {
     
     const getStatusClass = (status) => {
       switch (status) {
+        // VolunteerRequestStatus values
         case "approved": return "status-approved";
         case "pending": return "status-pending";
         case "rejected": return "status-rejected";
+        // AppointmentStatus values
         case "completed": return "status-completed";
+        case "upcoming": return "status-upcoming";
+        case "inProgress": return "status-in-progress";
+        case "canceled": return "status-canceled";
         default: return "status-default";
       }
     };
     
     return (
-      <div className={`tag ${getSessionTypeClass()} ${getStatusClass(status)}`}>
+      <div className={`tag session ${getStatusClass(status)}`}>
         {appointment.sessionType}
       </div>
     );
@@ -454,30 +453,6 @@ export default function Appointments() {
           <LoadingScreen />
         ) : (
           <>
-            <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
-              <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-                <Globe size={35} />
-              </button>
-              {showLangOptions && (
-                <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-                  <button onClick={() => { 
-                    localStorage.setItem('language', 'en');
-                    i18n.changeLanguage('en').then(() => {
-                      document.documentElement.dir = 'ltr';
-                    });
-                    setShowLangOptions(false); 
-                  }}>English</button>
-                  <button onClick={() => { 
-                    localStorage.setItem('language', 'he');
-                    i18n.changeLanguage('he').then(() => {
-                      document.documentElement.dir = 'rtl';
-                    });
-                    setShowLangOptions(false); 
-                  }}>עברית</button>
-                </div>
-              )}
-            </div>
-            
             <div className="profile-header">
               <h1 className="profile-title">{t("appointments.title")}</h1>
               <p className="profile-subtitle">{t("appointments.subtitle")}</p>
@@ -507,11 +482,11 @@ export default function Appointments() {
                 ) : (
                   filtered.map((a) => (
                     <div 
-                      className={`appointment-card ${getSessionTypeClass()}`} 
+                      className="appointment-card session" 
                       key={a.id} 
                       onClick={() => setSelected(a)}
                       style={{
-                        borderLeftColor: getSessionBorderColor()
+                        borderLeftColor: "#4b5563"
                       }}
                     >
                       <div className="appointment-left">
@@ -588,7 +563,7 @@ export default function Appointments() {
                     <div style={{ marginBottom: '1rem' }}>
                       <span 
                         style={{
-                          backgroundColor: getSessionColor(),
+                          backgroundColor: "#6b7280",
                           color: 'white',
                           fontSize: '0.875rem',
                           fontWeight: '500',
@@ -674,13 +649,25 @@ export default function Appointments() {
                             padding: "0.75rem",
                             borderRadius: "0.5rem",
                             backgroundColor:
+                              // VolunteerRequestStatus values
                               selected.status === "approved" ? "#d1fae5" :
                               selected.status === "pending"  ? "#fef3c7" :
-                              selected.status === "rejected" ? "#fee2e2" : "#f3f4f6",
+                              selected.status === "rejected" ? "#fee2e2" :
+                              // AppointmentStatus values
+                              selected.status === "completed" ? "#dbeafe" :
+                              selected.status === "upcoming" ? "#f0f9ff" :
+                              selected.status === "inProgress" ? "#fef7cd" :
+                              selected.status === "canceled" ? "#fee2e2" : "#f3f4f6",
                             border: `1px solid ${
+                              // VolunteerRequestStatus values
                               selected.status === "approved" ? "#10b981" :
                               selected.status === "pending"  ? "#f59e0b" :
-                              selected.status === "rejected" ? "#ef4444" : "#d1d5db"
+                              selected.status === "rejected" ? "#ef4444" :
+                              // AppointmentStatus values
+                              selected.status === "completed" ? "#3b82f6" :
+                              selected.status === "upcoming" ? "#0ea5e9" :
+                              selected.status === "inProgress" ? "#eab308" :
+                              selected.status === "canceled" ? "#dc2626" : "#d1d5db"
                             }`
                           }}
                         >
@@ -688,11 +675,53 @@ export default function Appointments() {
                             <span style={{
                               fontWeight: 500,
                               color:
+                                // VolunteerRequestStatus values
                                 selected.status === "approved" ? "#065f46" :
                                 selected.status === "pending"  ? "#92400e" :
-                                selected.status === "rejected" ? "#991b1b" : "#374151"
+                                selected.status === "rejected" ? "#991b1b" :
+                                // AppointmentStatus values
+                                selected.status === "completed" ? "#1e40af" :
+                                selected.status === "upcoming" ? "#0c4a6e" :
+                                selected.status === "inProgress" ? "#a16207" :
+                                selected.status === "canceled" ? "#7f1d1d" : "#374151"
                             }}>
-                              {t("appointments.statusLabel")} {t(`appointments.status.${selected.status}`)}
+                              {/* Show appropriate label based on status type */}
+                              {["pending", "approved", "rejected"].includes(selected.status) 
+                                ? t("appointments.requestStatusLabel") 
+                                : t("appointments.statusLabel")
+                              } {t(`appointments.status.${selected.status}`)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show attendance status if available */}
+                      {selected.attendanceStatus && (
+                        <div
+                          style={{
+                            marginTop: "1rem",
+                            padding: "0.75rem",
+                            borderRadius: "0.5rem",
+                            backgroundColor:
+                              selected.attendanceStatus === "present" ? "#d1fae5" :
+                              selected.attendanceStatus === "late"  ? "#fef3c7" :
+                              selected.attendanceStatus === "absent" ? "#fee2e2" : "#f3f4f6",
+                            border: `1px solid ${
+                              selected.attendanceStatus === "present" ? "#10b981" :
+                              selected.attendanceStatus === "late"  ? "#f59e0b" :
+                              selected.attendanceStatus === "absent" ? "#ef4444" : "#d1d5db"
+                            }`
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span style={{
+                              fontWeight: 500,
+                              color:
+                                selected.attendanceStatus === "present" ? "#065f46" :
+                                selected.attendanceStatus === "late"  ? "#92400e" :
+                                selected.attendanceStatus === "absent" ? "#991b1b" : "#374151"
+                            }}>
+                              {t("appointments.attendanceLabel")} {t(`appointments.attendance.${selected.attendanceStatus}`)}
                             </span>
                           </div>
                         </div>
@@ -726,6 +755,33 @@ export default function Appointments() {
               </div>
             )}
           </>
+        )}
+      </div>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe className="lang-icon" />
+        </button>
+        {showLangOptions && (
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+            <button onClick={() => {
+              localStorage.setItem('language', 'en');
+              i18n.changeLanguage('en').then(() => {
+                document.documentElement.dir = 'ltr';
+              });
+              setShowLangOptions(false);
+            }}>
+              English
+            </button>
+            <button onClick={() => {
+              localStorage.setItem('language', 'he');
+              i18n.changeLanguage('he').then(() => {
+                document.documentElement.dir = 'rtl';
+              });
+              setShowLangOptions(false);
+            }}>
+              עברית
+            </button>
+          </div>
         )}
       </div>
     </Layout>

@@ -1,59 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award, FileText, CheckCircle2, XCircle, History, CalendarDays, CalendarClock, ChevronRight } from 'lucide-react';
-import { collection, getDocs, query, where, orderBy, limit, doc, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award, 
+  FileText, CheckCircle2, XCircle, History, CalendarDays, 
+  CalendarClock, ChevronRight 
+} from 'lucide-react';
+import { 
+  collection, getDocs, query, where, orderBy, limit, doc, 
+  updateDoc, addDoc, Timestamp 
+} from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { db } from '@/lib/firebase';
 import { Layout } from '@/components/volunteer/Layout';
 import LoadingScreen from '@/components/volunteer/InnerLS';
 import './styles/Attendance.css';
 
-const Attendance = () => {
-  const [activeTab, setActiveTab] = useState('Today');
-  const [selectedSessions, setSelectedSessions] = useState({});
-  const [todaySessions, setTodaySessions] = useState([]);
-  const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState('');
-  const [userId, setUserId] = useState('');
-  const { t, i18n } = useTranslation('attendance');
-  const [showLangOptions, setShowLangOptions] = useState(false);
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+// Import proper Firestore collection references
+import { 
+  calendar_slotsRef, 
+  attendanceRef, 
+  volunteersRef,
+  docToObject
+} from '@/services/firestore';
 
-  // Pagination state for history
-  const [historyPage, setHistoryPage] = useState(0);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [hasMoreHistory, setHasMoreHistory] = useState(true);
-  const [allUserRecords, setAllUserRecords] = useState([]);
-  const [totalHistoryCount, setTotalHistoryCount] = useState(0);
-
+// Constants
   const RECORDS_PER_PAGE = 5;
 
-  // Function to show notifications
-  const showNotification = (message, type = "error") => {
-    setNotification({ show: true, message, type });
-    // Auto hide after 5 seconds
-    setTimeout(() => {
-      setNotification({ show: false, message: "", type: "" });
-    }, 5000);
-  };
-
-  // Get username from localStorage
-  useEffect(() => {
-    const storedUsername = localStorage.getItem('username');
-    const storedUserId = localStorage.getItem('userId');
-    if (storedUsername) {
-      setUsername(storedUsername);
-    }
-    if (storedUserId) {
-      setUserId(storedUserId);
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
-  }, [i18n.language]);
-
-  // Helper function to parse time string and get current time status
+// Helper Functions
   const parseTimeString = (timeStr) => {
     if (!timeStr) return null;
     
@@ -69,93 +42,183 @@ const Attendance = () => {
     return timeDate;
   };
 
-  // Updated function to determine attendance status with 15-minute grace period
+const getHoursFromTimeRange = (startTime, endTime) => {
+  if (!startTime || !endTime) {
+    console.log('Missing time data:', { startTime, endTime });
+    return 0;
+  }
+  
+  const parseTime = (timeStr) => {
+    if (!timeStr) return 0;
+    
+    // Handle different time formats
+    let time = timeStr.trim();
+    let period = '';
+    
+    // Check if it has AM/PM
+    if (time.includes('AM') || time.includes('PM')) {
+      const parts = time.split(' ');
+      time = parts[0];
+      period = parts[1];
+    }
+    
+    // Parse hours and minutes
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.log('Invalid time format:', timeStr);
+      return 0;
+    }
+    
+    let totalHours = hours;
+    
+    // Handle AM/PM conversion
+    if (period) {
+      if (period.toLowerCase() === 'pm' && hours !== 12) {
+        totalHours = hours + 12;
+      } else if (period.toLowerCase() === 'am' && hours === 12) {
+        totalHours = 0;
+      }
+    }
+    
+    return totalHours + (minutes || 0) / 60;
+  };
+
+  try {
+    console.log('Calculating hours for:', { startTime, endTime });
+    const start = parseTime(startTime);
+    const end = parseTime(endTime);
+    const hours = Math.max(0, end - start);
+    console.log('Calculated hours:', hours);
+    return hours;
+  } catch (error) {
+    console.error('Error parsing time range:', error, { startTime, endTime });
+    return 0;
+  }
+};
+
   const getAttendanceStatus = (startTime, endTime) => {
     const now = new Date();
     const sessionStart = parseTimeString(startTime);
     const sessionEnd = parseTimeString(endTime);
     
-    if (!sessionStart || !sessionEnd) return 'present'; // Default if time parsing fails
-    
-    // Create grace period: 15 minutes after session start
-    const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000); // 15 minutes in milliseconds
+  if (!sessionStart || !sessionEnd) return 'present';
     
     if (now > sessionEnd) {
-      return 'auto-absent'; // Session has ended
-    } else if (now > gracePeriodEnd) {
-      return 'late'; // Grace period has ended, now considered late
+    return 'ended';
     } else if (now > sessionStart) {
-      return 'grace-period'; // Within 15-minute grace period
+    return 'in-progress';
     } else {
-      return 'present'; // Before session start time
+    return 'upcoming';
+  }
+};
+
+// Custom Hooks
+const useAuth = () => {
+  const [username, setUsername] = useState('');
+  const [userId, setUserId] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.username) {
+        navigate("/login");
+      } else if (user.role !== "volunteer") {
+        navigate("/manager");
+      } else {
+        setUsername(user.username);
+        setUserId(user.id || user.uid);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      navigate("/login");
     }
+  }, [navigate]);
+
+  return { username, userId };
+};
+
+const useNotifications = () => {
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+
+  const showNotification = (message, type = "error") => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "" });
+    }, 5000);
   };
 
-  // Updated fetchTodaySessions to handle multiple sessions
+  return { notification, showNotification };
+};
+
+const useTodaySessions = (username, userId) => {
+  const [todaySessions, setTodaySessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchTodaySessions = async () => {
-      if (!username) return;
+      if (!username || !userId) return;
 
       try {
         setLoading(true);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const calendarRef = collection(db, 'calendar_slots');
-        const snapshot = await getDocs(calendarRef);
-        
-        const todayData = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(slot => {
-            // Check if date matches today
-            let slotDate;
-            if (slot.date && slot.date.toDate) {
-              slotDate = slot.date.toDate();
-            } else if (slot.date) {
-              slotDate = new Date(slot.date);
-            } else {
-              return false;
-            }
-            
-            slotDate.setHours(0, 0, 0, 0);
-            
-            // Check all conditions
-            const isToday = slotDate.getTime() === today.getTime();
-            const isInProgress = slot.status === 'inProgress';
-            const userVolunteer = slot.volunteers?.find(v => 
-              v.username === username && v.status === 'approved'
-            );
-            
-            return isToday && isInProgress && userVolunteer;
-          });
+        // Get volunteer's appointmentHistory
+        const volunteerSnapshot = await getDocs(volunteersRef);
+        const volunteer = volunteerSnapshot.docs
+          .map(doc => docToObject(doc))
+          .find(v => v.userId === userId || v.userId === username);
 
-        if (todayData.length > 0) {
-          // Check attendance for each session
+        if (!volunteer || !volunteer.appointmentHistory) {
+          setTodaySessions([]);
+          return;
+        }
+
+        // Filter today's sessions from appointmentHistory
+        const todayAppointments = volunteer.appointmentHistory.filter(appointment => {
+          const appointmentDate = new Date(appointment.date);
+          appointmentDate.setHours(0, 0, 0, 0);
+          return appointmentDate.getTime() === today.getTime();
+        });
+
+        if (todayAppointments.length === 0) {
+          setTodaySessions([]);
+          return;
+        }
+
+        // Get calendar slot data for enrichment
+        const calendarSnapshot = await getDocs(calendar_slotsRef);
+        const calendarData = {};
+        calendarSnapshot.docs.forEach(doc => {
+          const data = docToObject(doc);
+          calendarData[data.appointmentId || doc.id] = data;
+        });
+
+        // Check attendance records and build sessions
           const sessionsWithAttendance = await Promise.all(
-            todayData.map(async (session) => {
-              const attendanceRef = collection(db, 'attendance');
-              
+          todayAppointments.map(async (appointment) => {
               try {
-                // Check if attendance record already exists for this session
+              // Check if attendance already exists
                 const existingAttendanceQuery = query(
                   attendanceRef,
-                  where('appointmentId', '==', session.appointmentId || session.id),
-                  where('volunteerId', 'in', [userId, username].filter(Boolean))
+                where('appointmentId', '==', appointment.appointmentId),
+                where('volunteerId.id', '==', userId)
                 );
                 
                 const existingAttendanceSnapshot = await getDocs(existingAttendanceQuery);
                 
                 if (!existingAttendanceSnapshot.empty) {
-                  // Attendance already recorded - don't include this session
-                  return null;
+                return null; // Skip if attendance already exists
                 }
               } catch (attendanceError) {
-                // If query fails, try manual filtering
-                const allAttendanceSnapshot = await getDocs(collection(db, 'attendance'));
+              // Fallback check
+              const allAttendanceSnapshot = await getDocs(attendanceRef);
                 const existingRecord = allAttendanceSnapshot.docs.find(doc => {
                   const data = doc.data();
-                  return (data.appointmentId === (session.appointmentId || session.id)) &&
-                         (data.volunteerId === userId || data.volunteerId === username);
+                return (data.appointmentId === appointment.appointmentId) &&
+                       (data.volunteerId?.id === userId || data.volunteerId === userId);
                 });
                 
                 if (existingRecord) {
@@ -163,26 +226,27 @@ const Attendance = () => {
                 }
               }
               
-              // Return session data if no attendance record exists
+            // Get calendar slot data for this appointment
+            const calendarSlot = calendarData[appointment.appointmentId];
+            
               return {
-                id: session.id,
-                time: `${session.startTime} - ${session.endTime}`,
-                residents: session.residentIds || [],
-                description: session.notes || 'Volunteer session with residents',
+              id: appointment.appointmentId,
+              time: `${appointment.startTime} - ${appointment.endTime}`,
+              residents: appointment.residentIds || calendarSlot?.residentIds || [],
+              description: calendarSlot?.notes || 'Volunteer session with residents',
                 status: 'not_confirmed',
-                sessionType: session.isCustom ? session.customLabel : ('General Session'),
-                date: session.date,
-                appointmentId: session.appointmentId || session.id,
-                startTime: session.startTime,
-                endTime: session.endTime
+              sessionType: calendarSlot?.isCustom ? calendarSlot.customLabel : 'General Session',
+              date: appointment.date,
+              appointmentId: appointment.appointmentId,
+              startTime: appointment.startTime,
+              endTime: appointment.endTime
               };
             })
           );
 
-          // Filter out null values (sessions with existing attendance)
           const availableSessions = sessionsWithAttendance.filter(session => session !== null);
           
-          // Sort sessions by start time
+        // Sort by start time
           availableSessions.sort((a, b) => {
             const timeA = parseTimeString(a.startTime);
             const timeB = parseTimeString(b.startTime);
@@ -190,13 +254,9 @@ const Attendance = () => {
           });
 
           setTodaySessions(availableSessions);
-          setSelectedSessions({}); // Reset selected sessions state
-        } else {
-          setTodaySessions([]);
-          setSelectedSessions({});
-        }
       } catch (error) {
         console.error('Error fetching today\'s sessions:', error);
+        setTodaySessions([]);
       } finally {
         setLoading(false);
       }
@@ -205,227 +265,153 @@ const Attendance = () => {
     fetchTodaySessions();
   }, [username, userId]);
 
-  // Updated handleConfirm function with grace period logic
-  const handleConfirm = async (sessionId) => {
-    const session = todaySessions.find(s => s.id === sessionId);
-    if (!session) return;
+  return { todaySessions, setTodaySessions, loading };
+};
 
+const useAttendanceHistory = (username, userId) => {
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [allUserRecords, setAllUserRecords] = useState([]);
+  const [totalHistoryCount, setTotalHistoryCount] = useState(0);
+
+  const enrichHistoryData = async (records) => {
     try {
-      const [startTime, endTime] = session.time.split(' - ');
-      const attendanceStatus = getAttendanceStatus(startTime, endTime);
+      const calendarSnapshot = await getDocs(calendar_slotsRef);
+      const calendarData = {};
       
-      // Don't allow confirmation if session has ended
-      if (attendanceStatus === 'auto-absent') {
-        showNotification('Cannot confirm attendance - the session has already ended.', 'error');
-        return;
-      }
-
-      // Determine final status based on attendance status
-      let finalStatus;
-      let statusMessage;
-      
-      switch (attendanceStatus) {
-        case 'present':
-          finalStatus = 'present';
-          statusMessage = 'Attendance confirmed as PRESENT';
-          break;
-        case 'grace-period':
-          finalStatus = 'present';
-          statusMessage = 'Attendance confirmed as PRESENT (within grace period)';
-          break;
-        case 'late':
-          finalStatus = 'late';
-          statusMessage = 'Attendance confirmed as LATE (grace period expired)';
-          break;
-        default:
-          finalStatus = 'present';
-          statusMessage = 'Attendance confirmed';
-      }
-      
-      // Check if attendance record already exists
-      const attendanceRef = collection(db, 'attendance');
-      const existingQuery = query(
-        attendanceRef,
-        where('appointmentId', '==', session.appointmentId || session.id),
-        where('volunteerId', '==', userId || username)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        showNotification('Attendance already recorded for this session.', 'warning');
-        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-        return;
-      }
-
-      // Create attendance record with appropriate notes
-      let notes;
-      switch (attendanceStatus) {
-        case 'present':
-          notes = 'Confirmed before session start time';
-          break;
-        case 'grace-period':
-          notes = 'Confirmed within 15-minute grace period';
-          break;
-        case 'late':
-          notes = 'Confirmed after grace period expired';
-          break;
-        default:
-          notes = 'Attendance confirmed';
-      }
-
-      await addDoc(collection(db, 'attendance'), {
-        appointmentId: session.appointmentId || session.id,
-        volunteerId: userId || username,
-        confirmedBy: username,
-        confirmedAt: Timestamp.now(),
-        status: finalStatus,
-        notes: notes
+      calendarSnapshot.docs.forEach(doc => {
+        const data = docToObject(doc);
+        const appointmentId = data.appointmentId || doc.id;
+        calendarData[appointmentId] = {
+          ...data,
+          id: doc.id
+        };
       });
-      
-      showNotification(statusMessage, 'success');      
-      // Remove this session from today's sessions after confirmation
-      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-      
-      // Refresh history to show the new attendance record
-      await fetchInitialAttendanceHistory();
-      
-    } catch (error) {
-      console.error('Error confirming attendance:', error);
-      showNotification('Error confirming attendance. Please try again.', 'error');
-    }
-  };
 
-  // Updated handleCancel to work with specific session
-  const handleCancel = async (sessionId) => {
-    const session = todaySessions.find(s => s.id === sessionId);
-    if (!session) return;
-
-    try {
-      // Check if attendance record already exists
-      const attendanceRef = collection(db, 'attendance');
-      const existingQuery = query(
-        attendanceRef,
-        where('appointmentId', '==', session.appointmentId || session.id),
-        where('volunteerId', '==', userId || username)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        showNotification('Attendance already recorded for this session.', 'warning');
-        // Remove this session from today's sessions
-        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-        return;
-      }
-
-      // Create absent attendance record
-      await addDoc(collection(db, 'attendance'), {
-        appointmentId: session.appointmentId || session.id,
-        volunteerId: userId || username,
-        confirmedBy: username,
-        confirmedAt: Timestamp.now(),
-        status: 'absent',
-        notes: 'Cancelled by volunteer'
-      });    
-      
-      showNotification('Marked as unable to attend.', 'info');  
-      // Remove this session from today's sessions after cancellation
-      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-      
-      // Refresh history to show the new attendance record
-      await fetchInitialAttendanceHistory();
-      
-    } catch (error) {
-      console.error('Error cancelling attendance:', error);
-      showNotification('Error cancelling attendance. Please try again.', 'error');
-    }
-  };
-
-  // Auto-absent logic with grace period consideration
-  useEffect(() => {
-    const checkAndCreateAbsentRecords = async () => {
-      if (!username || todaySessions.length === 0) return;
-
-      for (const session of todaySessions) {
-        const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
+      const enrichedHistory = records.map(record => {
+        const appointmentData = calendarData[record.appointmentId];
         
-        if (attendanceStatus === 'auto-absent') {
-          try {
-            // Check if attendance record already exists
-            const attendanceRef = collection(db, 'attendance');
-            const existingQuery = query(
-              attendanceRef,
-              where('appointmentId', '==', session.appointmentId || session.id),
-              where('volunteerId', '==', userId || username)
-            );
-            const existingSnapshot = await getDocs(existingQuery);
-            
-            if (existingSnapshot.empty) {
-              // Create absent record automatically
-              await addDoc(collection(db, 'attendance'), {
-                appointmentId: session.appointmentId || session.id,
-                volunteerId: userId || username,
-                confirmedBy: username,
-                confirmedAt: Timestamp.now(),
-                status: 'absent',
-                notes: 'Automatically marked absent - session ended without confirmation'
-              });              
-              // Remove this session from today's sessions
-              setTodaySessions(prev => prev.filter(s => s.id !== session.id));
-              
-              // Refresh history to show the new attendance record
-              await fetchInitialAttendanceHistory();
-            }
-          } catch (error) {
-            console.error('Error creating automatic absent record:', error);
+        console.log('Enriching appointmentHistory record:', {
+          recordId: record.id,
+          appointmentId: record.appointmentId,
+          appointmentData: appointmentData ? {
+            startTime: appointmentData.startTime,
+            endTime: appointmentData.endTime,
+            customLabel: appointmentData.customLabel
+          } : null,
+          recordData: {
+            startTime: record.startTime,
+            endTime: record.endTime,
+            time: record.time
+          }
+        });
+        
+        let recordDate;
+        if (record.date) {
+          recordDate = new Date(record.date);
+        } else {
+          recordDate = new Date();
+        }
+        
+        // Calculate hours - try multiple sources
+        let hours = 0;
+        if (appointmentData?.startTime && appointmentData?.endTime) {
+          hours = getHoursFromTimeRange(appointmentData.startTime, appointmentData.endTime);
+          console.log('Hours from appointmentData:', hours);
+        } else if (record.startTime && record.endTime) {
+          hours = getHoursFromTimeRange(record.startTime, record.endTime);
+          console.log('Hours from record data:', hours);
+        } else if (record.time) {
+          // Try to parse from time string like "9:00 AM - 11:00 AM"
+          const timeParts = record.time.split(' - ');
+          if (timeParts.length === 2) {
+            hours = getHoursFromTimeRange(timeParts[0], timeParts[1]);
+            console.log('Hours from time string:', hours);
           }
         }
-      }
-    };
+        
+        return {
+          id: record.id,
+          date: recordDate.toISOString().split('T')[0],
+          title: appointmentData?.customLabel || 
+                 appointmentData?.sessionType || 
+                 appointmentData?.notes || 
+                 'Volunteer Session',
+          time: appointmentData ? 
+                `${appointmentData.startTime} - ${appointmentData.endTime}` : 
+                record.time || 'Time not available',
+          status: record.status || 'completed',
+          hours: hours,
+          notes: record.notes || '',
+          appointmentId: record.appointmentId,
+          source: 'appointmentHistory'
+        };
+      });
+      
+      return enrichedHistory;
+    } catch (error) {
+      console.error('Error enriching history data:', error);
+      return records;
+    }
+  };
 
-    // Check every minute for auto-absent logic
-    const interval = setInterval(checkAndCreateAbsentRecords, 60000);
-    
-    // Check immediately
-    checkAndCreateAbsentRecords();
-    
-    return () => clearInterval(interval);
-  }, [todaySessions, username, userId]);
-
-  // Fetch initial attendance history (first 5 records)
   const fetchInitialAttendanceHistory = async () => {
     if (!userId && !username) return;
 
     try {
-      const attendanceRef = collection(db, 'attendance');
+      // ONLY fetch from volunteer's appointmentHistory
+      const volunteerSnapshot = await getDocs(volunteersRef);
+      let appointmentHistoryRecords = [];
       
-      // Get all attendance records and filter manually (no index required)
-      const snapshot = await getDocs(attendanceRef);
-      // Filter records for this user
-      let userRecords = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(record => {
-          return record.volunteerId === userId || 
-                 record.volunteerId === username ||
-                 record.confirmedBy === username;
-        });        
+      const volunteer = volunteerSnapshot.docs
+        .map(doc => docToObject(doc))
+        .find(v => v.userId === userId || v.userId === username);
       
-      // Sort by confirmedAt date (most recent first)
-      userRecords.sort((a, b) => {
-        const dateA = a.confirmedAt?.toDate ? a.confirmedAt.toDate() : new Date(a.confirmedAt || 0);
-        const dateB = b.confirmedAt?.toDate ? b.confirmedAt.toDate() : new Date(b.confirmedAt || 0);
-        return dateB - dateA;
+      if (volunteer && volunteer.appointmentHistory) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        console.log('Fetching history from volunteer appointmentHistory:', {
+          volunteerId: volunteer.id,
+          appointmentHistoryCount: volunteer.appointmentHistory.length,
+          appointmentHistory: volunteer.appointmentHistory
+        });
+        
+        appointmentHistoryRecords = volunteer.appointmentHistory
+          .filter(appointment => {
+            // Filter out upcoming sessions - only include past/completed sessions
+            const appointmentDate = new Date(appointment.date);
+            appointmentDate.setHours(0, 0, 0, 0);
+            return appointmentDate < today || appointment.status === 'completed';
+          })
+          .map(appointment => ({
+            id: `appointment-${appointment.appointmentId}`,
+            appointmentId: appointment.appointmentId,
+            date: appointment.date,
+            startTime: appointment.startTime,
+            endTime: appointment.endTime,
+            time: `${appointment.startTime} - ${appointment.endTime}`,
+            status: appointment.status || 'completed',
+            notes: '',
+            source: 'appointmentHistory',
+            sortDate: new Date(appointment.date)
+          }));
+      }
+
+      // Sort records by date (most recent first)
+      appointmentHistoryRecords.sort((a, b) => {
+        return b.sortDate - a.sortDate;
       });
 
-      // Store all records for pagination
-      setAllUserRecords(userRecords);
-      setTotalHistoryCount(userRecords.length);
+      setAllUserRecords(appointmentHistoryRecords);
+      setTotalHistoryCount(appointmentHistoryRecords.length);
       
-      // Set initial page data
-      const initialRecords = userRecords.slice(0, RECORDS_PER_PAGE);
-      setHasMoreHistory(userRecords.length > RECORDS_PER_PAGE);
+      const initialRecords = appointmentHistoryRecords.slice(0, RECORDS_PER_PAGE);
+      setHasMoreHistory(appointmentHistoryRecords.length > RECORDS_PER_PAGE);
       setHistoryPage(0);
       
-      // Get appointment details and enrich the data
       const enrichedHistory = await enrichHistoryData(initialRecords);
       setAttendanceHistory(enrichedHistory);
       
@@ -434,7 +420,6 @@ const Attendance = () => {
     }
   };
 
-  // Load more history records
   const loadMoreHistory = async () => {
     if (historyLoading || !hasMoreHistory) return;
 
@@ -448,14 +433,11 @@ const Attendance = () => {
       const nextPageRecords = allUserRecords.slice(startIndex, endIndex);
       
       if (nextPageRecords.length > 0) {
-        // Enrich the new records
         const enrichedNewRecords = await enrichHistoryData(nextPageRecords);
         
-        // Append to existing history
         setAttendanceHistory(prev => [...prev, ...enrichedNewRecords]);
         setHistoryPage(nextPage);
         
-        // Check if there are more records
         setHasMoreHistory(endIndex < allUserRecords.length);
       } else {
         setHasMoreHistory(false);
@@ -468,238 +450,27 @@ const Attendance = () => {
     }
   };
 
-  // Helper function to enrich history data with appointment details
-  const enrichHistoryData = async (records) => {
-    try {
-      // Get appointment details for each attendance record
-      const calendarRef = collection(db, 'calendar_slots');
-      const calendarSnapshot = await getDocs(calendarRef);
-      const calendarData = {};
-      
-      calendarSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const appointmentId = data.appointmentId || doc.id;
-        calendarData[appointmentId] = {
-          ...data,
-          id: doc.id
-        };
-      });
-
-      const enrichedHistory = records.map(record => {
-        const appointmentData = calendarData[record.appointmentId];
-        
-        // Handle date conversion safely
-        let recordDate;
-        if (record.confirmedAt?.toDate) {
-          recordDate = record.confirmedAt.toDate();
-        } else if (record.confirmedAt) {
-          recordDate = new Date(record.confirmedAt);
-        } else {
-          recordDate = new Date();
-        }
-        
-        return {
-          id: record.id,
-          date: recordDate.toISOString().split('T')[0],
-          title: appointmentData?.customLabel || 
-                 appointmentData?.sessionType || 
-                 appointmentData?.notes || 
-                 'Volunteer Session',
-          time: appointmentData ? 
-                `${appointmentData.startTime} - ${appointmentData.endTime}` : 
-                'Time not available',
-          status: record.status || 'present',
-          hours: getHoursFromTimeRange(appointmentData?.startTime, appointmentData?.endTime),
-          notes: record.notes || '',
-          appointmentId: record.appointmentId
-        };
-      });
-      
-      return enrichedHistory;
-    } catch (error) {
-      console.error('Error enriching history data:', error);
-      return records;
-    }
-  };
-
-  // Fetch attendance history on component mount
   useEffect(() => {
     if (userId || username) {
       fetchInitialAttendanceHistory();
     }
   }, [userId, username]);
 
-  // Helper function to calculate hours from time range
-  const getHoursFromTimeRange = (startTime, endTime) => {
-    if (!startTime || !endTime) return 0;
-    
-    const parseTime = (timeStr) => {
-      const [time, period] = timeStr.split(' ');
-      let [hours, minutes] = time.split(':').map(Number);
-      
-      if (period?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-      if (period?.toLowerCase() === 'am' && hours === 12) hours = 0;
-      
-      return hours + (minutes || 0) / 60;
-    };
-
-    try {
-      const start = parseTime(startTime);
-      const end = parseTime(endTime);
-      return Math.max(0, end - start);
-    } catch (error) {
-      console.error('Error parsing time range:', error);
-      return 0;
-    }
-  };
-
-  // Function to get the appropriate tab icon
-  const getTabIcon = (key) => {
-    switch (key) {
-      case 'Today':
-        return <CalendarDays size={18} />;
-      case 'History':
-        return <History size={18} />;
-      default:
-        return null;
-    }
-  };
-
-  // Updated getSessionTimeStatus function with grace period logic
-  const getSessionTimeStatus = (session) => {
-    if (!session) return null;
-    
-    const [startTime, endTime] = session.time.split(' - ');
-    const status = getAttendanceStatus(startTime, endTime);
-    const now = new Date();
-    const sessionStart = parseTimeString(startTime);
-    const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000);
-    
-    switch (status) {
-      case 'auto-absent':
         return {
-          message: 'Session has ended - automatically marked as absent',
-          type: 'error',
-          canConfirm: false
-        };
-      case 'late':
-        return {
-          message: 'Grace period expired - confirming now will mark you as LATE',
-          type: 'error',
-          canConfirm: true
-        };
-      case 'grace-period':
-        const remainingMinutes = Math.ceil((gracePeriodEnd - now) / (60 * 1000));
-        return {
-          message: `Session started - you have ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''} left to confirm on time`,
-          type: 'warning',
-          canConfirm: true,
-          remainingTime: remainingMinutes
-        };
-      default:
-        const minutesUntilStart = Math.ceil((sessionStart - now) / (60 * 1000));
-        return {
-          message: `Session starts in ${minutesUntilStart} minute${minutesUntilStart !== 1 ? 's' : ''}`,
-          type: 'info',
-          canConfirm: true
-        };
-    }
+    attendanceHistory,
+    historyLoading,
+    hasMoreHistory,
+    totalHistoryCount,
+    loadMoreHistory,
+    refreshHistory: fetchInitialAttendanceHistory
   };
+};
 
-  // Updated status class function to handle grace period
-  const getStatusClass = (status) => {
-    const statusClasses = {
-      not_confirmed: 'status-not-confirmed',
-      confirmed: 'status-confirmed',
-      cancelled: 'status-cancelled',
-      'auto-absent': 'status-missed',
-      'grace-period': 'status-grace-period',
-      present: 'status-attended',
-      absent: 'status-missed',
-      late: 'status-late'
-    };
-    return statusClasses[status] || '';
-  };
-
-  // Updated status text function to handle grace period
-  const getStatusText = (status) => {
-    return t(`attendance.statuses.${status}`) || status;
-  };
-
-  // Real-time countdown component for grace period
-  const GracePeriodCountdown = ({ session }) => {
-    const [timeLeft, setTimeLeft] = useState(null);
-    
-    useEffect(() => {
-      const updateCountdown = () => {
-        const now = new Date();
-        const sessionStart = parseTimeString(session.startTime);
-        const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000);
-        const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-        
-        if (attendanceStatus === 'grace-period') {
-          const remaining = Math.ceil((gracePeriodEnd - now) / (60 * 1000));
-          setTimeLeft(remaining > 0 ? remaining : 0);
-        } else {
-          setTimeLeft(null);
-        }
-      };
-      
-      updateCountdown();
-      const interval = setInterval(updateCountdown, 30000); // Update every 30 seconds
-      
-      return () => clearInterval(interval);
-    }, [session]);
-    
-    if (timeLeft === null) return null;
+// Components
+const NotificationToast = ({ notification, onClose }) => {
+  if (!notification.show) return null;
     
     return (
-      <div className="grace-period-countdown">
-        <div className="countdown-container">
-          <div className="countdown-circle">
-            <span className="countdown-time">{timeLeft}</span>
-          </div>
-          <p className="countdown-text">
-            {timeLeft === 1 
-              ? t('attendance.minuteLeft') 
-              : t('attendance.minutesLeft', { count: timeLeft })}
-          </p>
-        </div>
-      </div>
-    );
-  };
-
-  // Calculate stats from history
-  const stats = {
-    totalHours: attendanceHistory.reduce((sum, session) => 
-      sum + (session.status === 'present' || session.status === 'late' ? session.hours : 0), 0
-    ),
-    completedSessions: attendanceHistory.filter(session => 
-      session.status === 'present' || session.status === 'late'
-    ).length,
-    attendanceRate: attendanceHistory.length > 0 
-      ? ((attendanceHistory.filter(session => session.status === 'present' || session.status === 'late').length / attendanceHistory.length) * 100).toFixed(1)
-      : 0,
-    thisMonthHours: attendanceHistory
-      .filter(session => {
-        const sessionDate = new Date(session.date);
-        const now = new Date();
-        return sessionDate.getMonth() === now.getMonth() && 
-               sessionDate.getFullYear() === now.getFullYear() &&
-               (session.status === 'present' || session.status === 'late');
-      })
-      .reduce((sum, session) => sum + session.hours, 0)
-  };
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  return (
-    <Layout>
-      <div className="attendance-container" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
-        {/* Notification Toast */}
-        {notification.show && (
           <div 
             className={`notification-toast ${notification.type}`}
             style={{
@@ -729,7 +500,7 @@ const Attendance = () => {
               {notification.type === 'info' && <span>ℹ️</span>}
               <span>{notification.message}</span>
               <button
-                onClick={() => setNotification({ show: false, message: "", type: "" })}
+          onClick={onClose}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -745,11 +516,14 @@ const Attendance = () => {
               </button>
             </div>
           </div>
-        )}
+  );
+};
 
-        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+const LanguageToggle = ({ i18n, showLangOptions, setShowLangOptions, langToggleRef }) => {
+  return (
+    <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
           <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-            <Globe size={35} />
+        <Globe className="lang-icon" />
           </button>
           {showLangOptions && (
             <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
@@ -759,17 +533,452 @@ const Attendance = () => {
                     document.documentElement.dir = 'ltr';
                   });
                   setShowLangOptions(false); 
-                }}>English</button>
+          }}>
+            English
+          </button>
                 <button onClick={() => { 
                   localStorage.setItem('language', 'he');
                   i18n.changeLanguage('he').then(() => {
                     document.documentElement.dir = 'rtl';
                   });
                   setShowLangOptions(false); 
-                }}>עברית</button>
+          }}>
+            עברית
+          </button>
             </div>
           )}
         </div>
+  );
+};
+
+const SessionCard = ({ session, index, onConfirm, onCancel, t, loadingState }) => {
+  const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
+  
+  const getSessionTimeStatus = () => {
+    const now = new Date();
+    const sessionStart = parseTimeString(session.startTime);
+    
+    switch (attendanceStatus) {
+      case 'ended':
+        return {
+          message: 'Session has ended',
+          type: 'error',
+          canConfirm: false
+        };
+      case 'in-progress':
+        return {
+          message: 'Session is currently in progress',
+          type: 'info',
+          canConfirm: true
+        };
+      case 'upcoming':
+        const minutesUntilStart = Math.ceil((sessionStart - now) / (60 * 1000));
+        let timeMessage;
+        if (minutesUntilStart >= 60) {
+          const hours = (minutesUntilStart / 60).toFixed(1);
+          timeMessage = `Session starts in ${hours} hour${hours !== '1.0' ? 's' : ''}`;
+        } else {
+          timeMessage = `Session starts in ${minutesUntilStart} minute${minutesUntilStart !== 1 ? 's' : ''}`;
+        }
+        return {
+          message: timeMessage,
+          type: 'info',
+          canConfirm: true
+        };
+      default:
+        return {
+          message: 'Unknown status',
+          type: 'info',
+          canConfirm: true
+        };
+    }
+  };
+
+  const getStatusClass = (status) => {
+    const statusClasses = {
+      not_confirmed: 'status-not-confirmed',
+      confirmed: 'status-confirmed',
+      cancelled: 'status-cancelled',
+      ended: 'status-ended',
+      'in-progress': 'status-in-progress',
+      upcoming: 'status-upcoming',
+      present: 'status-attended',
+      absent: 'status-missed',
+      late: 'status-late'
+    };
+    return statusClasses[status] || '';
+  };
+
+  const getStatusText = (status) => {
+    return t(`attendance.statuses.${status}`) || status;
+  };
+
+  const timeStatus = getSessionTimeStatus();
+  const canConfirm = timeStatus?.canConfirm !== false;
+
+  return (
+    <div className="session-card">
+                        <div className="session-card-content">
+                          <div className="session-card-header">
+                            <h3 className="session-card-title">
+            {t('attendance.sessionNumber', { number: index + 1 })}
+                            </h3>
+                            <span className="session-time-badge">{session.time}</span>
+                          </div>
+
+        <div className="detail-divider"></div>
+
+                          <div className="session-details">
+                          </div>
+
+                          <div className="status-section">
+                            <div className="status-row">
+                              <span className="status-label">{t('attendance.status')}:</span>
+            <span className={`status-badge ${getStatusClass(session.status)}`}>
+              {getStatusText(session.status)}
+                              </span>
+                            </div>
+
+          {timeStatus && (
+                                  <div className={`alert-box alert-${timeStatus.type}`}>
+                                    <AlertCircle className="alert-icon" />
+                                    <div className="alert-content">
+                                      <p className="alert-title">{t('attendance.sessionTiming')}</p>
+                                      <p className="alert-message">{timeStatus.message}</p> 
+                                    </div>
+                                  </div>
+          )}
+
+          {!canConfirm ? (
+                                  <div className="status-message status-error">
+                                    <div className="status-message-header">
+                                      <XCircle className="status-message-icon" />
+                                      <p className="status-message-title">{t('attendance.sessionEnded')}</p>
+                                    </div>
+              <p className="status-message-text">{t('attendance.cannotConfirm')}</p>
+                                  </div>
+          ) : (
+                                <>
+                                  <div className="alert-box alert-warning">
+                                    <AlertCircle className="alert-icon" />
+                                    <div className="alert-content">
+                                      <p className="alert-title">{t('attendance.confirmTitle')}</p>
+                                      <p className="alert-message">{t('attendance.confirmMessage')}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="action-buttons">
+                                    <button
+                                      onClick={() => onCancel(session.id)}
+                                      className="btn btn-cancel"
+                                      disabled={loadingState}
+                                    >
+                                      {loadingState === 'cancelling' ? (
+                                        <>
+                                          <div className="loading-spinner"></div>
+                                          <span className="btn-text">{t('attendance.cancelling')}</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <X className="btn-icon" />
+                                          <span className="btn-text">{t('attendance.unableToAttend')}</span>
+                                        </>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => onConfirm(session.id)}
+                                      className="btn btn-confirm"
+                                      disabled={loadingState}
+                                    >
+                                      {loadingState === 'confirming' ? (
+                                        <>
+                                          <div className="loading-spinner"></div>
+                                          <span className="btn-text">{t('attendance.confirming')}</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Check className="btn-icon" />
+                                          <span className="btn-text">{t('attendance.confirm')}</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HistoryItem = ({ session, t, i18n }) => {
+  const getStatusClass = (status) => {
+    const statusClasses = {
+      not_confirmed: 'status-not-confirmed',
+      confirmed: 'status-confirmed',
+      cancelled: 'status-cancelled',
+      ended: 'status-ended',
+      'in-progress': 'status-in-progress',
+      upcoming: 'status-upcoming',
+      present: 'status-attended',
+      absent: 'status-missed',
+      completed: 'status-completed',
+      approved: 'status-approved',
+      pending: 'status-pending',
+      rejected: 'status-rejected'
+    };
+    return statusClasses[status] || '';
+  };
+
+  const getStatusText = (status) => {
+    return t(`attendance.statuses.${status}`) || status;
+  };
+
+  return (
+    <div className="history-item">
+      <div>
+        <div className="history-item-header">
+          <h3 className="history-item-title">{session.title}</h3>
+          <span className={`status-badge ${getStatusClass(session.status)}`}>
+            {getStatusText(session.status)}
+          </span>
+                          </div>
+        
+        <div className="history-item-details">
+          <div className="history-detail">
+            <CalendarDays className="history-detail-icon" />
+            <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            })}</span>
+                        </div>
+          <div className="history-detail">
+            <Clock className="history-detail-icon" />
+            <span>{session.time}</span>
+                      </div>
+        </div>
+
+        {(session.status === 'present' || session.status === 'completed') && (
+          <div className="history-metrics">
+            <div className="metric-item">
+              <TrendingUp className="metric-icon" />
+              <span className="metric-text">
+                {session.hours < 1 
+                  ? t('attendance.minutesCompleted', { minutes: Math.round(session.hours * 60) })
+                  : t('attendance.hoursCompleted', { hours: session.hours.toFixed(1) })
+                }
+              </span>
+            </div>
+          </div>
+        )}
+
+        {session.notes && (
+          <p className="reason-text">
+            <span className="reason-label">{t('attendance.notes')}: </span>
+            {session.notes}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Main Component
+const Attendance = () => {
+  const { t, i18n } = useTranslation('attendance');
+  const [activeTab, setActiveTab] = useState('Today');
+  const [showLangOptions, setShowLangOptions] = useState(false);
+  const [loadingStates, setLoadingStates] = useState({});
+  const langToggleRef = useRef(null);
+
+  // Custom hooks
+  const { username, userId } = useAuth();
+  const { notification, showNotification } = useNotifications();
+  const { todaySessions, setTodaySessions, loading } = useTodaySessions(username, userId);
+  const { 
+    attendanceHistory, 
+    historyLoading, 
+    hasMoreHistory, 
+    totalHistoryCount, 
+    loadMoreHistory, 
+    refreshHistory 
+  } = useAttendanceHistory(username, userId);
+
+  // Set RTL/LTR based on language
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
+  }, [i18n.language]);
+
+  // Handle click outside language toggle to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
+      }
+    };
+
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
+
+  // Attendance handlers
+  const handleConfirm = async (sessionId) => {
+    const session = todaySessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    // Set loading state for this session
+    setLoadingStates(prev => ({ ...prev, [sessionId]: 'confirming' }));
+
+    try {
+      const [startTime, endTime] = session.time.split(' - ');
+      const attendanceStatus = getAttendanceStatus(startTime, endTime);
+      
+      if (attendanceStatus === 'ended') {
+        showNotification('Cannot confirm attendance - the session has already ended.', 'error');
+        return;
+      }
+
+      // Check for existing attendance record
+      const existingQuery = query(
+        attendanceRef,
+        where('appointmentId', '==', session.appointmentId || session.id),
+        where('volunteerId.id', '==', userId)
+      );
+      const existingSnapshot = await getDocs(existingQuery);
+      
+      if (!existingSnapshot.empty) {
+        showNotification('Attendance already recorded for this session.', 'warning');
+        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+        return;
+      }
+
+      // Create attendance record with present status
+      const attendanceData = {
+        appointmentId: session.appointmentId || session.id,
+        volunteerId: { id: userId, type: 'volunteer' },
+        status: 'present',
+        confirmedBy: 'volunteer',
+        confirmedAt: Timestamp.now(),
+        notes: 'Attendance confirmed by volunteer'
+      };
+
+      console.log('Creating attendance record:', attendanceData);
+      await addDoc(attendanceRef, attendanceData);
+      
+      showNotification('Attendance confirmed successfully!', 'success');      
+      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+      await refreshHistory();
+      
+    } catch (error) {
+      console.error('Error confirming attendance:', error);
+      showNotification('Error confirming attendance. Please try again.', 'error');
+    } finally {
+      // Clear loading state
+      setLoadingStates(prev => ({ ...prev, [sessionId]: null }));
+    }
+  };
+
+  const handleCancel = async (sessionId) => {
+    const session = todaySessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    // Set loading state for this session
+    setLoadingStates(prev => ({ ...prev, [sessionId]: 'cancelling' }));
+
+    try {
+      // Check for existing attendance record
+      const existingQuery = query(
+        attendanceRef,
+        where('appointmentId', '==', session.appointmentId || session.id),
+        where('volunteerId.id', '==', userId)
+      );
+      const existingSnapshot = await getDocs(existingQuery);
+      
+      if (!existingSnapshot.empty) {
+        showNotification('Attendance already recorded for this session.', 'warning');
+        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+        return;
+      }
+
+      // Create attendance record with absent status
+      const attendanceData = {
+        appointmentId: session.appointmentId || session.id,
+        volunteerId: { id: userId, type: 'volunteer' },
+        status: 'absent',
+        confirmedBy: 'volunteer',
+        confirmedAt: Timestamp.now(),
+        notes: 'Unable to attend - cancelled by volunteer'
+      };
+
+      console.log('Creating attendance record:', attendanceData);
+      await addDoc(attendanceRef, attendanceData);
+      
+      showNotification('Marked as unable to attend.', 'info');  
+      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+      await refreshHistory();
+      
+    } catch (error) {
+      console.error('Error cancelling attendance:', error);
+      showNotification('Error cancelling attendance. Please try again.', 'error');
+    } finally {
+      // Clear loading state
+      setLoadingStates(prev => ({ ...prev, [sessionId]: null }));
+    }
+  };
+
+  // Calculate stats
+  const stats = useMemo(() => ({
+    totalHours: attendanceHistory.reduce((sum, session) => 
+      sum + ((session.status === 'present' || session.status === 'completed') ? session.hours : 0), 0
+    ),
+    completedSessions: attendanceHistory.filter(session => 
+      session.status === 'present' || session.status === 'completed'
+    ).length,
+    attendanceRate: attendanceHistory.length > 0 
+      ? ((attendanceHistory.filter(session => session.status === 'present' || session.status === 'completed').length / attendanceHistory.length) * 100).toFixed(1)
+      : 0,
+    thisMonthHours: attendanceHistory
+      .filter(session => {
+        const sessionDate = new Date(session.date);
+        const now = new Date();
+        return sessionDate.getMonth() === now.getMonth() && 
+               sessionDate.getFullYear() === now.getFullYear() &&
+               (session.status === 'present' || session.status === 'completed');
+      })
+      .reduce((sum, session) => sum + session.hours, 0)
+  }), [attendanceHistory]);
+
+  // Tab icon helper
+  const getTabIcon = (key) => {
+    switch (key) {
+      case 'Today':
+        return <CalendarDays size={18} />;
+      case 'History':
+        return <History size={18} />;
+      default:
+        return null;
+    }
+  };
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <Layout>
+      <div className="attendance-container" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+        <NotificationToast 
+          notification={notification} 
+          onClose={() => showNotification("", "")} 
+        />
+
         <div className="attendance-wrapper">
           {/* Header */}
           <div className="attendance-header">
@@ -802,153 +1011,15 @@ const Attendance = () => {
                       {t('attendance.todaysSessions')} ({todaySessions.length})
                     </h2>
                     {todaySessions.map((session, index) => (
-                      <div key={session.id} className="session-card">
-                        <div className="session-card-content">
-                          <div className="session-card-header">
-                            <h3 className="session-card-title">
-                              {t('attendance.sessionNumber', { number: index + 1 })}: {session.sessionType}
-                            </h3>
-                            <span className="session-time-badge">{session.time}</span>
-                          </div>
-                          <p className="session-card-description">{t('attendance.pleaseConfirm')}</p>
-
-                          {/* Progress Bar */}
-                          <div className="session-progress-bar">
-                            <div className={`session-progress-fill ${getAttendanceStatus(session.startTime, session.endTime)}`}></div>
-                          </div>
-
-                          <div className="session-details">
-                            <div className="detail-row detail-row-responsive">
-                              <div className="detail-content">
-                                <Clock className="detail-icon" />
-                                <div>
-                                  <p className="detail-label">{t('attendance.time')}</p>
-                                  <p className="detail-value">{session.time}</p>
-                                </div>
-                              </div>
-                              <div className="detail-section">
-                                <p className="detail-label">{t('attendance.date')}</p>
-                                <p className="detail-value">Today</p>
-                              </div>
-                            </div>
-
-                            <div className="detail-row">
-                              <Users className="detail-icon" />
-                              <div className="detail-content">
-                                <p className="detail-label">{t('attendance.sessionType')}</p>
-                                <p className="detail-value">{session.sessionType}</p>
-                              </div>
-                            </div>
-
-                            <div className="detail-divider"></div>
-
-                            <div className="detail-row">
-                              <FileText className="detail-icon" />
-                              <div className="detail-content">
-                                <p className="detail-label" style={{ marginBottom: '0.5rem' }}>{t('attendance.description')}</p>
-                                <p className="detail-value">{session.description}</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="status-section">
-                            <div className="status-row">
-                              <span className="status-label">{t('attendance.status')}:</span>
-                              <span className={`status-badge ${getStatusClass(selectedSessions[session.id]?.status || session.status)}`}>
-                                {getStatusText(selectedSessions[session.id]?.status || session.status)}
-                              </span>
-                            </div>
-
-                            {/* Time Status Indicator */}
-                            {(() => {
-                              const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-                              return (
-                                <div className={`time-status-indicator ${attendanceStatus}`}>
-                                  {attendanceStatus === 'present' && `✅ ${t('attendance.onTime')}`}
-                                  {attendanceStatus === 'grace-period' && `⏰ ${t('attendance.graceActive')}`}
-                                  {attendanceStatus === 'late' && `⚠️ ${t('attendance.late')}`}
-                                  {attendanceStatus === 'auto-absent' && `❌ ${t('attendance.ended')}`}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Grace Period Countdown */}
-                            {getAttendanceStatus(session.startTime, session.endTime) === 'grace-period' && (
-                              <GracePeriodCountdown session={session} />
-                            )}
-
-                            {/* Show time-based status information */}
-                            {(() => {
-                              const timeStatus = getSessionTimeStatus(session);
-                              if (timeStatus && !selectedSessions[session.id]) {
-                                return (
-                                  <div className={`alert-box alert-${timeStatus.type}`}>
-                                    <AlertCircle className="alert-icon" />
-                                    <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.sessionTiming')}</p>
-                                      <p className="alert-message">{timeStatus.message}</p> 
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-
-                            {(!selectedSessions[session.id] || selectedSessions[session.id].status === 'not_confirmed') && (() => {
-                              const timeStatus = getSessionTimeStatus(session);
-                              const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-                              const canConfirm = timeStatus?.canConfirm !== false;
-                              
-                              if (!canConfirm) {
-                                return (
-                                  <div className="status-message status-error">
-                                    <div className="status-message-header">
-                                      <XCircle className="status-message-icon" />
-                                      <p className="status-message-title">{t('attendance.sessionEnded')}</p>
-                                    </div>
-                                    <p className="status-message-text">{t('attendance.autoMarkedAbsent')}</p>
-                                  </div>
-                                );
-                              }
-
-                              return (
-                                <>
-                                  <div className="alert-box alert-warning">
-                                    <AlertCircle className="alert-icon" />
-                                    <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.confirmTitle')}</p>
-                                      <p className="alert-message">{t('attendance.confirmMessage')}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="action-buttons">
-                                    <button
-                                      onClick={() => handleCancel(session.id)}
-                                      className="btn btn-cancel"
-                                    >
-                                      <X className="btn-icon" />
-                                      <span className="btn-text">{t('attendance.unableToAttend')}</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleConfirm(session.id)}
-                                      className={`btn btn-confirm ${attendanceStatus === 'grace-period' ? 'grace-period' : ''} ${attendanceStatus === 'late' ? 'late' : ''}`}
-                                    >
-                                      <Check className="btn-icon" />
-                                      <span className="btn-text">
-                                        {attendanceStatus === 'late' 
-                                          ? t('attendance.confirmLate') 
-                                          : attendanceStatus === 'grace-period' 
-                                            ? t('attendance.confirmGrace') 
-                                            : t('attendance.confirm')}
-                                      </span>
-                                    </button>
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      </div>
+                      <SessionCard
+                        key={session.id}
+                        session={session}
+                        index={index}
+                        onConfirm={handleConfirm}
+                        onCancel={handleCancel}
+                        t={t}
+                        loadingState={loadingStates[session.id]}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -997,48 +1068,12 @@ const Attendance = () => {
                 {attendanceHistory.length > 0 ? (
                   <>
                     {attendanceHistory.map((session) => (
-                      <div key={session.id} className="history-item">
-                        <div>
-                          <div className="history-item-header">
-                            <h3 className="history-item-title">{session.title}</h3>
-                            <span className={`status-badge ${getStatusClass(session.status)}`}>
-                              {getStatusText(session.status)}
-                            </span>
-                          </div>
-                          
-                          <div className="history-item-details">
-                            <div className="history-detail">
-                              <CalendarDays className="history-detail-icon" />
-                              <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}</span>
-                            </div>
-                            <div className="history-detail">
-                              <Clock className="history-detail-icon" />
-                              <span>{session.time}</span>
-                            </div>
-                          </div>
-
-                          {(session.status === 'present' || session.status === 'late') && (
-                            <div className="history-metrics">
-                              <div className="metric-item">
-                                <TrendingUp className="metric-icon" />
-                                <span className="metric-text">{t('attendance.hoursCompleted', { hours: session.hours.toFixed(1) })}</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {session.notes && (
-                            <p className="reason-text">
-                              <span className="reason-label">{t('attendance.notes')}: </span>
-                              {session.notes}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                      <HistoryItem
+                        key={session.id}
+                        session={session}
+                        t={t}
+                        i18n={i18n}
+                      />
                     ))}
                     
                     {/* Load More Button */}
@@ -1085,6 +1120,12 @@ const Attendance = () => {
           )}
         </div>
       </div>
+      <LanguageToggle 
+        i18n={i18n}
+        showLangOptions={showLangOptions}
+        setShowLangOptions={setShowLangOptions}
+        langToggleRef={langToggleRef}
+      />
     </Layout>
   );
 };

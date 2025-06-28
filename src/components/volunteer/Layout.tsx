@@ -83,7 +83,7 @@ export function Layout({ children }: LayoutProps) {
   }, []);
 
   return (
-    <div className="flex min-h-screen" style={{ backgroundColor: '#f8fafc' }}>
+    <div className="flex min-h-screen" style={{ backgroundColor: '#f2f4f6' }}>
       <Sidebar 
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
