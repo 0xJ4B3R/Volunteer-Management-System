@@ -74,14 +74,14 @@
       "rejectedStatus": "Rejected ❌"
     },
     "sessionTypes": {
-    "art": "Art",
-    "baking": "Baking",
-    "music": "Music",
-    "reading": "Reading",
-    "crafts": "Crafts",
-    "exercise": "Exercise",
-    "gardening": "Gardening",
-    "beading": "Beading",
-    "session": "Session"
+      "art": "Art",
+      "baking": "Baking", 
+      "music": "Music",
+      "reading": "Reading",
+      "crafts": "Crafts",
+      "exercise": "Exercise",
+      "gardening": "Gardening",
+      "beading": "Beading",
+      "session": "Session"
   }
 }

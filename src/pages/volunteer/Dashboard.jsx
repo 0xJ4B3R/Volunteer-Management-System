@@ -206,7 +206,8 @@ const Dashboard = () => {
         const volunteerData = volunteerDoc.data();
                 
         setUserData({
-          name: username || volunteerData.fullName || 'Volunteer',
+          fullName: volunteerData.fullName || '',
+          name: username || 'Volunteer',
           totalHours: volunteerData.totalHours || 0,
           totalSessions: volunteerData.totalSessions || 0,
           previousHours: volunteerData.previousHours || 0,
@@ -512,7 +513,7 @@ const Dashboard = () => {
             <h1 className="dash-dashboard-title">{t('dashboard.title')}</h1>
           </div>
           <p className="dash-dashboard-greeting">
-            {getGreeting()}, {userData.name}! 👋
+            {getGreeting()}, {userData.fullName}! 👋
           </p>
         </div>
 

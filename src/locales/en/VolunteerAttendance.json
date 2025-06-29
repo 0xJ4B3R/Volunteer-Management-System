@@ -7,11 +7,14 @@
       "history": "History"
     },
     "todaysSessions": "Today's Sessions",
+    "sessionNumber": "Session {{number}}",
     "pleaseConfirm": "Please confirm your attendance for this session.",
     "time": "Time",
     "date": "Date",
+    "today": "Today",
     "sessionType": "Session Type",
     "description": "Description",
+    "defaultDescription": "Volunteer session with residents",
     "status": "Status",
     "onTime": "On Time",
     "graceActive": "Grace Period Active",
@@ -38,10 +41,13 @@
     "attendanceRate": "Attendance Rate",
     "noHistory": "No attendance history found.",
     "hoursCompleted": "{{hours}} hours completed",
-    "notes": "Notes",
     "sessionLabel": "Session",
-    "timeUnavailable": "Time not available",
+    "timeNotAvailable": "Time not available",
     "defaultSessionTitle": "Volunteer Session",
+    "loading": "Loading...",
+    "loadMore": "Load More History",
+    "showingRecords": "Showing {{showing}} of {{total}} records",
+    "allLoaded": "All history loaded ({{count}} records)",
     "statuses": {
       "not_confirmed": "Not Confirmed",
       "confirmed": "Confirmed",
@@ -59,6 +65,54 @@
         "late": "Late",
         "absent": "Absent"
       }
+    },
+    "notifications": {
+      "sessionEnded": "Cannot confirm attendance - the session has already ended.",
+      "confirmedPresent": "Attendance confirmed as PRESENT",
+      "confirmedGrace": "Attendance confirmed as PRESENT (within grace period)",
+      "confirmedLate": "Attendance confirmed as LATE (grace period expired)",
+      "confirmed": "Attendance confirmed",
+      "alreadyRecorded": "Attendance already recorded for this session.",
+      "markedAbsent": "Marked as unable to attend.",
+      "confirmError": "Error confirming attendance. Please try again.",
+      "cancelError": "Error cancelling attendance. Please try again."
+    },
+    "notes": "Notes",
+    "notesDetails": {
+      "beforeStart": "Confirmed before session start time",
+      "graceConfirmed": "Confirmed within 15-minute grace period",
+      "lateConfirmed": "Confirmed after grace period expired",
+      "confirmed": "Attendance confirmed",
+      "cancelledByVolunteer": "Cancelled by volunteer",
+      "autoAbsent": "Automatically marked absent - session ended without confirmation"
+    },
+    "timeStatus": {
+      "sessionEnded": "Session has ended - automatically marked as absent",
+      "graceExpired": "Grace period expired - confirming now will mark you as LATE",
+      "graceActive": "Session started - you have {{minutes}} minute(s) left to confirm on time",
+      "sessionStarts": "Session starts in {{minutes}} minute(s)"
+    },
+    "sessionTypes": {
+      "session": "Session",
+      "gardening": "Gardening",
+      "artsAndCrafts": "Arts & Crafts",
+      "music": "Music",
+      "reading": "Reading",
+      "games": "Games",
+      "cooking": "Cooking",
+      "exercise": "Exercise",
+      "outdoorActivities": "Outdoor Activities",
+      "socialHour": "Social Hour",
+      "bingo": "Bingo",
+      "crafts": "Crafts",
+      "storytelling": "Storytelling",
+      "meditation": "Meditation",
+      "walking": "Walking",
+      "puzzles": "Puzzles",
+      "movieNight": "Movie Night",
+      "bookClub": "Book Club",
+      "painting": "Painting",
+      "dancing": "Dancing"
     }
   }
 }

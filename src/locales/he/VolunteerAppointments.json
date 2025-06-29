@@ -70,6 +70,31 @@
       "AM": "בבוקר",
       "PM": "אחה\"צ"
     },
+    "sessionTypes": {
+      "session": "מפגש",
+      "gardening": "גינון",
+      "artsAndCrafts": "אמנויות ויצירה",
+      "music": "מוזיקה",
+      "reading": "קריאה", 
+      "games": "משחקים",
+      "cooking": "בישול",
+      "exercise": "התעמלות",
+      "outdoorActivities": "פעילויות חוץ",
+      "socialHour": "שעה חברתית",
+      "bingo": "בינגו",
+      "crafts": "יצירה",
+      "storytelling": "סיפור",
+      "meditation": "מדיטציה",
+      "walking": "הליכה",
+      "puzzles": "פאזלים",
+      "movieNight": "ערב סרטים",
+      "bookClub": "מועדון ספרים",
+      "painting": "ציור",
+      "dancing": "ריקוד",
+      "art": "אמנות",
+      "baking": "אפייה",
+      "beading": "חרוזים"
+    },
     "room": "חדר"
   }
 }

@@ -53,6 +53,50 @@ export default function Appointments() {
   const [username, setUsername] = useState("");
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
 
+  // Add this function near the top of your component, after the existing utility functions
+
+  // Helper function to translate session types
+  const translateSessionType = (sessionType) => {
+    if (!sessionType) return t('sessionTypes.session', 'Session');
+
+    // Handle common session type variations
+    const type = sessionType.toLowerCase().trim();
+
+    // Map variations to standard keys
+    const typeMapping = {
+      'general session': 'session',
+      'volunteer session': 'session',
+      'regular session': 'session',
+      'default': 'session',
+      'gardening': 'gardening',
+      'arts and crafts': 'artsAndCrafts',
+      'arts & crafts': 'artsAndCrafts',
+      'music': 'music',
+      'reading': 'reading',
+      'games': 'games',
+      'cooking': 'cooking',
+      'exercise': 'exercise',
+      'outdoor activities': 'outdoorActivities',
+      'social hour': 'socialHour',
+      'bingo': 'bingo',
+      'crafts': 'crafts',
+      'storytelling': 'storytelling',
+      'meditation': 'meditation',
+      'walking': 'walking',
+      'puzzles': 'puzzles',
+      'movie night': 'movieNight',
+      'book club': 'bookClub',
+      'painting': 'painting',
+      'dancing': 'dancing',
+      'art': 'art',
+      'baking': 'baking',
+      'beading': 'beading'
+    };
+
+    const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, ''); // Clean up for translation key
+    return t(`sessionTypes.${mappedType}`, sessionType); // Fallback to original if translation not found
+  };
+
   // Function to show notifications
   const showNotification = (message, type = "error") => {
     setNotification({ show: true, message, type });
@@ -158,8 +202,8 @@ export default function Appointments() {
             date: formatFirebaseDate(data.date),
             day: getDayFromDate(data.date),
             time: `${data.startTime} - ${data.endTime}`,
-            location: sessionType,
-            sessionType: sessionType, // Keep separate for color logic
+            location: translateSessionType(sessionType), // <-- Change this line
+            sessionType: sessionType, // Keep original for color logic
             note: data.notes || "",
             category: data.isCustom ? "Custom" : "Regular",
             status: userVolunteer ? userVolunteer.status : (data.isOpen ? "Open" : "Closed"),
@@ -243,12 +287,19 @@ export default function Appointments() {
     return false;
   });
 
-  const filtered = tabAppointments.filter((a) => {
-    const matchSearch =
-      (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
-      (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
-    return matchSearch;
-  });
+  const filtered = tabAppointments
+    .filter((a) => {
+      const matchSearch =
+        (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
+        (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
+      return matchSearch;
+    })
+    .sort((a, b) => {
+      if (tab === "past") {
+        return new Date(b.rawData.date) - new Date(a.rawData.date); // Latest to oldest
+      }
+      return new Date(a.rawData.date) - new Date(b.rawData.date); // Soonest to latest for other tabs
+    });
 
   const handleCancel = async (id) => {
     try {
@@ -342,10 +393,10 @@ export default function Appointments() {
   };
 
   // Get status tag with appropriate styling
-  const getStatusTag = (appointment) => {
+   const getStatusTag = (appointment) => {
     const userVolunteer = appointment.volunteers?.find(v => v.username === username);
     const status = userVolunteer?.status || appointment.status;
-    
+
     const getStatusClass = (status) => {
       switch (status) {
         case "approved": return "status-approved";
@@ -356,9 +407,9 @@ export default function Appointments() {
       }
     };
     
-    return (
+     return (
       <div className={`tag ${getSessionTypeClass(appointment.sessionType)} ${getStatusClass(status)}`}>
-        {appointment.sessionType}
+        {translateSessionType(appointment.sessionType)} {/* <-- Change this line */}
       </div>
     );
   };
@@ -547,7 +598,7 @@ export default function Appointments() {
                         display: 'inline-block'
                       }}
                     >
-                      {selected.sessionType}
+                      {translateSessionType(selected.sessionType)} {/* <-- Change this line */}
                     </span>
                   </div>
                     

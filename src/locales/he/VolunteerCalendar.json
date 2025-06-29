@@ -74,14 +74,14 @@
       "rejectedStatus": "נדחה ❌"
     },
     "sessionTypes": {
-        "art": "אמנות",
-        "baking": "אפייה",
-        "music": "מוזיקה",
-        "reading": "קריאה",
-        "crafts": "מלאכת יד",
-        "exercise": "פעילות גופנית",
-        "gardening": "גינון",
-        "beading": "חרוזים",
-        "session": "פגישה"
+      "art": "אמנות",
+      "baking": "אפייה",
+      "music": "מוזיקה", 
+      "reading": "קריאה",
+      "crafts": "יצירה",
+      "exercise": "התעמלות",
+      "gardening": "גינון",
+      "beading": "חרוזים",
+      "session": "מפגש"
     }
 }

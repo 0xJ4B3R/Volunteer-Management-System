@@ -7,11 +7,14 @@
       "history": "היסטוריה"
     },
     "todaysSessions": "המפגשים של היום",
+    "sessionNumber": "מפגש {{number}}",
     "pleaseConfirm": "אנא אשר את הנוכחות שלך למפגש זה.",
     "time": "שעה",
     "date": "תאריך",
+    "today": "היום",
     "sessionType": "סוג מפגש",
     "description": "תיאור",
+    "defaultDescription": "מפגש התנדבות עם דיירים",
     "status": "סטטוס",
     "onTime": "הגעת בזמן",
     "graceActive": "תקופת חסד פעילה",
@@ -38,10 +41,13 @@
     "attendanceRate": "אחוז נוכחות",
     "noHistory": "לא נמצאה היסטוריית נוכחות.",
     "hoursCompleted": "{{hours}} שעות הושלמו",
-    "notes": "הערות",
     "sessionLabel": "מפגש",
-    "timeUnavailable": "שעה לא זמינה",
+    "timeNotAvailable": "שעה לא זמינה",
     "defaultSessionTitle": "מפגש התנדבות",
+    "loading": "טוען...",
+    "loadMore": "טען עוד היסטוריה",
+    "showingRecords": "מציג {{showing}} מתוך {{total}} רשומות",
+    "allLoaded": "כל ההיסטוריה נטענה ({{count}} רשומות)",
     "statuses": {
       "not_confirmed": "לא אושר",
       "confirmed": "מאושר",
@@ -59,6 +65,54 @@
         "late": "מאחר",
         "absent": "נעדר"
       }
+    },
+    "notifications": {
+      "sessionEnded": "לא ניתן לאשר נוכחות - המפגש כבר הסתיים.",
+      "confirmedPresent": "הנוכחות אושרה כ-נוכח",
+      "confirmedGrace": "הנוכחות אושרה כ-נוכח (בתקופת החסד)",
+      "confirmedLate": "הנוכחות אושרה כ-מאחר (תקופת החסד פגה)",
+      "confirmed": "הנוכחות אושרה",
+      "alreadyRecorded": "הנוכחות כבר נרשמה עבור המפגש הזה.",
+      "markedAbsent": "סומן כלא יכול להגיע.",
+      "confirmError": "שגיאה באישור הנוכחות. אנא נסה שוב.",
+      "cancelError": "שגיאה בביטול הנוכחות. אנא נסה שוב."
+    },
+    "notes": "הערות",
+    "notesDetails": {
+      "beforeStart": "אושר לפני שעת תחילת המפגש",
+      "graceConfirmed": "אושר בתוך תקופת החסד של 15 דקות",
+      "lateConfirmed": "אושר לאחר שתקופת החסד פגה",
+      "confirmed": "הנוכחות אושרה",
+      "cancelledByVolunteer": "בוטל על ידי המתנדב",
+      "autoAbsent": "סומן אוטומטית כנעדר - המפגש הסתיים ללא אישור"
+    },
+    "timeStatus": {
+      "sessionEnded": "המפגש הסתיים - סומן אוטומטית כנעדר",
+      "graceExpired": "תקופת החסד פגה - אישור עכשיו יסמן אותך כמאחר",
+      "graceActive": "המפגש התחיל - נותרו לך {{minutes}} דקות לאשר בזמן",
+      "sessionStarts": "המפגש מתחיל בעוד {{minutes}} דקות"
+    },
+    "sessionTypes": {
+      "session": "מפגש",
+      "gardening": "גינון",
+      "artsAndCrafts": "אמנויות ויצירה",
+      "music": "מוזיקה",
+      "reading": "קריאה",
+      "games": "משחקים",
+      "cooking": "בישול",
+      "exercise": "התעמלות",
+      "outdoorActivities": "פעילויות חוץ",
+      "socialHour": "שעה חברתית",
+      "bingo": "בינגו",
+      "crafts": "יצירה",
+      "storytelling": "סיפור",
+      "meditation": "מדיטציה",
+      "walking": "הליכה",
+      "puzzles": "פאזלים",
+      "movieNight": "ערב סרטים",
+      "bookClub": "מועדון ספרים",
+      "painting": "ציור",
+      "dancing": "ריקוד"
     }
   }
 }

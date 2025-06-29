@@ -70,6 +70,31 @@
       "AM": "AM",
       "PM": "PM"
     },
+    "sessionTypes": {
+      "session": "Session",
+      "gardening": "Gardening",
+      "artsAndCrafts": "Arts & Crafts",
+      "music": "Music", 
+      "reading": "Reading",
+      "games": "Games",
+      "cooking": "Cooking",
+      "exercise": "Exercise",
+      "outdoorActivities": "Outdoor Activities",
+      "socialHour": "Social Hour",
+      "bingo": "Bingo",
+      "crafts": "Crafts",
+      "storytelling": "Storytelling",
+      "meditation": "Meditation",
+      "walking": "Walking",
+      "puzzles": "Puzzles",
+      "movieNight": "Movie Night",
+      "bookClub": "Book Club",
+      "painting": "Painting",
+      "dancing": "Dancing",
+      "art": "Art",
+      "baking": "Baking",
+      "beading": "Beading"
+    },
     "room": "Room"
   }
 }
