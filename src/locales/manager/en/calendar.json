@@ -176,6 +176,7 @@
       "startTime": "Start Time",
       "endTime": "End Time",
       "maxCapacity": "Max Capacity",
+      "sessionCategory": "Session Category",
       "notes": "Notes",
       "notesPlaceholder": "Add notes about this session...",
       "period": "Period",
@@ -183,6 +184,14 @@
         "morning": "Morning",
         "afternoon": "Afternoon",
         "evening": "Evening"
+      },
+      "categories": {
+        "none": "None",
+        "music": "Music",
+        "gardening": "Gardening",
+        "beads": "Beads",
+        "art": "Art",
+        "baking": "Baking"
       },
       "isCustom": "Custom Session",
       "customSession": "Custom Session",

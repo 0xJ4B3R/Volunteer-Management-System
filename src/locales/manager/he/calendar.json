@@ -176,6 +176,7 @@
       "startTime": "שעת התחלה",
       "endTime": "שעת סיום",
       "maxCapacity": "קיבולת מקסימלית",
+      "sessionCategory": "קטגוריית פגישה",
       "notes": "הערות",
       "notesPlaceholder": "הוסף הערות על הפגישה...",
       "period": "תקופה",
@@ -183,6 +184,14 @@
         "morning": "בוקר",
         "afternoon": "צהריים",
         "evening": "ערב"
+      },
+      "categories": {
+        "none": "ללא",
+        "music": "מוסיקה",
+        "gardening": "גינון",
+        "beads": "חרוזים",
+        "art": "אמנות",
+        "baking": "אפיה"
       },
       "isCustom": "פגישה מותאמת",
       "customSession": "פגישה מותאמת",
@@ -295,7 +304,8 @@
     "title": "פרטי פגישה",
     "date": "תאריך: {{date}}",
     "time": "שעה: {{start}} - {{end}}",
-    "volunteers": "מתנדבים: {{current}}/{{capacity}}"
+    "volunteers": "מתנדבים: {{current}}/{{capacity}}",
+    "sessionCategory": "קטגוריית פגישה"
   },
   "badges": {
     "custom": "מותאם אישית",

@@ -66,6 +66,7 @@ function ensureSlotShape(raw: any): CalendarSlotUI {
     period: raw.period ?? null,
     isCustom: !!raw.isCustom,
     customLabel: raw.customLabel ?? null,
+    sessionCategory: raw.sessionCategory ?? null,
     residentIds: raw.residentIds || [],
     maxCapacity: raw.maxCapacity ?? 1,
     volunteerRequests,

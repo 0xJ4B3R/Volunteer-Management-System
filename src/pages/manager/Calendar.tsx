@@ -334,6 +334,7 @@ const ManagerCalendar = () => {
 
   // Add timeError state for inline time validation
   const [timeError, setTimeError] = useState("");
+  const [editTimeError, setEditTimeError] = useState("");
 
   // Calendar state with Firestore hooks
   const { slots, loading: slotsLoading, error: slotsError } = useCalendarSlots();
@@ -390,6 +391,7 @@ const ManagerCalendar = () => {
     period: "morning",
     isCustom: false,
     customLabel: null,
+    sessionCategory: null,
     residentIds: [],
     maxCapacity: 1,
     volunteerRequests: [],
@@ -816,6 +818,7 @@ const ManagerCalendar = () => {
         period: newSlot.isCustom ? null : (newSlot.period || "morning"),
         isCustom: newSlot.isCustom || false,
         customLabel: newSlot.customLabel || null,
+        sessionCategory: newSlot.sessionCategory || null,
         residentIds: newSlot.residentIds || [],
         maxCapacity: (isPastSession || isOngoingSession)
           ? (newSlot.externalGroup ? newSlot.externalGroup.numberOfParticipants : selectedVolunteers.length)
@@ -850,6 +853,7 @@ const ManagerCalendar = () => {
         period: createdSlot.period,
         isCustom: createdSlot.isCustom,
         customLabel: createdSlot.customLabel,
+        sessionCategory: createdSlot.sessionCategory,
         residentIds: createdSlot.residentIds,
         maxCapacity: createdSlot.maxCapacity,
         volunteerRequests: createdSlot.volunteerRequests,
@@ -1063,6 +1067,7 @@ const ManagerCalendar = () => {
         period: "morning",
         isCustom: false,
         customLabel: null,
+        sessionCategory: null,
         residentIds: [],
         maxCapacity: 1,
         volunteerRequests: [],
@@ -1171,6 +1176,7 @@ const ManagerCalendar = () => {
         period: selectedSlot.period,
         isCustom: selectedSlot.isCustom,
         customLabel: selectedSlot.customLabel,
+        sessionCategory: selectedSlot.sessionCategory,
         approvedVolunteers: selectedSlot.approvedVolunteers,
         residentIds: selectedSlot.residentIds,
       };
@@ -3247,6 +3253,7 @@ const ManagerCalendar = () => {
         } else {
           setVolunteerTab('available');
           setResidentTab('available');
+          setTimeError(""); // Reset time error when closing dialog
           setNewSlot({
             date: formatIsraelTime(addDays(new Date(), 1), 'yyyy-MM-dd'),
             startTime: "09:00",
@@ -3254,6 +3261,7 @@ const ManagerCalendar = () => {
             period: "morning",
             isCustom: false,
             customLabel: null,
+            sessionCategory: null,
             residentIds: [],
             maxCapacity: 1,
             volunteerRequests: [],
@@ -3323,6 +3331,7 @@ const ManagerCalendar = () => {
                       />
                     </div>
                   )}
+
                   <div className="space-y-2">
                     <Label htmlFor="startTime" className="text-sm font-medium text-slate-700">{t('forms.sessionDetails.startTime')} *</Label>
                     <Input
@@ -3362,6 +3371,9 @@ const ManagerCalendar = () => {
                       disabled={!newSlot.isCustom && newSlot.period !== null}
                       className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
+                    {timeError && (
+                      <div className="text-sm text-red-500 mt-1">{timeError}</div>
+                    )}
                   </div>
                   {/* Period always spans both columns, but only show if not custom */}
                   {!newSlot.isCustom && (
@@ -3407,10 +3419,28 @@ const ManagerCalendar = () => {
                       />
                     </div>
                   )}
+                  {/* Session Category field */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="sessionCategory" className="text-sm font-medium text-slate-700">{t('forms.sessionDetails.sessionCategory')}</Label>
+                    <Select
+                      value={newSlot.sessionCategory || "none"}
+                      onValueChange={(value) => setNewSlot(prev => ({ ...prev, sessionCategory: value === "none" ? null : value as "music" | "gardening" | "beads" | "art" | "baking" }))}
+                      dir={dir}
+                    >
+                      <SelectTrigger className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={dir}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent dir={dir}>
+                        <SelectItem value="none">{t('forms.sessionDetails.categories.none')}</SelectItem>
+                        <SelectItem value="music">{t('forms.sessionDetails.categories.music')}</SelectItem>
+                        <SelectItem value="gardening">{t('forms.sessionDetails.categories.gardening')}</SelectItem>
+                        <SelectItem value="beads">{t('forms.sessionDetails.categories.beads')}</SelectItem>
+                        <SelectItem value="art">{t('forms.sessionDetails.categories.art')}</SelectItem>
+                        <SelectItem value="baking">{t('forms.sessionDetails.categories.baking')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                {timeError && (
-                  <div className="text-sm text-red-500 mt-1">{timeError}</div>
-                )}
               </div>
 
               {/* Session Type Card (restyled) */}
@@ -4165,6 +4195,7 @@ const ManagerCalendar = () => {
           setEditResidentTab('available');
           setEditVolunteerSearch("");
           setEditResidentSearch("");
+          setEditTimeError(""); // Reset time error when closing dialog
         }
       }}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col" dir={dir}>
@@ -4216,13 +4247,22 @@ const ManagerCalendar = () => {
                         />
                       </div>
                     )}
+
                     <div className="space-y-2">
                       <Label htmlFor="edit-startTime" className="text-sm font-medium text-slate-700">{t('forms.sessionDetails.startTime')} *</Label>
                       <Input
                         id="edit-startTime"
                         type="time"
                         value={selectedSlot.startTime}
-                        onChange={(e) => setSelectedSlot({ ...selectedSlot, startTime: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSelectedSlot({ ...selectedSlot, startTime: value });
+                          if (selectedSlot.endTime && value >= selectedSlot.endTime) {
+                            setEditTimeError(t('messages.invalidTimeRangeDescription'));
+                          } else {
+                            setEditTimeError("");
+                          }
+                        }}
                         required
                         disabled={!selectedSlot.isCustom && selectedSlot.period !== null}
                         className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -4234,11 +4274,22 @@ const ManagerCalendar = () => {
                         id="edit-endTime"
                         type="time"
                         value={selectedSlot.endTime}
-                        onChange={(e) => setSelectedSlot({ ...selectedSlot, endTime: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSelectedSlot({ ...selectedSlot, endTime: value });
+                          if (selectedSlot.startTime && selectedSlot.startTime >= value) {
+                            setEditTimeError(t('messages.invalidTimeRangeDescription'));
+                          } else {
+                            setEditTimeError("");
+                          }
+                        }}
                         required
                         disabled={!selectedSlot.isCustom && selectedSlot.period !== null}
                         className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
+                      {editTimeError && (
+                        <div className="text-sm text-red-500 mt-1">{editTimeError}</div>
+                      )}
                     </div>
                     {/* Period always spans both columns, but only show if not custom */}
                     {!selectedSlot.isCustom && (
@@ -4284,6 +4335,27 @@ const ManagerCalendar = () => {
                         />
                       </div>
                     )}
+                  </div>
+                  {/* Session Category field */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="edit-sessionCategory" className="text-sm font-medium text-slate-700">{t('forms.sessionDetails.sessionCategory')}</Label>
+                    <Select
+                      value={selectedSlot.sessionCategory || "none"}
+                      onValueChange={(value) => setSelectedSlot({ ...selectedSlot, sessionCategory: value === "none" ? null : value as "music" | "gardening" | "beads" | "art" | "baking" })}
+                      dir={dir}
+                    >
+                      <SelectTrigger className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={dir}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent dir={dir}>
+                        <SelectItem value="none">{t('forms.sessionDetails.categories.none')}</SelectItem>
+                        <SelectItem value="music">{t('forms.sessionDetails.categories.music')}</SelectItem>
+                        <SelectItem value="gardening">{t('forms.sessionDetails.categories.gardening')}</SelectItem>
+                        <SelectItem value="beads">{t('forms.sessionDetails.categories.beads')}</SelectItem>
+                        <SelectItem value="art">{t('forms.sessionDetails.categories.art')}</SelectItem>
+                        <SelectItem value="baking">{t('forms.sessionDetails.categories.baking')}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="edit-status" className="text-sm font-medium text-slate-700">{t('forms.sessionDetails.status')}</Label>
@@ -4781,7 +4853,6 @@ const ManagerCalendar = () => {
                                           }));
                                         }}
                                         className={cn("flex-shrink-0 bg-white hover:bg-slate-50 border-slate-300", isRTL ? "mr-2" : "ml-2")}
-                                        disabled={isSessionInPast(selectedSlot.date, selectedSlot.startTime) && selectedSlot.residentIds.length === 1}
                                       >
                                         {t('buttons.remove')}
                                       </Button>

@@ -102,6 +102,7 @@ export type SlotPeriod = 'morning' | 'afternoon' | 'evening' | null;
 export type SlotStatus = 'open' | 'full' | 'canceled';
 export type VolunteerRequestStatus = 'pending' | 'approved' | 'rejected';
 export type VolunteerRequestAssignedBy = 'ai' | 'manager';
+export type SessionCategory = 'music' | 'gardening' | 'beads' | 'art' | 'baking' | null;
 
 // New type for participant IDs
 export interface ParticipantId {
@@ -139,6 +140,7 @@ export interface CalendarSlot {
   period?: SlotPeriod;
   isCustom: boolean;
   customLabel?: string | null;
+  sessionCategory?: SessionCategory;
   residentIds: string[];
   maxCapacity: number;
   appointmentId?: string | null;
@@ -198,7 +200,7 @@ export interface MatchingRule {
 // REPORTS
 export type ReportSubject = 'volunteer' | 'resident' | 'external_group';
 export type ReportScope = 'individual' | 'all';
-export type ReportType = 
+export type ReportType =
   | 'volunteer_individual'
   | 'volunteer_all'
   | 'resident_individual'

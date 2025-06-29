@@ -36,7 +36,7 @@ import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 const ManagerDashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('manager-dashboard');
-  const { isRTL } = useLanguage();
+  const { isRTL, language } = useLanguage();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [isLoading, setIsLoading] = useState(true);
@@ -843,7 +843,7 @@ const ManagerDashboard = () => {
                                 <div className="flex justify-between items-center">
                                   <div className="flex flex-col justify-center">
                                     <div className="font-medium">
-                                      {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                      {new Date(session.date).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                     </div>
                                     <div className="text-sm text-slate-500 mt-1">
                                       {session.startTime} - {session.endTime} • {t('pendingVolunteers.volunteersCount', {
@@ -1057,7 +1057,7 @@ const ManagerDashboard = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="p-6 pt-4">
-                      <div className={cn("space-y-4 max-h-[428px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
+                      <div className={cn("space-y-4 max-h-[448px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
                         {todoItems.length > 0 ? (
                           todoItems.map((item, index) => (
                             <div
