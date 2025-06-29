@@ -1,0 +1,64 @@
+{
+  "attendance": {
+    "title": "Attendance",
+    "subtitle": "Manage your session attendance and view history",
+    "tabs": {
+      "today": "Today",
+      "history": "History"
+    },
+    "todaysSessions": "Today's Sessions",
+    "pleaseConfirm": "Please confirm your attendance for this session.",
+    "time": "Time",
+    "date": "Date",
+    "sessionType": "Session Type",
+    "description": "Description",
+    "status": "Status",
+    "onTime": "On Time",
+    "graceActive": "Grace Period Active",
+    "late": "Late Confirmation",
+    "ended": "Session Ended",
+    "minuteLeft": "minute left in grace period",
+    "minutesLeft": "{{count}} minutes left in grace period",
+    "sessionTiming": "Session Timing",
+    "sessionEnded": "Session Ended",
+    "autoMarkedAbsent": "This session has ended and you have been automatically marked as absent.",
+    "confirmTitle": "Please confirm your attendance",
+    "confirmMessage": "Your attendance needs to be confirmed for this session.",
+    "confirm": "Confirm Attendance",
+    "confirmLate": "Confirm (Late)",
+    "confirmGrace": "Confirm (Grace Period)",
+    "unableToAttend": "Unable to Attend",
+    "noSessions": "No Sessions Today",
+    "noSessionsDesc": "You don't have any approved sessions scheduled for today.",
+    "noSessionsTitle": "No sessions found",
+    "noSessionsMessage": "Check the calendar to see your upcoming sessions or contact your coordinator.",
+    "thisMonth": "This Month's Summary",
+    "sessions": "Sessions",
+    "hours": "Hours",
+    "attendanceRate": "Attendance Rate",
+    "noHistory": "No attendance history found.",
+    "hoursCompleted": "{{hours}} hours completed",
+    "notes": "Notes",
+    "sessionLabel": "Session",
+    "timeUnavailable": "Time not available",
+    "defaultSessionTitle": "Volunteer Session",
+    "statuses": {
+      "not_confirmed": "Not Confirmed",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "auto-absent": "Auto Absent",
+      "grace-period": "Grace Period",
+      "present": "Present",
+      "absent": "Absent",
+      "late": "Late"
+    },
+    "historyItem": {
+      "title": "{{title}}",
+      "status": {
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent"
+      }
+    }
+  }
+}

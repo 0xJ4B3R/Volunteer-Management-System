@@ -1,0 +1,123 @@
+{
+  "nav": {
+    "title": "Neveh Horim",
+    "contact": "Contact",
+    "services": "Services",
+    "features": "Features",
+    "about": "About",
+    "login": "Login"
+  },
+  "hero": {
+    "title": "Empowering Volunteers, Enriching Lives",
+    "description": "Join our community to make a real difference. Connect, contribute, and grow through meaningful volunteering opportunities.",
+    "getStarted": "Get Started",
+    "contactUs": "Contact Us"
+  },
+  "features": {
+    "title": "The platform makes volunteering accessible, organized, and impactful for everyone involved.",
+    "smartScheduling": {
+      "title": "Smart Scheduling",
+      "desc": "Easily browse and sign up for volunteer opportunities that fit your schedule."
+    },
+    "personalizedMatching": {
+      "title": "Personalized Matching",
+      "desc": "Find opportunities that match your skills, interests, and availability. Make every hour count."
+    },
+    "mobileFriendly": {
+      "title": "Mobile Friendly",
+      "desc": "Access your volunteer dashboard anywhere. Confirm attendance, check schedules, and stay connected on the go."
+    },
+    "achievements": {
+      "title": "Achievement System",
+      "desc": "Earn badges and recognition for your volunteer work. Celebrate milestones and inspire others to get involved."
+    }
+  },
+  "services": {
+    "title": "Our Services",
+    "subtitle": "Comprehensive care and support services designed to enhance quality of life",
+    "of": "of",
+    "items": {
+      "medical": {
+        "title": "24-Hour Medical and Nursing Care",
+        "desc": "Provided by the home's skilled staff, including consultations with specialist doctors."
+      },
+      "social": {
+        "title": "Social Services",
+        "desc": "Offers support to residents and their families, maintains connections with the community and schools, and initiates special activities."
+      },
+      "cultural": {
+        "title": "Cultural Activities",
+        "desc": "Animal therapy, gardening, weekly Torah portion study, music classes, exercise, ceramics, jewelry and bead making, guest artist performances, trips, and parties."
+      },
+      "projects": {
+        "title": "Special Projects: Growing Community",
+        "desc": "Strengthening connections between residents and staff through meaningful community-building initiatives."
+      },
+      "volunteers": {
+        "title": "Volunteers",
+        "desc": "Schools, pre-military programs, retirees, and neighbors assist with both group and individual activities."
+      },
+      "therapy": {
+        "title": "Occupational Therapy",
+        "desc": "Includes a Snoezelen room (multi-sensory stimulation) and cognitive groups for enhanced well-being."
+      },
+      "employment": {
+        "title": "Employment and Social Activities",
+        "desc": "Handicrafts, music engagement, classes, computer room, music room, cultural performances, and more."
+      },
+      "physio": {
+        "title": "Physiotherapy",
+        "desc": "Personalized individual and group therapy in a well-equipped facility and an activity yard."
+      },
+      "meals": {
+        "title": "Five Meals a Day",
+        "desc": "Supervised by a dietitian and under rabbinical supervision for optimal nutrition and kosher compliance."
+      },
+      "tv": {
+        "title": "Cable TV Connection",
+        "desc": "Option to install cable television in residents' rooms for entertainment and connection."
+      },
+      "cleaning": {
+        "title": "Cleaning and Security Services",
+        "desc": "Comprehensive cleaning and 24/7 security services to ensure a safe and comfortable environment."
+      },
+      "laundry": {
+        "title": "Laundry Services",
+        "desc": "Professional laundry services to maintain residents' clothing and linens with care."
+      },
+      "beauty": {
+        "title": "Hair Salon and Pedicure",
+        "desc": "On-site beauty services including hair styling and pedicure treatments for resident comfort."
+      },
+      "synagogue": {
+        "title": "Synagogue",
+        "desc": "On-site synagogue facilities for prayer services and religious observance."
+      },
+      "pharmacy": {
+        "title": "Pharmacy",
+        "desc": "Convenient on-site pharmacy services for medication management and prescription needs."
+      }
+    }
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Get in touch with our team. We're here to help and answer any questions you may have.",
+    "location": "Location",
+    "phone": "Phone",
+    "email": "Email",
+    "fax": "Fax",
+    "address": {
+      "line1": "Ma'ale Ze'ev Street 3",
+      "line2": "Jerusalem, Israel"
+    }
+  },
+  "footer": {
+    "aboutUs": "About Us",
+    "services": "Services",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "support": "Support",
+    "contact": "Contact",
+    "rights": "© 2025 Neveh Horim. All rights reserved. Making communities stronger, one volunteer at a time."
+  }
+}
