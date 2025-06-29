@@ -2019,13 +2019,13 @@ const ManagerCalendar = () => {
       if (action === 'approve') {
         const newParticipant: ParticipantId = { id: volunteerId, type: 'volunteer' };
         updatedApprovedVolunteers = [...updatedApprovedVolunteers, newParticipant];
-        
+
         // Check if volunteer request has an assigned resident that should be added to residentIds
         const volunteerRequest = session.volunteerRequests.find(v => v.volunteerId === volunteerId);
         if (volunteerRequest?.assignedResidentId && !updatedResidentIds.includes(volunteerRequest.assignedResidentId)) {
           updatedResidentIds = [...updatedResidentIds, volunteerRequest.assignedResidentId];
         }
-        
+
         // Update status based on approved volunteers count
         if (updatedApprovedVolunteers.length >= session.maxCapacity) {
           updatedStatus = "full";
@@ -3472,10 +3472,10 @@ const ManagerCalendar = () => {
                                 value={recurringPattern.frequency}
                                 onValueChange={handleFrequencyChange}
                               >
-                                <SelectTrigger className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                                <SelectTrigger className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={dir}>
                                   <SelectValue placeholder={t('forms.recurring.frequency')} />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent dir={dir}>
                                   <SelectItem value="daily">{t('forms.recurring.frequencies.daily')}</SelectItem>
                                   <SelectItem value="weekly">{t('forms.recurring.frequencies.weekly')}</SelectItem>
                                   <SelectItem value="monthly">{t('forms.recurring.frequencies.monthly')}</SelectItem>
@@ -4781,6 +4781,7 @@ const ManagerCalendar = () => {
                                           }));
                                         }}
                                         className={cn("flex-shrink-0 bg-white hover:bg-slate-50 border-slate-300", isRTL ? "mr-2" : "ml-2")}
+                                        disabled={isSessionInPast(selectedSlot.date, selectedSlot.startTime) && selectedSlot.residentIds.length === 1}
                                       >
                                         {t('buttons.remove')}
                                       </Button>

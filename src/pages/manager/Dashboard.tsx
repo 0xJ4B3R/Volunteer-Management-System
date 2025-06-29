@@ -1057,7 +1057,7 @@ const ManagerDashboard = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="p-6 pt-4">
-                      <div className={cn("space-y-4 max-h-[448px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
+                      <div className={cn("space-y-4 max-h-[428px] overflow-y-auto", isRTL ? "pl-2" : "pr-2")}>
                         {todoItems.length > 0 ? (
                           todoItems.map((item, index) => (
                             <div

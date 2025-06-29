@@ -155,6 +155,7 @@ const useNotifications = () => {
 const useTodaySessions = (username, userId) => {
   const [todaySessions, setTodaySessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [volunteer, setVolunteer] = useState(null);
 
   useEffect(() => {
     const fetchTodaySessions = async () => {
@@ -173,8 +174,19 @@ const useTodaySessions = (username, userId) => {
 
         if (!volunteer || !volunteer.appointmentHistory) {
           setTodaySessions([]);
+          setVolunteer(null);
           return;
         }
+
+        console.log('Found volunteer for attendance:', {
+          volunteerId: volunteer.id,
+          userId: volunteer.userId,
+          fullName: volunteer.fullName,
+          appointmentHistoryCount: volunteer.appointmentHistory?.length || 0
+        });
+
+        // Store the volunteer object for later use
+        setVolunteer(volunteer);
 
         // Filter today's sessions from appointmentHistory
         const todayAppointments = volunteer.appointmentHistory.filter(appointment => {
@@ -200,11 +212,11 @@ const useTodaySessions = (username, userId) => {
         const sessionsWithAttendance = await Promise.all(
           todayAppointments.map(async (appointment) => {
             try {
-              // Check if attendance already exists
+              // Check if attendance already exists - use volunteer.id instead of userId
               const existingAttendanceQuery = query(
                 attendanceRef,
                 where('appointmentId', '==', appointment.appointmentId),
-                where('volunteerId.id', '==', userId)
+                where('volunteerId.id', '==', volunteer.id)
               );
 
               const existingAttendanceSnapshot = await getDocs(existingAttendanceQuery);
@@ -213,12 +225,12 @@ const useTodaySessions = (username, userId) => {
                 return null; // Skip if attendance already exists
               }
             } catch (attendanceError) {
-              // Fallback check
+              // Fallback check - use volunteer.id instead of userId
               const allAttendanceSnapshot = await getDocs(attendanceRef);
               const existingRecord = allAttendanceSnapshot.docs.find(doc => {
                 const data = doc.data();
                 return (data.appointmentId === appointment.appointmentId) &&
-                  (data.volunteerId?.id === userId || data.volunteerId === userId);
+                  (data.volunteerId?.id === volunteer.id || data.volunteerId === volunteer.id);
               });
 
               if (existingRecord) {
@@ -257,6 +269,7 @@ const useTodaySessions = (username, userId) => {
       } catch (error) {
         console.error('Error fetching today\'s sessions:', error);
         setTodaySessions([]);
+        setVolunteer(null);
       } finally {
         setLoading(false);
       }
@@ -265,7 +278,7 @@ const useTodaySessions = (username, userId) => {
     fetchTodaySessions();
   }, [username, userId]);
 
-  return { todaySessions, setTodaySessions, loading };
+  return { todaySessions, setTodaySessions, loading, volunteer };
 };
 
 const useAttendanceHistory = (username, userId) => {
@@ -275,6 +288,7 @@ const useAttendanceHistory = (username, userId) => {
   const [hasMoreHistory, setHasMoreHistory] = useState(true);
   const [allUserRecords, setAllUserRecords] = useState([]);
   const [totalHistoryCount, setTotalHistoryCount] = useState(0);
+  const [volunteer, setVolunteer] = useState(null);
 
   const enrichHistoryData = async (records) => {
     try {
@@ -370,8 +384,18 @@ const useAttendanceHistory = (username, userId) => {
         .find(v => v.userId === userId || v.userId === username);
 
       if (volunteer && volunteer.appointmentHistory) {
+        // Store the volunteer object for consistency
+        setVolunteer(volunteer);
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
+        console.log('Found volunteer for history:', {
+          volunteerId: volunteer.id,
+          userId: volunteer.userId,
+          fullName: volunteer.fullName,
+          appointmentHistoryCount: volunteer.appointmentHistory.length
+        });
 
         console.log('Fetching history from volunteer appointmentHistory:', {
           volunteerId: volunteer.id,
@@ -398,6 +422,8 @@ const useAttendanceHistory = (username, userId) => {
             source: 'appointmentHistory',
             sortDate: new Date(appointment.date)
           }));
+      } else {
+        setVolunteer(null);
       }
 
       // Sort records by date (most recent first)
@@ -417,6 +443,7 @@ const useAttendanceHistory = (username, userId) => {
 
     } catch (error) {
       console.error('Error fetching attendance history:', error);
+      setVolunteer(null);
     }
   };
 
@@ -462,7 +489,8 @@ const useAttendanceHistory = (username, userId) => {
     hasMoreHistory,
     totalHistoryCount,
     loadMoreHistory,
-    refreshHistory: fetchInitialAttendanceHistory
+    refreshHistory: fetchInitialAttendanceHistory,
+    volunteer
   };
 };
 
@@ -797,15 +825,19 @@ const Attendance = () => {
   // Custom hooks
   const { username, userId } = useAuth();
   const { notification, showNotification } = useNotifications();
-  const { todaySessions, setTodaySessions, loading } = useTodaySessions(username, userId);
+  const { todaySessions, setTodaySessions, loading, volunteer: todayVolunteer } = useTodaySessions(username, userId);
   const {
     attendanceHistory,
     historyLoading,
     hasMoreHistory,
     totalHistoryCount,
     loadMoreHistory,
-    refreshHistory
+    refreshHistory,
+    volunteer: historyVolunteer
   } = useAttendanceHistory(username, userId);
+
+  // Use the volunteer from today's sessions as the primary volunteer object
+  const volunteer = todayVolunteer || historyVolunteer;
 
   // Robust language direction management
   const applyLanguageDirection = (lang) => {
@@ -869,6 +901,14 @@ const Attendance = () => {
     const session = todaySessions.find(s => s.id === sessionId);
     if (!session) return;
 
+    // Check if volunteer object is available
+    if (!volunteer) {
+      showNotification('Volunteer information not available. Please refresh the page.', 'error');
+      return;
+    }
+
+    console.log('Confirming attendance with volunteer ID:', volunteer.id, 'for session:', sessionId);
+
     // Set loading state for this session
     setLoadingStates(prev => ({ ...prev, [sessionId]: 'confirming' }));
 
@@ -885,7 +925,7 @@ const Attendance = () => {
       const existingQuery = query(
         attendanceRef,
         where('appointmentId', '==', session.appointmentId || session.id),
-        where('volunteerId.id', '==', userId)
+        where('volunteerId.id', '==', volunteer.id)
       );
       const existingSnapshot = await getDocs(existingQuery);
 
@@ -898,7 +938,7 @@ const Attendance = () => {
       // Create attendance record with present status
       const attendanceData = {
         appointmentId: session.appointmentId || session.id,
-        volunteerId: { id: userId, type: 'volunteer' },
+        volunteerId: { id: volunteer.id, type: 'volunteer' },
         status: 'present',
         confirmedBy: 'volunteer',
         confirmedAt: Timestamp.now(),
@@ -925,6 +965,14 @@ const Attendance = () => {
     const session = todaySessions.find(s => s.id === sessionId);
     if (!session) return;
 
+    // Check if volunteer object is available
+    if (!volunteer) {
+      showNotification('Volunteer information not available. Please refresh the page.', 'error');
+      return;
+    }
+
+    console.log('Cancelling attendance with volunteer ID:', volunteer.id, 'for session:', sessionId);
+
     // Set loading state for this session
     setLoadingStates(prev => ({ ...prev, [sessionId]: 'cancelling' }));
 
@@ -933,7 +981,7 @@ const Attendance = () => {
       const existingQuery = query(
         attendanceRef,
         where('appointmentId', '==', session.appointmentId || session.id),
-        where('volunteerId.id', '==', userId)
+        where('volunteerId.id', '==', volunteer.id)
       );
       const existingSnapshot = await getDocs(existingQuery);
 
@@ -946,7 +994,7 @@ const Attendance = () => {
       // Create attendance record with absent status
       const attendanceData = {
         appointmentId: session.appointmentId || session.id,
-        volunteerId: { id: userId, type: 'volunteer' },
+        volunteerId: { id: volunteer.id, type: 'volunteer' },
         status: 'absent',
         confirmedBy: 'volunteer',
         confirmedAt: Timestamp.now(),
