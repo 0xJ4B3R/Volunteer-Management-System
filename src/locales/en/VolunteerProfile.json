@@ -23,19 +23,47 @@
     "newPassword": "New Password",
     "confirmPassword": "Confirm Password",
     "confirmChange": "Confirm Password Change",
+    "password_change_required": "⚠️ Password change required for security reasons. Please update your password below.",
     "prompt": {
       "newSkill": "Enter a new skill"
     },
     "toast": {
       "addedTitle": "Skill Added",
       "addedDesc": "{{skill}} has been added.",
+      "languageAdded": "{{language}} has been added.",
       "removedTitle": "Skill Removed",
       "removedDesc": "{{skill}} has been removed.",
+      "languageRemoved": "{{language}} has been removed.",
       "errorTitle": "Error",
       "errorDesc": "Please check your inputs.",
+      "emptySkill": "Please enter a skill name.",
+      "emptyLanguage": "Please enter a language name.",
+      "maxSkills": "You can only have up to 5 skills.",
+      "maxLanguages": "You can only have up to 5 languages.",
+      "duplicateSkill": "This skill already exists.",
+      "duplicateLanguage": "This language already exists.",
       "addSkillError": "Failed to add skill. Please try again.",
       "removeSkillError": "Failed to remove skill. Please try again.",
+      "addLanguageError": "Failed to add language. Please try again.",
+      "removeLanguageError": "Failed to remove language. Please try again.",
       "passwordChanged": "Password changed successfully!"
+    },
+    "password": {
+      "fillAllFields": "Please fill in all password fields.",
+      "passwordsMismatch": "New passwords do not match.",
+      "passwordTooShort": "New password must be at least 6 characters long.",
+      "samePassword": "New password must be different from current password.",
+      "changing": "Changing password...",
+      "userNotFound": "User data not found.",
+      "userDocNotFound": "User document not found.",
+      "noPasswordSet": "No password set for this user.",
+      "verificationError": "Unable to verify password.",
+      "incorrectCurrent": "Current password is incorrect.",
+      "hashError": "Cannot create secure password on this device.",
+      "changeSuccess": "Password changed successfully!",
+      "changeError": "Failed to change password. Please try again.",
+      "permissionDenied": "Permission denied. Please log in again.",
+      "networkError": "Network error. Please check your connection."
     },
     "errors": {
       "fillAllFields": "Please fill in all password fields.",
@@ -46,7 +74,9 @@
       "documentNotFound": "User document not found.",
       "noPasswordSet": "No password set for this user.",
       "incorrectCurrent": "Current password is incorrect.",
-      "changeFailed": "Failed to change password. Please try again."
+      "changeFailed": "Failed to change password. Please try again.",
+      "passwordTooWeak": "Password doesn't meet security requirements"
+
     },
     "badges": {
       "Beginner": "Beginner",
@@ -57,6 +87,22 @@
       "Champion": "Champion",
       "Humanitarian": "Humanitarian",
       "Lord of the deeds": "Lord of the deeds"
-    }
+    },
+    "passwordStrength": {
+      "weak": "Weak",
+      "medium": "Medium",
+      "good": "Good", 
+      "strong": "Strong"
+    },
+    "passwordRequirements": {
+      "length": "At least 8 characters",
+      "uppercase": "One uppercase letter",
+      "lowercase": "One lowercase letter",
+      "number": "One number", 
+      "special": "One special character",
+      "noSpaces": "No spaces"
+    },
+    "passwordsMatch": "Passwords match",
+    "passwordsDontMatch": "Passwords don't match"
   }
 }

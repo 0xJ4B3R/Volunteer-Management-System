@@ -1,41 +1,69 @@
 {
   "profile": {
     "title": "הפרופיל שלך",
-    "subtitle": "נהל את פרטיך האישיים והגדרות החשבון",
+    "subtitle": "נהל את המידע האישי שלך והגדרות החשבון",
     "tabs": {
-      "info": "פרטים אישיים",
+      "info": "מידע אישי",
       "security": "אבטחה"
     },
-    "memberSince": "חבר מ",
-    "Hours": "סה\"כ שעות",
+    "memberSince": "חבר מאז",
+    "Hours": "שעות",
     "username": "שם משתמש",
-    "status": "דרגת מתנדב",
+    "status": "סטטוס מתנדב",
     "phone": "טלפון",
     "completedSessions": "מפגשים שהושלמו",
     "skills": "כישורים",
-    "addSkill": "הוסף כישרון",
-    "enterSkill":"הוסף כישרון",
+    "addSkill": "הוסף כישור",
+    "enterSkill": "הכנס כישור",
     "languages": "שפות",
-    "enterLanguage":"הוסף שפה",
     "addLanguage": "הוסף שפה",
-    "changePassword": "שנה סיסמה",
+    "enterLanguage": "הכנס שפה",
+    "changePassword": "שינוי סיסמה",
     "currentPassword": "סיסמה נוכחית",
     "newPassword": "סיסמה חדשה",
-    "confirmPassword": "אימות סיסמה חדשה",
-    "confirmChange": "אישור שינוי סיסמה",
+    "confirmPassword": "אימות סיסמה",
+    "confirmChange": "אשר שינוי סיסמה",
+    "password_change_required": "⚠️ נדרש שינוי סיסמה מטעמי אבטחה. אנא עדכן את הסיסמה שלך למטה.",
     "prompt": {
-      "newSkill": "הזן כישור חדש"
+      "newSkill": "הכנס כישור חדש"
     },
     "toast": {
       "addedTitle": "כישור נוסף",
-      "addedDesc": "{{skill}} נוסף לרשימתך.",
+      "addedDesc": "{{skill}} נוסף בהצלחה.",
+      "languageAdded": "{{language}} נוספה בהצלחה.",
       "removedTitle": "כישור הוסר",
-      "removedDesc": "{{skill}} הוסר מהרשימה.",
+      "removedDesc": "{{skill}} הוסר בהצלחה.",
+      "languageRemoved": "{{language}} הוסרה בהצלחה.",
       "errorTitle": "שגיאה",
-      "errorDesc": "אנא בדוק את הקלט.",
-      "addSkillError": "הוספת הכישור נכשלה. נסה שוב.",
-      "removeSkillError": "הסרת הכישור נכשלה. נסה שוב.",
+      "errorDesc": "אנא בדוק את הנתונים שהזנת.",
+      "emptySkill": "אנא הכנס שם כישור.",
+      "emptyLanguage": "אנא הכנס שם שפה.",
+      "maxSkills": "ניתן להוסיף עד 5 כישורים בלבד.",
+      "maxLanguages": "ניתן להוסיף עד 5 שפות בלבד.",
+      "duplicateSkill": "הכישור הזה כבר קיים.",
+      "duplicateLanguage": "השפה הזו כבר קיימת.",
+      "addSkillError": "נכשל בהוספת הכישור. אנא נסה שוב.",
+      "removeSkillError": "נכשל בהסרת הכישור. אנא נסה שוב.",
+      "addLanguageError": "נכשל בהוספת השפה. אנא נסה שוב.",
+      "removeLanguageError": "נכשל בהסרת השפה. אנא נסה שוב.",
       "passwordChanged": "הסיסמה שונתה בהצלחה!"
+    },
+    "password": {
+      "fillAllFields": "אנא מלא את כל שדות הסיסמה.",
+      "passwordsMismatch": "הסיסמאות החדשות אינן תואמות.",
+      "passwordTooShort": "הסיסמה החדשה חייבת להכיל לפחות 6 תווים.",
+      "samePassword": "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית.",
+      "changing": "משנה סיסמה...",
+      "userNotFound": "נתוני המשתמש לא נמצאו.",
+      "userDocNotFound": "מסמך המשתמש לא נמצא.",
+      "noPasswordSet": "לא הוגדרה סיסמה עבור משתמש זה.",
+      "verificationError": "לא ניתן לאמת את הסיסמה.",
+      "incorrectCurrent": "הסיסמה הנוכחית שגויה.",
+      "hashError": "לא ניתן ליצור סיסמה מאובטחת במכשיר זה.",
+      "changeSuccess": "הסיסמה שונתה בהצלחה!",
+      "changeError": "נכשל בשינוי הסיסמה. אנא נסה שוב.",
+      "permissionDenied": "הרשאה נדחתה. אנא התחבר שוב.",
+      "networkError": "שגיאת רשת. אנא בדוק את החיבור שלך."
     },
     "errors": {
       "fillAllFields": "אנא מלא את כל שדות הסיסמה.",
@@ -46,17 +74,34 @@
       "documentNotFound": "מסמך המשתמש לא נמצא.",
       "noPasswordSet": "לא הוגדרה סיסמה עבור משתמש זה.",
       "incorrectCurrent": "הסיסמה הנוכחית שגויה.",
-      "changeFailed": "שינוי הסיסמה נכשל. נסה שוב."
+      "changeFailed": "נכשל בשינוי הסיסמה. אנא נסה שוב.",
+      "passwordTooWeak": "הסיסמה לא עומדת בדרישות האבטחה"
     },
     "badges": {
       "Beginner": "מתחיל",
       "Helper": "עוזר",
       "Contributor": "תורם",
       "Supporter": "תומך",
-      "Advocate": "שגריר",
+      "Advocate": "חסיד",
       "Champion": "אלוף",
       "Humanitarian": "הומניטרי",
       "Lord of the deeds": "אדון המעשים"
-    }
+    },
+    "passwordStrength": {
+      "weak": "חלשה",
+      "medium": "בינונית",
+      "good": "טובה",
+      "strong": "חזקה"
+    },
+    "passwordRequirements": {
+      "length": "לפחות 8 תווים",
+      "uppercase": "אות גדולה אחת",
+      "lowercase": "אות קטנה אחת",
+      "number": "מספר אחד",
+      "special": "תו מיוחד אחד",
+      "noSpaces": "ללא רווחים"
+    },
+    "passwordsMatch": "הסיסמאות תואמות",
+    "passwordsDontMatch": "הסיסמאות אינן תואמות"
   }
 }
