@@ -348,30 +348,50 @@ const Dashboard = () => {
         const status = data.status || "Unknown";
         const notes = data.notes || "";
         
-        // Parse confirmedAt timestamp
         let timeAgo = "Recently";
         if (data.confirmedAt) {
           try {
-            const confirmedDate = data.confirmedAt.toDate ? data.confirmedAt.toDate() : new Date(data.confirmedAt);
+            // Handle Firestore Timestamp object
+            let confirmedDate;
+            if (data.confirmedAt.toDate) {
+              confirmedDate = data.confirmedAt.toDate();
+            } else if (data.confirmedAt.seconds) {
+              // Convert Firestore timestamp (seconds + nanoseconds) to Date
+              confirmedDate = new Date(data.confirmedAt.seconds * 1000 + data.confirmedAt.nanoseconds / 1000000);
+            } else {
+              confirmedDate = new Date(data.confirmedAt);
+            }
+            
             const now = new Date();
             const diffTime = Math.abs(now - confirmedDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+            const diffMinutes = Math.floor(diffTime / (1000 * 60));
             
-            if (diffDays === 1) timeAgo = 'Today';
-            else if (diffDays === 2) timeAgo = '1 day ago';
+            if (diffDays === 0) {
+              if (diffHours === 0) {
+                if (diffMinutes === 0) timeAgo = 'Just now';
+                else if (diffMinutes === 1) timeAgo = '1 minute ago';
+                else timeAgo = `${diffMinutes} minutes ago`;
+              } else if (diffHours === 1) timeAgo = '1 hour ago';
+              else timeAgo = `${diffHours} hours ago`;
+            }
+            else if (diffDays === 1) timeAgo = '1 day ago';
             else if (diffDays < 7) timeAgo = `${diffDays} days ago`;
             else if (diffDays < 14) timeAgo = '1 week ago';
             else timeAgo = `${Math.floor(diffDays / 7)} weeks ago`;
+            
+            console.log("Calculated time ago:", timeAgo, "for date:", confirmedDate);
           } catch (error) {
             console.error("Error parsing confirmedAt:", error);
           }
         }
-
+      
         // Create activity text based on status
         let activityText = "";
         let icon = Activity;
         let iconColor = "dash-icon-blue";
-
+      
         if (status === "present") {
           activityText = `Marked as present${notes ? ` - ${notes}` : ''}`;
           icon = CheckCircle2;
@@ -387,7 +407,7 @@ const Dashboard = () => {
         } else {
           activityText = `Attendance: ${status}${notes ? ` - ${notes}` : ''}`;
         }
-
+      
         activities.push({
           id: doc.id,
           type: status,
@@ -559,9 +579,37 @@ const Dashboard = () => {
                 <h2 className="dash-activity-title">{t('dashboard.activity.title')}</h2>
               </div>
               <ul className="dash-activity-list">
+
                 {recentActivity.map((activity) => {
                   const IconComponent = activity.icon;
-                  const { type, notes = '', count = 0 } = activity;
+                  const { type, notes = '' } = activity;
+                  
+                  // Calculate count based on actual time difference
+                  const calculateCount = () => {
+                    if (!activity.confirmedAt) return 0;
+                    
+                    try {
+                      let confirmedDate;
+                      if (activity.confirmedAt.toDate) {
+                        confirmedDate = activity.confirmedAt.toDate();
+                      } else if (activity.confirmedAt.seconds) {
+                        confirmedDate = new Date(activity.confirmedAt.seconds * 1000 + activity.confirmedAt.nanoseconds / 1000000);
+                      } else {
+                        confirmedDate = new Date(activity.confirmedAt);
+                      }
+                      
+                      const now = new Date();
+                      const diffTime = Math.abs(now - confirmedDate);
+                      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                      
+                      return diffDays;
+                    } catch (error) {
+                      console.error("Error calculating days:", error);
+                      return 0;
+                    }
+                  };
+                
+                  const count = calculateCount();
                 
                   // figure out which text key + params to use
                   const text = (() => {
@@ -579,15 +627,14 @@ const Dashboard = () => {
                     }
                   })();
                 
-                  // figure out which time key + params to use
                   const time = (() => {
                     if (type === 'level-up') {
                       return t('dashboard.time.recent');
                     }
-                    if (activity.time === 'Today') {
+                    if (count === 0) {
                       return t('dashboard.time.today');
                     }
-                    if (activity.time === '1 day ago') {
+                    if (count === 1) {
                       return t('dashboard.time.yesterday');
                     }
                     return t('dashboard.time.daysAgo', { count });
