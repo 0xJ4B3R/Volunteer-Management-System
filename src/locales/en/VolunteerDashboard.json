@@ -86,6 +86,17 @@
       "4": "Thu",
       "5": "Fri",
       "6": "Sat"
+    },
+    "sessions": {
+      "art": "Art",
+      "baking": "Baking", 
+      "music": "Music",
+      "reading": "Reading",
+      "crafts": "Crafts",
+      "exercise": "Exercise",
+      "gardening": "Gardening",
+      "beading": "Beading",
+      "session": "Session"
     }
   }
 }

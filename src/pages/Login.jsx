@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff } from 'lucide-react';
 import { Globe } from 'lucide-react';
 import LoadingScreen from '@/components/volunteer/LoadingScreen';
+import WarningLoadingScreen from '@/components/volunteer/WarningLoadingScreen'; // Import the new component
 import './styles/Login.css';
 
 export default function LoginPage() {
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showDefaultPasswordWarning, setShowDefaultPasswordWarning] = useState(false); // New state
   const [error, setError] = useState(null);
   const [showLangOptions, setShowLangOptions] = useState(false);
   const navigate = useNavigate();
@@ -24,7 +26,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      setError(t("error_fill_fields"));
+      setError(t("login.error_fill_fields"));
       return;
     }
 
@@ -36,7 +38,7 @@ export default function LoginPage() {
       const querySnapShot = await getDocs(q);
 
       if (querySnapShot.empty) {
-        setError(t("error_user_not_found"));
+        setError(t("login.error_user_not_found"));
         setLoading(false);
         return;
       }
@@ -46,12 +48,12 @@ export default function LoginPage() {
       const role = userData.role;
       
       if (!userData.isActive) {
-        setError(t("error_user_inactive"));
+        setError(t("login.error_user_inactive"));
         setLoading(false);
         return;
       }
 
-      // SHA-256 encryption
+      // SHA-256 encryption function (keep your existing implementation)
       const sha256 = async (message) => {
         // Trying native.subtle
         if (crypto.subtle) {
@@ -66,7 +68,7 @@ export default function LoginPage() {
           }
         }
 
-        // If native.subtle fails
+        // JavaScript fallback implementation
         function sha256Fallback(ascii) {
           function rightRotate(value, amount) {
             return (value >>> amount) | (value << (32 - amount));
@@ -166,13 +168,29 @@ export default function LoginPage() {
           passwordMatches = passwordHash === storedPassword;
         } catch (hashError) {
           console.error("Hashing error:", hashError);
-          setError(t("error_login_failed"));
+          setError(t("login.error_login_failed"));
           setLoading(false);
           return;
         }
       }
 
       if (passwordMatches) {
+        // Check if user is using the default password
+        let isDefaultPassword = false;
+        
+        if (!isHashedPassword) {
+          // Plain text comparison for old passwords
+          isDefaultPassword = password === "Welcome123!";
+        } else {
+          // Hash comparison for new passwords
+          try {
+            const defaultPasswordHash = await sha256("Welcome123!");
+            isDefaultPassword = storedPassword === defaultPasswordHash;
+          } catch (hashError) {
+            console.error("Error checking default password:", hashError);
+          }
+        }
+
         // Store user data in localStorage
         localStorage.setItem("role", role);
         localStorage.setItem("userId", userDoc.id);
@@ -183,30 +201,64 @@ export default function LoginPage() {
           role: userData.role,
         }));
 
-        // Navigate based on role after a delay
-        setTimeout(() => {
-          if (role === 'volunteer') {
-            navigate('/volunteer');
-          } else if (role === 'manager') {
-            navigate('/manager');
-          } else {
-            setError(t("error_invalid_role"));
-            setLoading(false);
-          } 
-        }, 2000);
+        if (isDefaultPassword) {
+          // Set flags for default password detection
+          localStorage.setItem("requirePasswordChange", "true");
+          localStorage.setItem("isDefaultPassword", "true");
+          localStorage.setItem("showPasswordWarning", "true");
+          
+          // Switch to warning loading screen
+          setLoading(false);
+          setShowDefaultPasswordWarning(true);
+          
+          console.log("Default password detected, showing warning screen");
+          
+          // Navigate after showing warning for 15 seconds
+          setTimeout(() => {
+            console.log("Navigating to security tab...");
+            if (role === 'volunteer') {
+              navigate('/volunteer/profile?tab=security&warning=true');
+            } else if (role === 'manager') {
+              navigate('/manager/profile?tab=security&warning=true');
+            } else {
+              setError(t("login.error_invalid_role"));
+              setShowDefaultPasswordWarning(false);
+            } 
+          }, 15000); // 15 second delay
+        } else {
+          // Normal login flow - navigate to dashboard
+          setTimeout(() => {
+            if (role === 'volunteer') {
+              navigate('/volunteer');
+            } else if (role === 'manager') {
+              navigate('/manager');
+            } else {
+              setError(t("login.error_invalid_role"));
+              setLoading(false);
+            } 
+          }, 2000);
+        }
       } else {
-        setError(t("error_wrong_credentials"));
+        setError(t("login.error_wrong_credentials"));
         setLoading(false);
       }
 
     } catch (error) {
       console.error("Login error:", error);
-      setError(t("error_login_failed"));
+      setError(t("login.error_login_failed"));
       setLoading(false);
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  // Show warning loading screen if default password detected
+  if (showDefaultPasswordWarning) {
+    return <WarningLoadingScreen isDefaultPassword={true} countdownSeconds={15} />;
+  }
+
+  // Show regular loading screen
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="login-page">
@@ -237,22 +289,22 @@ export default function LoginPage() {
         </div>
 
         <div className="login-form-section">
-          <h1 className="login-title">{t("login_title")}</h1>
-          <p className="login-subtitle">{t("login_subtitle")}</p>
+          <h1 className="login-title">{t("login.login_title")}</h1>
+          <p className="login-subtitle">{t("login.login_subtitle")}</p>
 
           <form
             className="login-form"
             onSubmit={(e) => {
-              e.preventDefault();  // Prevent default form submission behavior
-              handleLogin();       // Trigger login function
+              e.preventDefault();
+              handleLogin();
             }}
           >
             <div className="form-group">
-              <label className="form-label" htmlFor="username">{t("username")}</label>
+              <label className="form-label" htmlFor="username">{t("login.username")}</label>
               <input
                 id="username"
                 type="text"
-                placeholder={t("username")}
+                placeholder={t("login.username")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="form-input"
@@ -260,12 +312,12 @@ export default function LoginPage() {
             </div>
 
             <div className="form-group password-group">
-              <label className="form-label" htmlFor="password">{t("password")}</label>
+              <label className="form-label" htmlFor="password">{t("login.password")}</label>
               <div className="password-input-wrapper">
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder={t("password")}
+                  placeholder={t("login.password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="form-input"
@@ -282,10 +334,10 @@ export default function LoginPage() {
             </div>
 
             <button 
-              type = "submit"
+              type="submit"
               className="login-button"
             >
-              {t("login_button")}
+              {t("login.login_button")}
             </button>
 
             {error && (
@@ -293,7 +345,7 @@ export default function LoginPage() {
             )}
 
             <a href="/" className="forgot-password-link">
-              {t("Back_to_home_page")}
+              {t("login.Back_to_home_page")}
             </a>
           </form>
         </div>

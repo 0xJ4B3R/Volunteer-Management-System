@@ -1,43 +1,43 @@
 {
   "dashboard": {
-    "title": "לוח מחוונים של מתנדב",
+    "title": "לוח בקרה מתנדבים",
     "greeting": {
       "morning": "בוקר טוב",
       "afternoon": "צהריים טובים",
       "evening": "ערב טוב"
     },
     "checkIn": {
-      "title": "כניסה",
-      "subtitle": "רשום את ההשתתפות שלך"
+      "title": "רישום נוכחות",
+      "subtitle": "רשום את הפגישה שלך עכשיו"
     },
     "upcoming": {
-      "title": "מפגשים קרובים",
-      "viewAll": "הצג הכול",
-      "none": "אין מפגשים קרובים"
+      "title": "פגישות קרובות",
+      "viewAll": "הצג הכל",
+      "none": "לא נמצאו פגישות קרובות"
     },
     "activity": {
       "title": "פעילות אחרונה",
-      "present": "נכחת במפגש. {{notes}}",
-      "late": "איחרת למפגש. {{notes}}",
-      "absent": "החמצת מפגש. {{notes}}",
+      "present": "השתתפת בפגישה. {{notes}}",
+      "late": "איחרת לפגישה. {{notes}}",
+      "absent": "החמצת פגישה. {{notes}}",
       "generic": "סטטוס: {{status}}. {{notes}}",
-      "cancelledByVolunteer": "המפגש בוטל על ידי המתנדב"
+      "cancelledByVolunteer": "החמצת את הפגישה. בוטלה על ידי המתנדב"
     },
     "stats": {
-      "totalHours": "סה\"כ שעות מתחילת התנדבות",
+      "totalHours": "סה״כ שעות מאז יצירת החשבון",
       "hoursLabel": "שעות",
       "level": "רמה נוכחית",
-      "sessionsCompleted": "מפגשים שהושלמו מתחילת התנדבות"
+      "sessionsCompleted": "פגישות שהושלמו מאז יצירת החשבון"
     },
-    "nextLevel": "הרמה הבאה: {{level}}",
-    "hoursToGo": ", {{count}} שעות נותרו",
-    "levelUp": "ברכות! הגעת לרמת {{level}}!🎉",
+    "nextLevel": "הבא: {{level}}",
+    "hoursToGo": " {{count}} שעות עד השלמה",
+    "levelUp": "כל הכבוד! הגעת לרמת {{level}}!🎉",
     "levels": {
       "Beginner": "מתחיל",
       "Helper": "עוזר",
       "Contributor": "תורם",
       "Supporter": "תומך",
-      "Advocate": "שגריר",
+      "Advocate": "דובר",
       "Champion": "אלוף",
       "Humanitarian": "הומניטרי",
       "Lord of the deeds": "אדון המעשים"
@@ -45,7 +45,7 @@
     "time": {
       "recent": "לאחרונה",
       "today": "היום",
-      "yesterday": "אתמול",
+      "yesterday": "לפני יום",
       "daysAgo": "לפני {{count}} ימים",
       "weekAgo": "לפני שבוע",
       "weeksAgo": "לפני {{count}} שבועות"
@@ -75,7 +75,7 @@
       "7": "אוג׳",
       "8": "ספט׳",
       "9": "אוק׳",
-      "10": "נו׳",
+      "10": "נוב׳",
       "11": "דצמ׳"
     },
     "days": {
@@ -86,6 +86,17 @@
       "4": "ה׳",
       "5": "ו׳",
       "6": "ש׳"
+    },
+    "sessions": {
+      "art": "אמנות",
+      "baking": "אפייה",
+      "music": "מוזיקה",
+      "reading": "קריאה",
+      "crafts": "יצירה",
+      "exercise": "התעמלות",
+      "gardening": "גינון",
+      "beading": "חרוזים",
+      "session": "פגישה"
     }
   }
 }

@@ -1,13 +1,20 @@
 {
-  "login_title": "התחברות!",
-  "login_subtitle": "ברוך הבא! שמחים לראותך שוב!",
-  "username": "שם משתמש",
-  "password": "סיסמה",
-  "login_button": "התחבר",
-  "Back_to_home_page": "חזרה לעמוד הבית",
-  "error_fill_fields": "אנא מלא את כל השדות",
-  "error_user_not_found": "המשתמש לא נמצא",
-  "error_invalid_role": "תפקיד לא תקין",
-  "error_wrong_credentials": "שם משתמש או סיסמה שגויים",
-  "error_login_failed": "לא ניתן להתחבר"
+  "login": {
+    "login_title": "התחברות!",
+    "login_subtitle": "ברוך הבא! כל כך טוב שחזרת!",
+    "username": "שם משתמש",
+    "password": "סיסמה",
+    "login_button": "התחבר",
+    "Back_to_home_page": "חזור לעמוד הבית",
+    "error_fill_fields": "אנא מלא את כל השדות למעלה",
+    "error_user_not_found": "משתמש לא נמצא",
+    "error_user_inactive": "החשבון שלך לא פעיל. אנא פנה למנהל המערכת.",
+    "error_invalid_role": "תפקיד משתמש לא חוקי",
+    "error_wrong_credentials": "סיסמה או שם משתמש שגויים",
+    "error_login_failed": "לא ניתן להתחבר",
+    "security_alert_title": "התראת אבטחה",
+    "default_password_warning": "אתה משתמש בסיסמת ברירת המחדל 'Welcome123!'. מטעמי אבטחה, עליך לשנות את הסיסמה שלך לפני המשך. תועבר להגדרות האבטחה כדי לעדכן את הסיסמה שלך.",
+    "redirecting_countdown": "מעביר לשינוי סיסמה בעוד {{count}} שניות..."
+  },
+  "loading": "טוען..."
 }

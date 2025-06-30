@@ -57,7 +57,9 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
   const profilePath = isVolunteer ? '/volunteer/profile' : '/manager/profile';
 
   const handleLogout = () => {
+    // Clear all stored data including sidebar state
     localStorage.clear();
+    sessionStorage.clear();
     navigate('/');
   };
 
@@ -68,6 +70,7 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
     }
   };
 
+  // Close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -94,6 +97,13 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isMobile, isSidebarOpen, toggleSidebar]);
+
+  // Auto-close profile menu when sidebar closes (except on mobile)
+  useEffect(() => {
+    if (!isSidebarOpen && !isMobile) {
+      setShowProfileMenu(false);
+    }
+  }, [isSidebarOpen, isMobile]);
 
   return (
     <>
@@ -149,6 +159,7 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
                 sidebar-link ${location.pathname === item.path ? 'active' : ''}
                 ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}
               `}
+              title={(!isSidebarOpen && !isMobile) ? item.name : undefined}
             >
               <item.icon />
               {(isSidebarOpen || isMobile) && <span>{item.name}</span>}
@@ -160,16 +171,23 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
         <div className="relative p-3 border-t border-gray-700" ref={dropdownRef}>
           <button
             onClick={() => {
-              if (!isSidebarOpen) toggleSidebar();
-              setShowProfileMenu((prev) => !prev);
+              if (!isSidebarOpen && !isMobile) {
+                // On desktop, expand sidebar first, then show menu
+                toggleSidebar();
+                setTimeout(() => setShowProfileMenu(true), 100);
+              } else {
+                // On mobile or when sidebar is open, toggle menu immediately
+                setShowProfileMenu((prev) => !prev);
+              }
             }}
             className={`sidebar-link ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}`}
+            title={(!isSidebarOpen && !isMobile) ? t('Profile') : undefined}
           >
             <UserCircle />
             {(isSidebarOpen || isMobile) && (
               <>
                 <span>{t('Profile')}</span>
-                <ChevronDown className={`chevron-icon ${i18n.dir() === 'rtl' ? 'rtl-chevron' : ''}`} />
+                <ChevronDown className={`chevron-icon ${showProfileMenu ? 'rotate-180' : ''} ${i18n.dir() === 'rtl' ? 'rtl-chevron' : ''}`} />
               </>
             )}
           </button>

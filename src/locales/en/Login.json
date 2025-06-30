@@ -1,13 +1,20 @@
 {
-  "login_title": "Login!",
-  "login_subtitle": "Welcome! So good to have you back!",
-  "username": "Username",
-  "password": "Password",
-  "login_button": "Log in",
-  "Back_to_home_page": "Back to home page",
-  "error_fill_fields": "Please fill all the fields above",
-  "error_user_not_found": "User not found",
-  "error_invalid_role": "Invalid user role",
-  "error_wrong_credentials": "Wrong password or username",
-  "error_login_failed": "Couldn't login"
+  "login": {
+    "login_title": "Login!",
+    "login_subtitle": "Welcome! So good to have you back!",
+    "username": "Username",
+    "password": "Password",
+    "login_button": "Log in",
+    "Back_to_home_page": "Back to home page",
+    "error_fill_fields": "Please fill all the fields above",
+    "error_user_not_found": "User not found",
+    "error_user_inactive": "Your account is inactive. Please contact an administrator.",
+    "error_invalid_role": "Invalid user role",
+    "error_wrong_credentials": "Wrong password or username",
+    "error_login_failed": "Couldn't login",
+    "security_alert_title": "Security Alert",
+    "default_password_warning": "You are using the default password 'Welcome123!'. For security reasons, you must change your password before continuing. You will be redirected to the security settings to update your password.",
+    "redirecting_countdown": "Redirecting to password change in {{count}} seconds..."
+  },
+  "loading": "Loading..."
 }
