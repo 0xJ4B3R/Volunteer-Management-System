@@ -64,19 +64,24 @@
       "sat": "Sat"
     },
     "SessionStatus": {
-      "label": "Status",
+      "label": "Status:",
       "approved": "Approved",
       "pending": "Pending",
       "rejected": "Rejected",
       "none": "Not Requested",
-      "pendingApproval": "Pending Approval",
-      "approvedStatus": "Approved",
-      "rejectedStatus": "Rejected"
+      "pendingApproval": "Pending Approval ⏳",
+      "approvedStatus": "Approved ✅",
+      "rejectedStatus": "Rejected ❌"
     },
-    "Sign Up for Session": "Sign Up for Session",
-    "Date:": "Date:",
-    "Time:": "Time:",
-    "Submitting Request...": "Submitting Request...",
-    "Request submitted successfully!": "Request submitted successfully!",
-    "Failed to submit request": "Failed to submit request"
+    "sessionTypes": {
+      "art": "Art",
+      "baking": "Baking", 
+      "music": "Music",
+      "reading": "Reading",
+      "crafts": "Crafts",
+      "exercise": "Exercise",
+      "gardening": "Gardening",
+      "beading": "Beading",
+      "session": "Session"
+  }
 }

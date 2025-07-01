@@ -121,7 +121,7 @@
   flex-direction: column;
   justify-content: center;
   background-color: #BE9E5C;
-  background-image: url("/Card.png");
+  background-image: url("Card.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -445,7 +445,7 @@ html[dir="rtl"] .password-input-wrapper .form-input {
   .login-form-section {
     padding: 1.5rem;
     background-color: #BE9E5C;
-    background-image: url("/PhoneCard.png");
+    background-image: url("PhoneCard.png");
     background-size: contain;
   }
 
@@ -507,7 +507,7 @@ html[dir="rtl"] .password-input-wrapper .form-input {
   .login-form-section {
     padding: 1rem;
     background-color: #BE9E5C;
-    background-image: url("/PhoneCard.png");
+    background-image: url("PhoneCard.png");
   }
 
   .login-title {
@@ -594,7 +594,7 @@ html[dir="rtl"] .password-input-wrapper .form-input {
   .login-form-section {
     padding: 0.75rem;
     background-color: #BE9E5C;
-    background-image: url("/PhoneCard.png");
+    background-image: url("PhoneCard.png");
   }
 
   .login-title {
@@ -684,7 +684,7 @@ html[dir="rtl"] .password-input-wrapper .form-input {
   .login-form-section {
     padding: 0.5rem;
     background-color: #BE9E5C;
-    background-image: url("/PhoneCard.png");
+    background-image: url("PhoneCard.png");
   }
 
   .login-title {
@@ -732,7 +732,7 @@ html[dir="rtl"] .password-input-wrapper .form-input {
     min-width: 60%;
     padding: 1rem;
     background-color: #BE9E5C;
-    background-image: url("/PhoneCard.png");
+    background-image: url("PhoneCard.png");
   }
 
   .login-title {

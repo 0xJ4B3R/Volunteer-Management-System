@@ -1,57 +1,102 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { Clock3, MapPin, Search, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, arrayRemove, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
+import { Layout } from "@/components/volunteer/layout"
 import "./styles/Appointments.css";
-import { Layout } from '@/components/volunteer/Layout';
 
-// Import proper Firestore hooks and types
-import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
-import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
-
-// Helper function to convert time to minutes for sorting
-const timeToMinutes = (timeStr) => {
-  if (!timeStr) return 0;
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  return hours * 60 + minutes;
+// Utility functions for session type colors
+const getSessionTypeColor = (type) => {
+  switch ((type || '').toLowerCase()) {
+    case "art": return "bg-[#3b82f6] text-white";
+    case "baking": return "bg-[#ec4899] text-white";
+    case "music": return "bg-[#f59e0b] text-white";
+    // case "reading": return "bg-[#10b981] text-white";
+    // case "crafts": return "bg-[#8b5cf6] text-white";
+    // case "exercise": return "bg-[#ef4444] text-white";
+    case "gardening": return "bg-[#6366f1] text-white";
+    case "beading": return "bg-[#14b8a6] text-white";
+    case "session": return "bg-[#6b7280] text-white";
+    default: return "bg-[#6b7280] text-white";
+  }
 };
 
-// Format Firebase date string to "MONTH DATE" format
-const formatFirebaseDate = (dateStr) => {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  const month = date.toLocaleString('en-US', { month: 'long' });
-  const day = date.getDate();
-  return `${month} ${day}`;
+const getSessionTypeBorderColor = (type) => {
+  switch ((type || '').toLowerCase()) {
+    case "art": return "#2563eb";
+    case "baking": return "#db2777";
+    case "music": return "#d97706";
+    // case "reading": return "#059669";
+    // case "crafts": return "#7c3aed";
+    // case "exercise": return "#dc2626";
+    case "gardening": return "#4f46e5";
+    case "beading": return "#0d9488";
+    case "session": return "#4b5563";
+    default: return "#4b5563";
+  }
 };
 
-// Get day of week from date string
-const getDayFromDate = (dateStr) => {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  const day = date.toLocaleString('en-US', { weekday: 'short' });
-  return day.substring(0, 3); // Get first 3 letters (Mon, Tue, etc.)
+const getSessionTypeClass = (type) => {
+  return (type || '').toLowerCase().replace(/\s+/g, '');
 };
 
 export default function Appointments() {
-  const navigate = useNavigate();
-  const { t, i18n } = useTranslation('appointments');
+  const { t, i18n } = useTranslation("appointments");
   const [tab, setTab] = useState("upcoming");
   const [query, setQuery] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [showLangOptions, setShowLangOptions] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [currentVolunteer, setCurrentVolunteer] = useState(null);
+  const [userId, setUserId] = useState("");
+  const [username, setUsername] = useState("");
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
-  const langToggleRef = useRef(null);
 
-  // Use proper Firestore hooks
-  const { slots, loading: slotsLoading } = useCalendarSlots();
-  const { volunteers, loading: volunteersLoading } = useVolunteers();
+  // Add this function near the top of your component, after the existing utility functions
+
+  // Helper function to translate session types
+  const translateSessionType = (sessionType) => {
+    if (!sessionType) return t('sessionTypes.session', 'Session');
+
+    // Handle common session type variations
+    const type = sessionType.toLowerCase().trim();
+
+    // Map variations to standard keys
+    const typeMapping = {
+      'general session': 'session',
+      'volunteer session': 'session',
+      'regular session': 'session',
+      'default': 'session',
+      'gardening': 'gardening',
+      'arts and crafts': 'artsAndCrafts',
+      'arts & crafts': 'artsAndCrafts',
+      'music': 'music',
+      'reading': 'reading',
+      'games': 'games',
+      'cooking': 'cooking',
+      'exercise': 'exercise',
+      'outdoor activities': 'outdoorActivities',
+      'social hour': 'socialHour',
+      'bingo': 'bingo',
+      'crafts': 'crafts',
+      'storytelling': 'storytelling',
+      'meditation': 'meditation',
+      'walking': 'walking',
+      'puzzles': 'puzzles',
+      'movie night': 'movieNight',
+      'book club': 'bookClub',
+      'painting': 'painting',
+      'dancing': 'dancing',
+      'art': 'art',
+      'baking': 'baking',
+      'beading': 'beading'
+    };
+
+    const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, ''); // Clean up for translation key
+    return t(`sessionTypes.${mappedType}`, sessionType); // Fallback to original if translation not found
+  };
 
   // Function to show notifications
   const showNotification = (message, type = "error") => {
@@ -62,322 +107,261 @@ export default function Appointments() {
     }, 5000);
   };
 
-  // Robust language direction management
-  const applyLanguageDirection = (lang) => {
-    const dir = lang === 'he' ? 'rtl' : 'ltr';
+  // Set RTL/LTR based on language
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
+  }, [i18n.language]);
 
-    // 1. Set the dir attribute on html element
-    document.documentElement.setAttribute('dir', dir);
-    document.documentElement.setAttribute('lang', lang);
+  // Get the username from localStorage
+  useEffect(() => {
+    // Get username from localStorage
+    const storedUsername = localStorage.getItem('username');
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
 
-    // 2. Remove any stale RTL/LTR classes
-    document.body.classList.remove('rtl', 'ltr');
-    document.documentElement.classList.remove('rtl', 'ltr');
+    // Also get userId if available
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+  }, []);
 
-    // 3. Add the correct direction class
-    document.body.classList.add(dir);
-    document.documentElement.classList.add(dir);
+  // Function to check if appointment date has passed and update status
+  const updatePastAppointments = async (appointmentsData) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // 4. Set CSS direction property explicitly
-    document.body.style.direction = dir;
-    document.documentElement.style.direction = dir;
+    const updatePromises = [];
+    const updatedAppointments = [...appointmentsData];
 
-    // 5. Remove any conflicting inline styles
-    const rootElements = document.querySelectorAll('[style*="direction"]');
-    rootElements.forEach(el => {
-      if (el !== document.body && el !== document.documentElement) {
-        el.style.direction = '';
+    for (let i = 0; i < appointmentsData.length; i++) {
+      const appointment = appointmentsData[i];
+      const appointmentDate = new Date(appointment.rawData.date);
+      const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
+
+      // Check if appointment date has passed and status is not already "completed"
+      if (appointmentDay < today && appointment.rawData.status !== "completed") {
+        // Update in Firebase
+        const appointmentRef = doc(db, "calendar_slots", appointment.id);
+        const updatePromise = updateDoc(appointmentRef, {
+          status: "completed"
+        }).then(() => {
+          // Update local state
+          updatedAppointments[i] = {
+            ...appointment,
+            rawData: {
+              ...appointment.rawData,
+              status: "completed"
+            }
+          };
+        }).catch((error) => {
+          console.error(`Error updating appointment ${appointment.id}:`, error);
+        });
+
+        updatePromises.push(updatePromise);
       }
-    });
+    }
+
+    // Wait for all updates to complete
+    if (updatePromises.length > 0) {
+      try {
+        await Promise.all(updatePromises);
+        return updatedAppointments;
+      } catch (error) {
+        console.error("Error updating some appointments:", error);
+        return updatedAppointments;
+      }
+    }
+
+    return appointmentsData;
   };
 
+  // Fetch appointments from Firebase
   useEffect(() => {
-    applyLanguageDirection(currentLanguage);
-  }, [currentLanguage]);
+    const fetchAppointments = async () => {
+      if (!username) return; // Don't fetch if username isn't available
 
-  // Sync currentLanguage with i18n.language
-  useEffect(() => {
-    if (i18n.language !== currentLanguage) {
-      setCurrentLanguage(i18n.language);
-    }
-  }, [i18n.language, currentLanguage]);
+      try {
+        setLoading(true);
+        const calendarRef = collection(db, "calendar_slots");
+        const snapshot = await getDocs(calendarRef);
 
-  // Handle click outside language toggle to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
-        setShowLangOptions(false);
+        const appointmentsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+
+          // Check if current user is a volunteer for this slot by username
+          const userVolunteer = data.volunteers?.find(v => v.username === username);
+
+          // Get session type from customLabel, fallback to "Session"
+          const sessionType = data.customLabel || "Session";
+
+          // Format the appointment data
+          return {
+            id: doc.id,
+            appointmentId: data.appointmentId,
+            date: formatFirebaseDate(data.date),
+            day: getDayFromDate(data.date),
+            time: `${data.startTime} - ${data.endTime}`,
+            location: translateSessionType(sessionType), // <-- Change this line
+            sessionType: sessionType, // Keep original for color logic
+            note: data.notes || "",
+            category: data.isCustom ? "Custom" : "Regular",
+            status: userVolunteer ? userVolunteer.status : (data.isOpen ? "Open" : "Closed"),
+            maxCapacity: data.maxCapacity,
+            volunteers: data.volunteers || [],
+            volunteerRequests: data.volunteerRequests || [],
+            isOpen: data.isOpen,
+            residentIds: data.residentIds || [],
+            rawData: data // Keep the raw data for reference
+          };
+        });
+
+        // Update past appointments automatically
+        const updatedAppointments = await updatePastAppointments(appointmentsData);
+
+        setAppointments(updatedAppointments);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        setLoading(false);
       }
     };
 
-    if (showLangOptions) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    fetchAppointments();
+  }, [username]); // Depend on username instead of userId
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showLangOptions]);
-
-  // Check authentication and get current user
+  // Periodic check for past appointments (every 5 minutes)
   useEffect(() => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
-      if (!user.username) {
-        navigate("/login");
-      } else if (user.role !== "volunteer") {
-        navigate("/manager");
-      } else {
-        setCurrentUser(user);
+    if (appointments.length === 0) return;
+
+    const intervalId = setInterval(async () => {
+      const updatedAppointments = await updatePastAppointments(appointments);
+      if (updatedAppointments !== appointments) {
+        setAppointments(updatedAppointments);
       }
-    } catch (error) {
-      console.error("Auth check error:", error);
-      navigate("/login");
-    }
-  }, [navigate]);
+    }, 5 * 60 * 1000); // Check every 5 minutes
 
-  // Find current volunteer record when user and volunteers data is available
-  useEffect(() => {
-    if (currentUser && volunteers.length > 0) {
-      const volunteer = volunteers.find(v =>
-        v.userId === currentUser.id ||
-        v.userId === currentUser.uid ||
-        v.fullName === currentUser.username // Fallback if linked by name
+    return () => clearInterval(intervalId);
+  }, [appointments]);
+
+  // Format Firebase date string to "MONTH DATE for example May 27" format
+  const formatFirebaseDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const month = date.toLocaleString('en-US', { month: 'long' });
+    const day = date.getDate();
+    return `${month} ${day}`;
+  };
+
+  // Get day of week from date string
+  const getDayFromDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const day = date.toLocaleString('en-US', { weekday: 'short' });
+    return day.substring(0, 3); // Get first 3 letters (Mon, Tue, etc.)
+  };
+
+  const now = new Date();
+
+  const tabAppointments = appointments.filter((a) => {
+    const dateObj = new Date(a.rawData.date);
+
+    if (tab === "upcoming") {
+      // Show appointment where user is approved, but ONLY if the appointment is NOT completed
+      const isUserApproved = a.volunteers?.some(v =>
+        v.username === username && v.status === "approved"
       );
-      setCurrentVolunteer(volunteer);
-
-      if (!volunteer) {
-        console.warn("Could not find volunteer record for user:", currentUser);
-      }
+      // Make sure it's not a completed appointment
+      return (isUserApproved || a.rawData.status === "upcoming") && a.rawData.status !== "completed";
     }
-  }, [currentUser, volunteers]);
-
-  // Memoized appointments from volunteer's appointmentHistory
-  const userAppointments = useMemo(() => {
-    if (!currentVolunteer || !slots.length) {
-      return [];
+    if (tab === "past") {
+      // Show any appointment with status "completed" regardless of date
+      return a.rawData.status === "completed";
     }
+    if (tab === "pending") {
+      // Show appointments where this user's status is "pending"
+      return a.volunteers?.some(v =>
+        v.username === username && v.status === "pending"
+      );
+    }
+    return false;
+  });
 
-    console.log("Current volunteer:", currentVolunteer);
-    console.log("Volunteer appointmentHistory:", currentVolunteer.appointmentHistory);
-    console.log("Slots:", slots);
-
-    // Get appointments from volunteer's appointmentHistory (confirmed appointments)
-    const historyAppointments = (currentVolunteer.appointmentHistory || [])
-      .map(appointmentEntry => {
-        // Find the corresponding slot for additional details
-        const slot = slots.find(s => s.id === appointmentEntry.appointmentId);
-
-        return {
-          id: appointmentEntry.appointmentId,
-          appointmentId: appointmentEntry.appointmentId,
-          date: formatFirebaseDate(appointmentEntry.date),
-          day: getDayFromDate(appointmentEntry.date),
-          time: `${appointmentEntry.startTime} - ${appointmentEntry.endTime}`,
-          location: slot?.customLabel || "Session",
-          sessionType: slot?.customLabel || "Session",
-          note: slot?.notes || "",
-          category: slot?.isCustom ? "Custom" : "Regular",
-          status: appointmentEntry.status || "upcoming",
-          appointmentStatus: appointmentEntry.status || "upcoming",
-          attendanceStatus: appointmentEntry.attendanceStatus,
-          maxCapacity: slot?.maxCapacity || 1,
-          volunteerRequests: slot?.volunteerRequests || [],
-          isOpen: slot?.isOpen ?? true,
-          residentIds: appointmentEntry.residentIds || [],
-          rawData: {
-            date: appointmentEntry.date,
-            startTime: appointmentEntry.startTime,
-            endTime: appointmentEntry.endTime,
-            status: appointmentEntry.status || "upcoming",
-            calendarSlotId: appointmentEntry.appointmentId
-          }
-        };
-      });
-
-    // Get slots with pending volunteer requests (not yet in appointmentHistory)
-    const pendingRequestSlots = slots
-      .filter(slot => {
-        // Check if current volunteer has a request for this slot
-        const hasVolunteerRequest = slot.volunteerRequests?.some(vr =>
-          vr.volunteerId === currentVolunteer.id
-        );
-
-        // Only include if there's no corresponding appointment in history yet
-        const hasAppointmentInHistory = currentVolunteer.appointmentHistory?.some(appointment =>
-          appointment.appointmentId === slot.id
-        );
-
-        return hasVolunteerRequest && !hasAppointmentInHistory;
-      })
-      .map(slot => {
-        const volunteerRequest = slot.volunteerRequests?.find(vr =>
-          vr.volunteerId === currentVolunteer.id
-        );
-
-        return {
-          id: slot.id, // Use slot ID for pending requests
-          appointmentId: slot.appointmentId || slot.id,
-          date: formatFirebaseDate(slot.date),
-          day: getDayFromDate(slot.date),
-          time: `${slot.startTime} - ${slot.endTime}`,
-          location: slot.customLabel || "Session",
-          sessionType: slot.customLabel || "Session",
-          note: slot.notes || "",
-          category: slot.isCustom ? "Custom" : "Regular",
-          status: volunteerRequest?.status || "pending",
-          appointmentStatus: "pending",
-          attendanceStatus: null,
-          maxCapacity: slot.maxCapacity,
-          volunteerRequests: slot.volunteerRequests || [],
-          isOpen: slot.isOpen,
-          residentIds: slot.residentIds || [],
-          rawData: {
-            date: slot.date,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            status: "pending",
-            calendarSlotId: slot.id
-          }
-        };
-      });
-
-    // Combine both arrays and sort
-    return [...historyAppointments, ...pendingRequestSlots]
-      .filter(Boolean) // Remove null entries
-      .sort((a, b) => {
-        // Sort by date, then by time
-        const dateA = new Date(a.rawData.date);
-        const dateB = new Date(b.rawData.date);
-
-        if (dateA.getTime() !== dateB.getTime()) {
-          return dateA.getTime() - dateB.getTime();
-        }
-
-        // If same date, sort by start time
-        const timeA = timeToMinutes(a.rawData.startTime);
-        const timeB = timeToMinutes(b.rawData.startTime);
-        return timeA - timeB;
-      });
-  }, [currentVolunteer, slots]);
-
-  // Loading state
-  const loading = slotsLoading || volunteersLoading;
-
-  // Filter appointments by tab
-  const tabAppointments = useMemo(() => {
-    return userAppointments.filter((a) => {
-      const dateObj = new Date(a.rawData.date);
-      const now = new Date();
-
-      if (tab === "upcoming") {
-        // Only show appointments from appointmentHistory (confirmed appointments)
-        // that are not completed and are in the future
-        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment =>
-          appointment.appointmentId === a.appointmentId
-        );
-        // Check for AppointmentStatus values
-        const isNotCompleted = a.appointmentStatus !== "completed" && a.appointmentStatus !== "canceled";
-        const isFuture = dateObj >= now;
-        return isFromHistory && isNotCompleted && isFuture;
-      }
-      if (tab === "past") {
-        // Show completed appointments from appointmentHistory
-        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment =>
-          appointment.appointmentId === a.appointmentId
-        );
-        // Check for AppointmentStatus values
-        return isFromHistory && (a.appointmentStatus === "completed" || a.appointmentStatus === "canceled" || dateObj < now);
-      }
-      if (tab === "pending") {
-        // Show appointments where volunteer request status is pending (VolunteerRequestStatus)
-        return a.status === "pending";
-      }
-      return false;
-    });
-  }, [userAppointments, tab, currentVolunteer]);
-
-  // Filter by search query
-  const filtered = useMemo(() => {
-    return tabAppointments.filter((a) => {
+  const filtered = tabAppointments
+    .filter((a) => {
       const matchSearch =
         (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
         (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
       return matchSearch;
+    })
+    .sort((a, b) => {
+      if (tab === "past") {
+        return new Date(b.rawData.date) - new Date(a.rawData.date); // Latest to oldest
+      }
+      return new Date(a.rawData.date) - new Date(b.rawData.date); // Soonest to latest for other tabs
     });
-  }, [tabAppointments, query]);
 
-  const handleCancel = async (appointmentId) => {
-    console.log("=== CANCEL DEBUG ===");
-    console.log("appointmentId:", appointmentId);
-    console.log("currentVolunteer:", currentVolunteer);
-
-    if (!currentVolunteer) {
-      showNotification("Volunteer data not available", "error");
-      return;
-    }
-
+  const handleCancel = async (id) => {
     try {
-      // Find the appointment to get slot data
-      const appointment = userAppointments.find(a => a.id === appointmentId);
-      console.log("Found appointment:", appointment);
+      // Find the appointment to get volunteer data
+      const appointment = appointments.find(a => a.id === id);
+      if (!appointment) return;
 
-      if (!appointment) {
-        showNotification("Appointment not found", "error");
-        return;
-      }
+      // Update Firestore: Remove the current user from volunteers array
+      const appointmentRef = doc(db, "calendar_slots", id);
 
-      // Find the corresponding slot
-      const slot = slots.find(s =>
-        s.id === appointment.rawData.calendarSlotId ||
-        s.appointmentId === appointmentId ||
-        s.id === appointmentId // For pending requests, the slot ID is used as appointment ID
-      );
-      console.log("Found slot:", slot);
+      // Find the volunteer entry to remove by username
+      const volunteerToRemove = appointment.volunteers.find(v => v.username === username);
 
-      if (!slot) {
-        showNotification("Slot not found", "error");
-        return;
-      }
+      if (volunteerToRemove) {
+        // Create update object to remove from both arrays
+        const updateData = {
+          volunteers: arrayRemove(volunteerToRemove)
+        };
 
-      // Remove the volunteer request from the slot
-      const slotRef = doc(db, "calendar_slots", slot.id);
+        // Also remove from volunteerRequests if the user ID exists there
+        // Check different possible ID formats that might be stored in volunteerRequests
+        const possibleIds = [
+          userId,
+          volunteerToRemove.id,
+          username,
+          volunteerToRemove.username
+        ].filter(Boolean); // Remove any null/undefined values
 
-      // Find the volunteer request to remove
-      console.log("Looking for volunteer request with volunteerId:", currentVolunteer.id);
-      console.log("Slot volunteerRequests:", slot.volunteerRequests);
-
-      const volunteerRequestToRemove = slot.volunteerRequests?.find(vr =>
-        vr.volunteerId === currentVolunteer.id
-      );
-
-      console.log("volunteerRequestToRemove:", volunteerRequestToRemove);
-
-      if (volunteerRequestToRemove) {
-        console.log("Attempting to remove request from slot:", slot.id);
-
-        // Filter out the volunteer request
-        const updatedVolunteerRequests = slot.volunteerRequests.filter(vr =>
-          vr.volunteerId !== currentVolunteer.id
+        // Find which ID format is actually in the volunteerRequests array
+        const userIdInRequests = possibleIds.find(id =>
+          appointment.volunteerRequests?.includes(id)
         );
 
-        console.log("Original requests:", slot.volunteerRequests.length);
-        console.log("Updated requests:", updatedVolunteerRequests.length);
+        if (userIdInRequests) {
+          updateData.volunteerRequests = arrayRemove(userIdInRequests);
+        }
 
-        await updateDoc(slotRef, {
-          volunteerRequests: updatedVolunteerRequests
-        });
+        // Perform the update
+        await updateDoc(appointmentRef, updateData);
 
-        showNotification("Request canceled successfully!", "success");
-      } else {
-        showNotification("No pending request found to cancel", "error");
+        // Update local state
+        setAppointments(prev => prev.map(a => {
+          if (a.id === id) {
+            return {
+              ...a,
+              volunteers: a.volunteers.filter(v => v.username !== username),
+              volunteerRequests: a.volunteerRequests.filter(reqId => reqId !== userIdInRequests),
+              status: "Open" // Reset status for this user's view
+            };
+          }
+          return a;
+        }));
       }
 
-      if (selected && selected.id === appointmentId) setSelected(null);
+      if (selected && selected.id === id) setSelected(null);
 
+      // Show success notification
+      showNotification("Appointment canceled successfully!", "success");
     } catch (error) {
       console.error("Error canceling appointment:", error);
-      showNotification("Error canceling request. Please try again.", "error");
+      showNotification("Error canceling appointment. Please try again.", "error");
     }
   };
 
@@ -411,26 +395,22 @@ export default function Appointments() {
 
   // Get status tag with appropriate styling
   const getStatusTag = (appointment) => {
-    const status = appointment.status;
+    const userVolunteer = appointment.volunteers?.find(v => v.username === username);
+    const status = userVolunteer?.status || appointment.status;
 
     const getStatusClass = (status) => {
       switch (status) {
-        // VolunteerRequestStatus values
         case "approved": return "status-approved";
         case "pending": return "status-pending";
         case "rejected": return "status-rejected";
-        // AppointmentStatus values
         case "completed": return "status-completed";
-        case "upcoming": return "status-upcoming";
-        case "inProgress": return "status-in-progress";
-        case "canceled": return "status-canceled";
         default: return "status-default";
       }
     };
 
     return (
-      <div className={`tag session ${getStatusClass(status)}`}>
-        {appointment.sessionType}
+      <div className={`tag ${getSessionTypeClass(appointment.sessionType)} ${getStatusClass(status)}`}>
+        {translateSessionType(appointment.sessionType)} {/* <-- Change this line */}
       </div>
     );
   };
@@ -489,6 +469,18 @@ export default function Appointments() {
           <LoadingScreen />
         ) : (
           <>
+            <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+              <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+                <Globe size={35} />
+              </button>
+              {showLangOptions && (
+                <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+                  <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>English</button>
+                  <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>עברית</button>
+                </div>
+              )}
+            </div>
+
             <div className="profile-header">
               <h1 className="profile-title">{t("appointments.title")}</h1>
               <p className="profile-subtitle">{t("appointments.subtitle")}</p>
@@ -518,11 +510,11 @@ export default function Appointments() {
                 ) : (
                   filtered.map((a) => (
                     <div
-                      className="appointment-card session"
+                      className={`appointment-card ${getSessionTypeClass(a.sessionType)}`}
                       key={a.id}
                       onClick={() => setSelected(a)}
                       style={{
-                        borderLeftColor: "#4b5563"
+                        borderLeftColor: getSessionTypeBorderColor(a.sessionType)
                       }}
                     >
                       <div className="appointment-left">
@@ -572,12 +564,12 @@ export default function Appointments() {
                   className="modal-content appointments-modal"
                   onClick={(e) => e.stopPropagation()}
                   style={{
-                    maxWidth: '28rem',
+                    maxWidth: '28rem', // max-w-md equivalent
                     width: '100%',
-                    borderRadius: '0.75rem',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    borderRadius: '0.75rem', // rounded-xl
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-xl
                     backgroundColor: 'white',
-                    padding: '1.5rem',
+                    padding: '1.5rem', // p-6
                     position: 'relative'
                   }}
                 >
@@ -585,7 +577,7 @@ export default function Appointments() {
                   <div style={{ marginBottom: '1.5rem' }}>
                     <h2
                       style={{
-                        fontSize: '1.125rem',
+                        fontSize: '1.125rem', // text-lg
                         fontWeight: 'bold',
                         marginBottom: '1rem',
                         textAlign: i18n.language === 'he' ? 'right' : 'left',
@@ -599,7 +591,7 @@ export default function Appointments() {
                     <div style={{ marginBottom: '1rem' }}>
                       <span
                         style={{
-                          backgroundColor: "#6b7280",
+                          backgroundColor: getSessionTypeColor(selected.sessionType),
                           color: 'white',
                           fontSize: '0.875rem',
                           fontWeight: '500',
@@ -608,7 +600,7 @@ export default function Appointments() {
                           display: 'inline-block'
                         }}
                       >
-                        {selected.sessionType}
+                        {translateSessionType(selected.sessionType)} {/* <-- Change this line */}
                       </span>
                     </div>
 
@@ -616,8 +608,8 @@ export default function Appointments() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        color: '#6b7280',
-                        fontSize: '0.875rem',
+                        color: '#6b7280', // text-gray-500
+                        fontSize: '0.875rem', // text-sm
                         marginBottom: '1rem'
                       }}
                     >
@@ -685,25 +677,12 @@ export default function Appointments() {
                             padding: "0.75rem",
                             borderRadius: "0.5rem",
                             backgroundColor:
-                              // VolunteerRequestStatus values
                               selected.status === "approved" ? "#d1fae5" :
                                 selected.status === "pending" ? "#fef3c7" :
-                                  selected.status === "rejected" ? "#fee2e2" :
-                                    // AppointmentStatus values
-                                    selected.status === "completed" ? "#dbeafe" :
-                                      selected.status === "upcoming" ? "#f0f9ff" :
-                                        selected.status === "inProgress" ? "#fef7cd" :
-                                          selected.status === "canceled" ? "#fee2e2" : "#f3f4f6",
-                            border: `1px solid ${
-                              // VolunteerRequestStatus values
-                              selected.status === "approved" ? "#10b981" :
-                                selected.status === "pending" ? "#f59e0b" :
-                                  selected.status === "rejected" ? "#ef4444" :
-                                    // AppointmentStatus values
-                                    selected.status === "completed" ? "#3b82f6" :
-                                      selected.status === "upcoming" ? "#0ea5e9" :
-                                        selected.status === "inProgress" ? "#eab308" :
-                                          selected.status === "canceled" ? "#dc2626" : "#d1d5db"
+                                  selected.status === "rejected" ? "#fee2e2" : "#f3f4f6",
+                            border: `1px solid ${selected.status === "approved" ? "#10b981" :
+                              selected.status === "pending" ? "#f59e0b" :
+                                selected.status === "rejected" ? "#ef4444" : "#d1d5db"
                               }`
                           }}
                         >
@@ -711,52 +690,11 @@ export default function Appointments() {
                             <span style={{
                               fontWeight: 500,
                               color:
-                                // VolunteerRequestStatus values
                                 selected.status === "approved" ? "#065f46" :
                                   selected.status === "pending" ? "#92400e" :
-                                    selected.status === "rejected" ? "#991b1b" :
-                                      // AppointmentStatus values
-                                      selected.status === "completed" ? "#1e40af" :
-                                        selected.status === "upcoming" ? "#0c4a6e" :
-                                          selected.status === "inProgress" ? "#a16207" :
-                                            selected.status === "canceled" ? "#7f1d1d" : "#374151"
+                                    selected.status === "rejected" ? "#991b1b" : "#374151"
                             }}>
-                              {/* Show appropriate label based on status type */}
-                              {["pending", "approved", "rejected"].includes(selected.status)
-                                ? t("appointments.requestStatusLabel")
-                                : t("appointments.statusLabel")
-                              } {t(`appointments.status.${selected.status}`)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Show attendance status if available */}
-                      {selected.attendanceStatus && (
-                        <div
-                          style={{
-                            marginTop: "1rem",
-                            padding: "0.75rem",
-                            borderRadius: "0.5rem",
-                            backgroundColor:
-                              selected.attendanceStatus === "present" ? "#d1fae5" :
-                                selected.attendanceStatus === "late" ? "#fef3c7" :
-                                  selected.attendanceStatus === "absent" ? "#fee2e2" : "#f3f4f6",
-                            border: `1px solid ${selected.attendanceStatus === "present" ? "#10b981" :
-                                selected.attendanceStatus === "late" ? "#f59e0b" :
-                                  selected.attendanceStatus === "absent" ? "#ef4444" : "#d1d5db"
-                              }`
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <span style={{
-                              fontWeight: 500,
-                              color:
-                                selected.attendanceStatus === "present" ? "#065f46" :
-                                  selected.attendanceStatus === "late" ? "#92400e" :
-                                    selected.attendanceStatus === "absent" ? "#991b1b" : "#374151"
-                            }}>
-                              {t("appointments.attendanceLabel")} {t(`appointments.attendance.${selected.attendanceStatus}`)}
+                              {t("appointments.statusLabel")} {t(`appointments.status.${selected.status}`)}
                             </span>
                           </div>
                         </div>
@@ -792,33 +730,6 @@ export default function Appointments() {
           </>
         )}
       </div>
-      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
-        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-          <Globe className="lang-icon" />
-        </button>
-        {showLangOptions && (
-          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={async () => {
-              localStorage.setItem('language', 'en');
-              await i18n.changeLanguage('en');
-              setCurrentLanguage('en');
-              applyLanguageDirection('en');
-              setShowLangOptions(false);
-            }}>
-              English
-            </button>
-            <button onClick={async () => {
-              localStorage.setItem('language', 'he');
-              await i18n.changeLanguage('he');
-              setCurrentLanguage('he');
-              applyLanguageDirection('he');
-              setShowLangOptions(false);
-            }}>
-              עברית
-            </button>
-          </div>
-        )}
-      </div>
     </Layout>
   );
-} 
+}

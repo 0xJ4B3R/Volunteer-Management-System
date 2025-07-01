@@ -1,54 +1,36 @@
 {
   "dashboard": {
-    "title": "Volunteer Portal",
-    "defaultName": "Volunteer",
+    "title": "Volunteer Dashboard",
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
       "evening": "Good evening"
     },
     "checkIn": {
-      "title": "Log Your Session",
-      "subtitle": "Record your attendance now"
+      "title": "Check In",
+      "subtitle": "Log your session now"
     },
     "upcoming": {
       "title": "Upcoming Sessions",
       "viewAll": "View All",
-      "none": "No upcoming sessions",
-      "loading": "Loading upcoming sessions...",
-      "loadingSubtitle": "Please wait while we fetch your schedule.",
-      "noSessionsMessage": "Great job staying on top of your schedule! New opportunities will appear here when they become available."
+      "none": "No upcoming sessions found"
     },
     "activity": {
       "title": "Recent Activity",
-      "present": "You attended a session{{notes}}",
-      "late": "You were late to a session{{notes}}",
-      "absent": "You missed a session{{notes}}",
-      "generic": "Status: {{status}}{{notes}}",
-      "cancelledByVolunteer": "You missed the session. Cancelled by volunteer",
-      "loading": "Loading recent activity...",
-      "loadingSubtitle": "Please wait while we fetch your activity history.",
-      "noActivity": "No recent activity",
-      "noActivityMessage": "Your volunteering activities will appear here. Start making a difference today!",
-      "unknownStatus": "Unknown"
+      "present": "You attended a session. {{notes}}",
+      "late": "You were late to a session. {{notes}}",
+      "absent": "You missed a session. {{notes}}",
+      "generic": "Status: {{status}}. {{notes}}",
+      "cancelledByVolunteer": "You missed the session. Cancelled by volunteer"
     },
     "stats": {
-      "totalHours": "Total Hours Since Joining",
+      "totalHours": "Total Hours since account creation",
       "hoursLabel": "Hours",
       "level": "Current Level",
-      "sessionsCompleted": "Total Sessions Since Joining",
-      "sessionsLabel": "sessions",
-      "sessionLabelSingular": "session"
-    },
-    "session": {
-      "defaultTitle": "Volunteer Session",
-      "defaultLocation": "Session Location",
-      "timeTBD": "Time TBD"
+      "sessionsCompleted": "Sessions Completed since account creation" 
     },
     "nextLevel": "Next: {{level}}",
     "hoursToGo": " {{count}} hours to go",
-    "hoursToMilestone": "{{count}} hours to next milestone ({{level}})",
-    "maxLevelAchieved": "🎉 Maximum level achieved!",
     "levelUp": "Congratulations! You've reached {{level}} level!🎉",
     "levels": {
       "Beginner": "Beginner",
@@ -105,9 +87,16 @@
       "5": "Fri",
       "6": "Sat"
     },
-    "languages": {
-      "english": "English",
-      "hebrew": "עברית"
+    "sessions": {
+      "art": "Art",
+      "baking": "Baking", 
+      "music": "Music",
+      "reading": "Reading",
+      "crafts": "Crafts",
+      "exercise": "Exercise",
+      "gardening": "Gardening",
+      "beading": "Beading",
+      "session": "Session"
     }
   }
 }

@@ -289,7 +289,7 @@
   position: absolute;
   top: 0.3rem;
   right: 0.3rem;
-  background-color: #2563eb; 
+  background-color: #2563eb;
   color: white;
   font-size: 0.6rem;
   padding: 0.1rem 0.3rem;
@@ -394,6 +394,7 @@
 .month-slot-time {
   font-size: 0.75rem;
   opacity: 0.9;
+  margin-right: 4px;
 }
 
 .month-slot.unavailable {
@@ -433,7 +434,7 @@
   .month-cell {
     min-height: 80px;
   }
-  
+
   .DialogContent {
     width: 95%;
     padding: 1.25rem;
@@ -464,7 +465,7 @@
   .month-cell {
     min-height: 60px;
   }
-  
+
   .DialogContent {
     width: 100%;
     max-width: none;
@@ -1049,11 +1050,11 @@
   .time-slot {
     border: 2px solid #000;
   }
-  
+
   .month-slot {
     border: 1px solid #000;
   }
-  
+
   .DialogContent {
     border: 2px solid #000;
   }
@@ -1064,15 +1065,15 @@
   .time-slot {
     transition: none;
   }
-  
+
   .month-slot {
     transition: none;
   }
-  
+
   .time-slot:hover {
     transform: none;
   }
-  
+
   .month-slot:hover {
     transform: none;
   }
@@ -1084,18 +1085,18 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   .month-slot {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   .tab-trigger {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     min-height: 44px;
   }
-  
+
   .filter-button {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;

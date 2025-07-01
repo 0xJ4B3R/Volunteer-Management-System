@@ -1,14 +1,20 @@
 {
-  "login_title": "כניסה למערכת",
-  "login_subtitle": "ברוכים הבאים למערכת ניהול המתנדבים",
-  "username": "שם משתמש",
-  "password": "סיסמה",
-  "login_button": "כניסה למערכת",
-  "Back_to_home_page": "חזרה לעמוד הבית",
-  "error_fill_fields": "אנא השלימו את כל השדות הנדרשים כדי להמשיך.",
-  "error_user_not_found": "שם המשתמש שהוזן אינו קיים במערכת שלנו.",
-  "error_user_inactive": "החשבון שלכם הושבת. אנא פנו למנהל המערכת לקבלת סיוע.",
-  "error_invalid_role": "לחשבונכם אין את ההרשאות המתאימות לגישה למערכת זו.",
-  "error_wrong_credentials": "שם המשתמש או הסיסמה שהוזנו שגויים. אנא בדקו את פרטי הגישה שלכם ונסו שוב.",
-  "error_login_failed": "ההזדהות נכשלה. אנא נסו שוב או פנו לתמיכה טכנית אם הבעיה נמשכת."
+  "login": {
+    "login_title": "התחברות!",
+    "login_subtitle": "ברוך הבא! כל כך טוב שחזרת!",
+    "username": "שם משתמש",
+    "password": "סיסמה",
+    "login_button": "התחבר",
+    "Back_to_home_page": "חזור לעמוד הבית",
+    "error_fill_fields": "אנא מלא את כל השדות למעלה",
+    "error_user_not_found": "משתמש לא נמצא",
+    "error_user_inactive": "החשבון שלך לא פעיל. אנא פנה למנהל המערכת.",
+    "error_invalid_role": "תפקיד משתמש לא חוקי",
+    "error_wrong_credentials": "סיסמה או שם משתמש שגויים",
+    "error_login_failed": "לא ניתן להתחבר",
+    "security_alert_title": "התראת אבטחה",
+    "default_password_warning": "אתה משתמש בסיסמת ברירת המחדל 'Welcome123!'. מטעמי אבטחה, עליך לשנות את הסיסמה שלך לפני המשך. תועבר להגדרות האבטחה כדי לעדכן את הסיסמה שלך.",
+    "redirecting_countdown": "מעביר לשינוי סיסמה בעוד {{count}} שניות..."
+  },
+  "loading": "טוען..."
 }

@@ -3,11 +3,11 @@
     "Week": "שבוע",
     "Month": "חודש",
     "Available slots only": "רק תאריכים פנויים",
-    "All Session Types": "כל סוגי הפגישות",
+    "All Session Types": "כל סוגי המפגשים",
     "Sign Up for:": "הרשמה ל:",
     "Date": "תאריך",
     "Time": "שעה",
-    "No sessions": "אין פגישות",
+    "No sessions": "אין מפגשים",
     "Loading calendar data...": "טוען נתוני לוח שנה...",
     "Submitting Request…": "שולח בקשה…",
     "Already Approved": "כבר אושר",
@@ -15,7 +15,7 @@
     "Request Pending": "בקשה ממתינה",
     "Not Available": "לא זמין",
     "Request to Join": "בקשה להצטרף",
-    "Select session type": "בחר סוג פגישה",
+    "Select session type": "בחר סוג מפגש",
     "Today": "היום",
     "months": {
         "0": "ינואר",
@@ -72,5 +72,16 @@
       "pendingApproval": "ממתין לאישור ⏳",
       "approvedStatus": "מאושר ✅",
       "rejectedStatus": "נדחה ❌"
+    },
+    "sessionTypes": {
+      "art": "אמנות",
+      "baking": "אפייה",
+      "music": "מוזיקה", 
+      "reading": "קריאה",
+      "crafts": "יצירה",
+      "exercise": "התעמלות",
+      "gardening": "גינון",
+      "beading": "חרוזים",
+      "session": "מפגש"
     }
 }

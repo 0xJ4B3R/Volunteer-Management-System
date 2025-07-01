@@ -172,11 +172,11 @@
 }
 
 /* Session type color variants for appointment cards */
-.appointment-card.reading {
+.appointment-card.art {
   border-left-color: #2563eb;
 }
 
-.appointment-card.games {
+.appointment-card.baking {
   border-left-color: #db2777;
 }
 
@@ -184,7 +184,7 @@
   border-left-color: #d97706;
 }
 
-.appointment-card.art {
+.appointment-card.reading {
   border-left-color: #059669;
 }
 
@@ -196,11 +196,11 @@
   border-left-color: #dc2626;
 }
 
-.appointment-card.therapy {
+.appointment-card.gardening {
   border-left-color: #4f46e5;
 }
 
-.appointment-card.social {
+.appointment-card.beading {
   border-left-color: #0d9488;
 }
 
@@ -209,11 +209,11 @@
 }
 
 /* Session type background colors with transparency for card backgrounds */
-.appointment-card.reading {
+.appointment-card.art {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, #2563eb 450%);
 }
 
-.appointment-card.games {
+.appointment-card.baking {
   background: linear-gradient(135deg, rgba(236, 72, 153, 0.05) 0%, #db2777 450%);
 }
 
@@ -221,7 +221,7 @@
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, #d97706 450%);
 }
 
-.appointment-card.art {
+.appointment-card.reading {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, #059669 450%);
 }
 
@@ -233,11 +233,11 @@
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, #dc2626 450%);
 }
 
-.appointment-card.therapy {
+.appointment-card.gardening {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, #4f46e5 450%);
 }
 
-.appointment-card.social {
+.appointment-card.beading {
   background: linear-gradient(135deg, rgba(20, 184, 166, 0.05) 0%, #0d9488 450%);
 }
 
@@ -313,13 +313,13 @@
 }
 
 /* Session type specific tag colors */
-.tag.reading {
+.tag.art {
   background-color: #3b82f6;
   color: white;
   border-color: #2563eb;
 }
 
-.tag.games {
+.tag.baking {
   background-color: #ec4899;
   color: white;
   border-color: #db2777;
@@ -331,7 +331,7 @@
   border-color: #d97706;
 }
 
-.tag.art {
+.tag.reading {
   background-color: #10b981;
   color: white;
   border-color: #059669;
@@ -349,13 +349,13 @@
   border-color: #dc2626;
 }
 
-.tag.therapy {
+.tag.gardening {
   background-color: #6366f1;
   color: white;
   border-color: #4f46e5;
 }
 
-.tag.social {
+.tag.beading {
   background-color: #14b8a6;
   color: white;
   border-color: #0d9488;
@@ -376,11 +376,11 @@
 }
 
 /* Add subtle glow effect to tags matching their session type */
-.tag.reading {
+.tag.art {
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 
-.tag.games {
+.tag.tag.baking {
   box-shadow: 0 0 0 1px rgba(236, 72, 153, 0.2);
 }
 
@@ -388,7 +388,7 @@
   box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2);
 }
 
-.tag.art {
+.tag.reading {
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
 }
 
@@ -400,11 +400,11 @@
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
 }
 
-.tag.therapy {
+.tag.gardening {
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
 }
 
-.tag.social {
+.tag.beading {
   box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.2);
 }
 

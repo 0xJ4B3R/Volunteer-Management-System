@@ -1,5 +1,5 @@
 {
-    "Dashboard": "לוח בקרה",
+    "Dashboard": "לוח מחוונים",
     "Calendar": "לוח שנה",
     "Appointments": "פגישות",
     "Attendance": "נוכחות",
@@ -7,8 +7,5 @@
     "Volunteer Portal": "פורטל מתנדבים",
     "Manager Portal": "פורטל מנהל",
     "View Profile": "הצג פרופיל",
-    "Logout": "התנתק",
-    "Open menu": "פתח תפריט",
-    "Collapse sidebar": "צמצם סרגל צד",
-    "Expand sidebar": "הרחב סרגל צד"
+    "Logout": "התנתק"
 }

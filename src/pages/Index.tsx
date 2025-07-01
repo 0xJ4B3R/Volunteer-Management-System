@@ -102,7 +102,7 @@ const ServicesCarousel = () => {
   };
 
   return (
-    <div 
+    <div
       className="services-carousel"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -116,7 +116,7 @@ const ServicesCarousel = () => {
           <p>{services[currentService].description}</p>
         </div>
       </div>
-      
+
       <div className="carousel-indicators">
         {services.map((_, index) => (
           <button
@@ -127,7 +127,7 @@ const ServicesCarousel = () => {
           />
         ))}
       </div>
-      
+
       <div className="service-counter">
         {currentService + 1} {t('services.of')} {services.length}
       </div>
@@ -146,23 +146,23 @@ const Homepage = () => {
   // Robust language direction management
   const applyLanguageDirection = (lang) => {
     const dir = lang === 'he' ? 'rtl' : 'ltr';
-    
+
     // 1. Set the dir attribute on html element
     document.documentElement.setAttribute('dir', dir);
     document.documentElement.setAttribute('lang', lang);
-    
+
     // 2. Remove any stale RTL/LTR classes
     document.body.classList.remove('rtl', 'ltr');
     document.documentElement.classList.remove('rtl', 'ltr');
-    
+
     // 3. Add the correct direction class
     document.body.classList.add(dir);
     document.documentElement.classList.add(dir);
-    
+
     // 4. Set CSS direction property explicitly
     document.body.style.direction = dir;
     document.documentElement.style.direction = dir;
-    
+
     // 5. Remove any conflicting inline styles
     const rootElements = document.querySelectorAll('[style*="direction"]');
     rootElements.forEach(el => {
@@ -228,8 +228,8 @@ const Homepage = () => {
         requestAnimationFrame(() => {
           const header = document.querySelector('.header') as HTMLElement;
           if (header) {
-            header.style.background = window.scrollY > 100 
-              ? 'rgba(255, 255, 255, 0.98)' 
+            header.style.background = window.scrollY > 100
+              ? 'rgba(255, 255, 255, 0.98)'
               : 'rgba(255, 255, 255, 0.95)';
           }
           ticking = false;
@@ -256,7 +256,7 @@ const Homepage = () => {
       const header = document.querySelector('.header') as HTMLElement;
       const headerHeight = header ? header.offsetHeight : 100; // Fallback to 100px
       const targetPosition = target.offsetTop - headerHeight + 1; // Extra 20px padding
-      
+
       window.scrollTo({
         top: targetPosition,
         behavior: 'smooth'
