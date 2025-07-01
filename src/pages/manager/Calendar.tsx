@@ -3424,7 +3424,7 @@ const ManagerCalendar = () => {
                     <Label htmlFor="sessionCategory" className="text-sm font-medium text-slate-700">{t('forms.sessionDetails.sessionCategory')}</Label>
                     <Select
                       value={newSlot.sessionCategory || "none"}
-                      onValueChange={(value) => setNewSlot(prev => ({ ...prev, sessionCategory: value === "none" ? null : value as "music" | "gardening" | "beads" | "art" | "baking" }))}
+                      onValueChange={(value) => setNewSlot(prev => ({ ...prev, sessionCategory: value === "none" ? null : value as "music" | "gardening" | "beading" | "art" | "baking" }))}
                       dir={dir}
                     >
                       <SelectTrigger className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={dir}>
@@ -3434,7 +3434,7 @@ const ManagerCalendar = () => {
                         <SelectItem value="none">{t('forms.sessionDetails.categories.none')}</SelectItem>
                         <SelectItem value="music">{t('forms.sessionDetails.categories.music')}</SelectItem>
                         <SelectItem value="gardening">{t('forms.sessionDetails.categories.gardening')}</SelectItem>
-                        <SelectItem value="beads">{t('forms.sessionDetails.categories.beads')}</SelectItem>
+                        <SelectItem value="beading">{t('forms.sessionDetails.categories.beading')}</SelectItem>
                         <SelectItem value="art">{t('forms.sessionDetails.categories.art')}</SelectItem>
                         <SelectItem value="baking">{t('forms.sessionDetails.categories.baking')}</SelectItem>
                       </SelectContent>
@@ -4341,7 +4341,7 @@ const ManagerCalendar = () => {
                     <Label htmlFor="edit-sessionCategory" className="text-sm font-medium text-slate-700">{t('forms.sessionDetails.sessionCategory')}</Label>
                     <Select
                       value={selectedSlot.sessionCategory || "none"}
-                      onValueChange={(value) => setSelectedSlot({ ...selectedSlot, sessionCategory: value === "none" ? null : value as "music" | "gardening" | "beads" | "art" | "baking" })}
+                      onValueChange={(value) => setSelectedSlot({ ...selectedSlot, sessionCategory: value === "none" ? null : value as "music" | "gardening" | "beading" | "art" | "baking" })}
                       dir={dir}
                     >
                       <SelectTrigger className="h-10 bg-white border-slate-300 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" dir={dir}>
@@ -4351,7 +4351,7 @@ const ManagerCalendar = () => {
                         <SelectItem value="none">{t('forms.sessionDetails.categories.none')}</SelectItem>
                         <SelectItem value="music">{t('forms.sessionDetails.categories.music')}</SelectItem>
                         <SelectItem value="gardening">{t('forms.sessionDetails.categories.gardening')}</SelectItem>
-                        <SelectItem value="beads">{t('forms.sessionDetails.categories.beads')}</SelectItem>
+                        <SelectItem value="beading">{t('forms.sessionDetails.categories.beading')}</SelectItem>
                         <SelectItem value="art">{t('forms.sessionDetails.categories.art')}</SelectItem>
                         <SelectItem value="baking">{t('forms.sessionDetails.categories.baking')}</SelectItem>
                       </SelectContent>

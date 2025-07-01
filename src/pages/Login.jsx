@@ -211,11 +211,8 @@ export default function LoginPage() {
           setLoading(false);
           setShowDefaultPasswordWarning(true);
 
-          console.log("Default password detected, showing warning screen");
-
           // Navigate after showing warning for 15 seconds
           setTimeout(() => {
-            console.log("Navigating to security tab...");
             if (role === 'volunteer') {
               navigate('/volunteer/profile?tab=security&warning=true');
             } else if (role === 'manager') {

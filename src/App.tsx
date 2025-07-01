@@ -17,7 +17,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 // General Pages
-import Index from "@/pages/Index";
+import Home from "@/pages/Home.jsx";
 import Login from "@/pages/Login.jsx";
 import NotFound from "@/pages/NotFound.jsx";
 
@@ -93,7 +93,7 @@ const App = () => (
               }}
             >
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
 
                 {/* Volunteer Routes */}

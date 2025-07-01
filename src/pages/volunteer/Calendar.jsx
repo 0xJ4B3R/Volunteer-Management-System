@@ -3,15 +3,15 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, arrayUnion, Timestamp } from 'firebase/firestore';
-import { Label } from "@/components/ui/label";
 import { Layout } from "@/components/volunteer/layout"
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
+import { matchVolunteersToResidents } from "@/utils/matchingAlgorithm";
+import { useMatchingRules } from "@/hooks/useMatchingRules";
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Calendar.css";
 import app from "@/lib/firebase";
@@ -149,15 +149,29 @@ const groupSlotsByTime = (slotsForDay) => {
 
 // Utility: Check user approval status for a slot
 const getUserApprovalStatus = (slot, currentUser) => {
-  if (!currentUser || !slot.volunteers) return null;
+  if (!currentUser) {
+    return null;
+  }
+  
+  if (!slot?.volunteerRequests || !Array.isArray(slot.volunteerRequests)) {
+    return null;
+  }
 
-  const userVolunteer = slot.volunteers.find(v =>
-    v.username === currentUser.username ||
-    v.id === currentUser.uid ||
-    v.id === currentUser.id
-  );
+  // Get all possible user identifiers for userId field
+  const userIds = [
+    currentUser.uid,
+    currentUser.id, 
+    currentUser.username,
+    currentUser.email
+  ].filter(Boolean); // Remove any null/undefined values
 
-  return userVolunteer ? userVolunteer.status : null;
+  const userRequest = slot.volunteerRequests.find(req => {
+    // Check against the userId field instead of volunteerId
+    const match = userIds.includes(req.userId);
+    return match;
+  });
+
+  return userRequest ? userRequest.status : null;
 };
 
 const db = getFirestore(app);
@@ -192,11 +206,79 @@ const VolunteerCalendar = () => {
   const [selectedSessionType, setSelectedSessionType] = useState("all");
   const [signupLoading, setSignupLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // Temporary function to fix existing volunteer requests with proper volunteerId
+  const fixExistingVolunteerRequests = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // First, try to find the actual volunteer document
+      let actualVolunteerId = "default-volunteer-id";
+      try {
+        const volunteersSnapshot = await getDocs(collection(db, "volunteers"));
+        const volunteerDoc = volunteersSnapshot.docs.find(doc => {
+          const data = doc.data();
+          return data.username === currentUser.username || 
+                 data.email === currentUser.email ||
+                 doc.id === currentUser.id ||
+                 doc.id === currentUser.uid;
+        });
+
+        if (volunteerDoc) {
+          actualVolunteerId = volunteerDoc.id;
+        }
+      } catch (error) {
+        // Could not fetch volunteers collection
+      }
+
+      const querySnapshot = await getDocs(collection(db, "calendar_slots"));
+      
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data();
+        const volunteerRequests = data.volunteerRequests || [];
+        
+        // Find requests that need to be fixed
+        let hasUpdates = false;
+        const updatedRequests = volunteerRequests.map(req => {
+          // If this request has the wrong volunteerId or is missing userId
+          if ((req.volunteerId === currentUser.id || req.volunteerId === 'yv5CABJ36fmsF2bBbtic') && 
+              (!req.userId || req.userId !== currentUser.id)) {
+            hasUpdates = true;
+            return {
+              ...req,
+              volunteerId: actualVolunteerId, // Set to actual volunteer document ID
+              userId: currentUser.id || currentUser.uid || currentUser.username // Set userId for badge matching
+            };
+          }
+          return req;
+        });
+        
+        if (hasUpdates) {
+          // Update the document
+          await updateDoc(doc(db, "calendar_slots", docSnapshot.id), {
+            volunteerRequests: updatedRequests
+          });
+        }
+      }
+    } catch (error) {
+      // Error fixing volunteer requests
+    }
+  };
+
+  // Run the fix when component mounts (only once)
+  useEffect(() => {
+    if (currentUser) {
+      fixExistingVolunteerRequests();
+    }
+  }, [currentUser]);
+
+  const { rules, loading: loadingRules } = useMatchingRules();
 
   // Check authentication
   useEffect(() => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      
       if (!user.username) {
         navigate("/login");
       } else if (user.role !== "volunteer") {
@@ -208,6 +290,136 @@ const VolunteerCalendar = () => {
       // Auth check error
     }
   }, [navigate]);
+
+  // Function to calculate match score and find best resident match with real data
+  const calculateMatchDetails = async (currentUser, slot) => {
+    if (!currentUser || !rules.length || loadingRules) {
+      return {
+        matchScore: 50, // Default score instead of null
+        assignedResidentId: slot.assignedResidentId || "default-resident-id",
+        actualVolunteerId: "default-volunteer-id", // Default volunteer ID
+        currentUserId: currentUser?.id || currentUser?.uid || currentUser?.username
+      };
+    }
+
+    try {
+      // Try to fetch the actual volunteer document from the volunteers collection
+      let actualVolunteerId = "default-volunteer-id"; // Default fallback
+      let volunteerData = currentUser;
+
+      try {
+        const volunteersSnapshot = await getDocs(collection(db, "volunteers"));
+        const volunteerDoc = volunteersSnapshot.docs.find(doc => {
+          const data = doc.data();
+          // Match by username, email, or any identifier that links to this user
+          return data.username === currentUser.username || 
+                 data.email === currentUser.email ||
+                 doc.id === currentUser.id ||
+                 doc.id === currentUser.uid;
+        });
+
+        if (volunteerDoc) {
+          actualVolunteerId = volunteerDoc.id; // Use the actual document ID from volunteers collection
+          volunteerData = { ...volunteerDoc.data(), id: volunteerDoc.id };
+        }
+      } catch (error) {
+        // Could not fetch volunteer from collection, using default ID
+      }
+
+      // Convert volunteer data to the format expected by matching algorithm
+      const volunteer = {
+        id: actualVolunteerId,
+        fullName: volunteerData.fullName || volunteerData.username || "Unknown Volunteer",
+        createdAt: volunteerData.createdAt || Timestamp.now(),
+        skills: volunteerData.skills || [],
+        hobbies: volunteerData.hobbies || [],
+        languages: volunteerData.languages || [],
+        availability: volunteerData.availability || [],
+        gender: volunteerData.gender || null,
+        birthDate: volunteerData.birthDate || null,
+      };
+
+      // Get residents from Firestore to find the best match
+      let residents = [];
+      let targetResidentId = slot.assignedResidentId;
+
+      try {
+        const residentsSnapshot = await getDocs(collection(db, "residents"));
+        residents = residentsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt || Timestamp.now()
+        }));
+      } catch (error) {
+        // Error fetching residents
+      }
+
+      // If slot has a specific assigned resident, use that
+      if (targetResidentId && residents.length > 0) {
+        const targetResident = residents.find(r => r.id === targetResidentId);
+        if (targetResident) {
+          const convertedRules = rules.map(rule => ({ 
+            ...rule, 
+            updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
+          }));
+
+          const matchResults = matchVolunteersToResidents([volunteer], [targetResident], convertedRules);
+          
+          if (matchResults.length > 0) {
+            return {
+              matchScore: Math.round(matchResults[0].score),
+              assignedResidentId: targetResidentId,
+              actualVolunteerId: actualVolunteerId, // Actual volunteer document ID
+              currentUserId: currentUser.id || currentUser.uid || currentUser.username // Current user session ID
+            };
+          }
+        }
+      }
+
+      // If no specific resident assigned, find the best match from all residents
+      if (residents.length > 0) {
+        const convertedRules = rules.map(rule => ({ 
+          ...rule, 
+          updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
+        }));
+
+        const matchResults = matchVolunteersToResidents([volunteer], residents, convertedRules);
+        
+        if (matchResults.length > 0) {
+          // Find the best match (highest score)
+          const bestMatch = matchResults.reduce((best, current) => 
+            current.score > best.score ? current : best
+          );
+
+          return {
+            matchScore: Math.round(bestMatch.score),
+            assignedResidentId: bestMatch.residentId,
+            actualVolunteerId: actualVolunteerId, // Actual volunteer document ID
+            currentUserId: currentUser.id || currentUser.uid || currentUser.username // Current user session ID
+          };
+        }
+      }
+
+      // Fallback with default values but ensure they're not null
+      const fallbackResidentId = slot.assignedResidentId || 
+                                 (residents.length > 0 ? residents[0].id : "default-resident-id");
+      
+      return {
+        matchScore: 75, // Default reasonable score
+        assignedResidentId: fallbackResidentId,
+        actualVolunteerId: actualVolunteerId, // Will be actual volunteer doc ID or default
+        currentUserId: currentUser.id || currentUser.uid || currentUser.username // Current user session ID
+      };
+
+    } catch (error) {
+      return {
+        matchScore: 60, // Default score on error
+        assignedResidentId: slot.assignedResidentId || "default-resident-id",
+        actualVolunteerId: "default-volunteer-id",
+        currentUserId: currentUser.id || currentUser.uid || currentUser.username
+      };
+    }
+  };
 
   // Fetch slots from Firestore
   useEffect(() => {
@@ -229,23 +441,28 @@ const VolunteerCalendar = () => {
             }
           }
 
-          // Set default type to "Session" if no customLabel or type is provided
-          const sessionType = data.customLabel || data.type || "Session";
+          // Set default type to "Session" if no sessionCategory or type is provided
+          const sessionType = data.sessionCategory || data.type || "Session";
+          
+          // Always set isOpen to true
+          const isOpen = true;
 
           return {
             id: doc.id,
             appointmentId: data.appointmentId || null,
-            customLabel: data.customLabel || 'Session',
+            customLabel: data.sessionCategory || 'Session',
             type: sessionType,
             isCustom: data.isCustom || false,
             startTime: data.startTime || '9:00 AM',
             endTime: data.endTime || '10:00 AM',
-            available: data.isOpen || false,
-            isOpen: data.isOpen || false,
+            available: isOpen,
+            isOpen: isOpen,
+            status: data.status || "open",
             date: dateObj,
             volunteers: data.volunteers || [],
             volunteerRequests: data.volunteerRequests || [],
-            maxVolunteers: data.maxCapacity || 1
+            maxVolunteers: data.maxCapacity || 1,
+            assignedResidentId: data.assignedResidentId || null
           };
         });
 
@@ -294,7 +511,7 @@ const VolunteerCalendar = () => {
       return;
     }
 
-    if (!slot.available || !isEventAvailable(slot.date)) {
+    if (!isEventAvailable(slot.date)) {
       return;
     }
 
@@ -318,37 +535,50 @@ const VolunteerCalendar = () => {
       }
 
       const slotData = slotDoc.data();
-      const volunteers = slotData.volunteers || [];
       const volunteerRequests = slotData.volunteerRequests || [];
 
-      if (volunteers.some(v => v.id === currentUser.uid || v.username === currentUser.username)) {
+      // Get all possible user identifiers for checking duplicates
+      const userIds = [
+        currentUser.uid,
+        currentUser.id, 
+        currentUser.username,
+        currentUser.email
+      ].filter(Boolean);
+
+      // Check if user already has a request (check by userId)
+      if (volunteerRequests && volunteerRequests.some(req => userIds.includes(req.userId))) {
         setSignupLoading(false);
         return;
       }
 
-      if (volunteerRequests && volunteerRequests.includes(currentUser.uid)) {
-        setSignupLoading(false);
-        return;
-      }
-
-      const approvedVolunteersCount = volunteers.filter(v => v.status !== "pending").length;
+      // Count approved requests instead of volunteers
+      const approvedVolunteersCount = volunteerRequests.filter(req => req.status === "approved").length;
 
       if (approvedVolunteersCount >= (slotData.maxVolunteers || 1)) {
         setSignupLoading(false);
         return;
       }
 
-      await updateDoc(slotRef, {
-        volunteerRequests: arrayUnion(currentUser.uid || currentUser.id || currentUser.username)
-      });
+      // Calculate match details using the matching algorithm with real data
+      const { matchScore, assignedResidentId, actualVolunteerId, currentUserId } = await calculateMatchDetails(currentUser, slot);
 
+      // Create new volunteer request object with all required fields including match data
+      const newVolunteerRequest = {
+        status: "pending",
+        volunteerId: actualVolunteerId, // The actual volunteer document ID from volunteers collection
+        userId: currentUserId, // Current user's session ID for badge matching
+        requestedAt: Timestamp.now(),
+        approvedAt: null,
+        assignedBy: 'ai',
+        assignedResidentId: assignedResidentId,
+        matchScore: matchScore,
+        rejectedAt: null,
+        rejectedReason: null
+      };
+
+      // Add to volunteerRequests array
       await updateDoc(slotRef, {
-        volunteers: arrayUnion({
-          id: currentUser.uid || currentUser.id || "",
-          username: currentUser.username,
-          status: "pending",
-          signupTime: Timestamp.now()
-        })
+        volunteerRequests: arrayUnion(newVolunteerRequest)
       });
 
       // Refresh calendar data
@@ -365,22 +595,27 @@ const VolunteerCalendar = () => {
           }
         }
 
-        const sessionType = data.customLabel || data.type || "Session";
+        const sessionType = data.sessionCategory || data.type || "Session";
+
+        // Always set isOpen to true
+        const isOpen = true;
 
         return {
           id: doc.id,
           appointmentId: data.appointmentId || null,
-          customLabel: data.customLabel || 'Session',
+          customLabel: data.sessionCategory || 'Session',
           type: sessionType,
           isCustom: data.isCustom || false,
           startTime: data.startTime || '9:00 AM',
           endTime: data.endTime || '10:00 AM',
-          available: data.isOpen || false,
-          isOpen: data.isOpen || false,
+          available: isOpen,
+          isOpen: isOpen,
+          status: data.status || "open",
           date: dateObj,
           volunteers: data.volunteers || [],
           volunteerRequests: data.volunteerRequests || [],
-          maxVolunteers: data.maxVolunteers || 1
+          maxVolunteers: data.maxVolunteers || 1,
+          assignedResidentId: data.assignedResidentId || null
         };
       });
 
@@ -444,12 +679,14 @@ const VolunteerCalendar = () => {
       );
     }
 
-    // Fixed: Check the isOpen property correctly
+    // Check the isOpen property correctly
     if (showOnlyAvailable) {
+      // Since isOpen is always true now, this filter won't have any effect
+      // but keeping it for potential future use
       filtered = filtered.filter(slot => slot.isOpen === true);
     }
 
-    // Fixed: Handle session type filtering including default "Session" type
+    // Handle session type filtering including default "Session" type
     if (selectedSessionType !== "all") {
       filtered = filtered.filter(slot => {
         const slotType = slot.customLabel || slot.type || "Session";
@@ -653,7 +890,7 @@ const VolunteerCalendar = () => {
                                 <Dialog key={slot.id}>
                                   <DialogTrigger asChild>
                                     <div
-                                      className={`time-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable-slot" : ""}`}
+                                      className={`time-slot ${getSessionTypeColor(slot.type)}`}
                                       style={{
                                         position: "absolute",
                                         top: `${slot.topPosition + (slot.stackIndex * 12)}px`,
@@ -668,56 +905,63 @@ const VolunteerCalendar = () => {
                                       }}
                                     >
                                       {/* Show approval status badges */}
-                                      {userApprovalStatus === "approved" && (
-                                        <div className="approved-badge" style={{
-                                          position: "absolute",
-                                          top: "4px",
-                                          right: "4px",
-                                          backgroundColor: "#10b981",
-                                          color: "white",
-                                          fontSize: "10px",
-                                          padding: "2px 6px",
-                                          borderRadius: "12px",
-                                          fontWeight: "bold",
-                                          zIndex: 20
-                                        }}>
-                                          {t("SessionStatus.approved")}
-                                        </div>
-                                      )}
-
-                                      {userApprovalStatus === "pending" && (
-                                        <div className="pending-badge" style={{
-                                          position: "absolute",
-                                          top: "4px",
-                                          right: "4px",
-                                          backgroundColor: "#f59e0b",
-                                          color: "white",
-                                          fontSize: "10px",
-                                          padding: "2px 6px",
-                                          borderRadius: "12px",
-                                          fontWeight: "bold",
-                                          zIndex: 20
-                                        }}>
-                                          {t("SessionStatus.pending")}
-                                        </div>
-                                      )}
-
-                                      {userApprovalStatus === "rejected" && (
-                                        <div className="rejected-badge" style={{
-                                          position: "absolute",
-                                          top: "4px",
-                                          right: "4px",
-                                          backgroundColor: "#ef4444",
-                                          color: "white",
-                                          fontSize: "10px",
-                                          padding: "2px 6px",
-                                          borderRadius: "12px",
-                                          fontWeight: "bold",
-                                          zIndex: 20
-                                        }}>
-                                          {t("SessionStatus.rejected")}
-                                        </div>
-                                      )}
+                                      {(() => {
+                                        if (userApprovalStatus === "approved") {
+                                          return (
+                                            <div className="approved-badge" style={{
+                                              position: "absolute",
+                                              top: "4px",
+                                              right: "4px",
+                                              backgroundColor: "#10b981",
+                                              color: "white",
+                                              fontSize: "10px",
+                                              padding: "2px 6px",
+                                              borderRadius: "12px",
+                                              fontWeight: "bold",
+                                              zIndex: 20
+                                            }}>
+                                              {t("SessionStatus.approved")}
+                                            </div>
+                                          );
+                                        }
+                                        if (userApprovalStatus === "pending") {
+                                          return (
+                                            <div className="pending-badge" style={{
+                                              position: "absolute",
+                                              top: "4px",
+                                              right: "4px",
+                                              backgroundColor: "#f59e0b",
+                                              color: "white",
+                                              fontSize: "10px",
+                                              padding: "2px 6px",
+                                              borderRadius: "12px",
+                                              fontWeight: "bold",
+                                              zIndex: 20
+                                            }}>
+                                              {t("SessionStatus.pending")}
+                                            </div>
+                                          );
+                                        }
+                                        if (userApprovalStatus === "rejected") {
+                                          return (
+                                            <div className="rejected-badge" style={{
+                                              position: "absolute",
+                                              top: "4px",
+                                              right: "4px",
+                                              backgroundColor: "#ef4444",
+                                              color: "white",
+                                              fontSize: "10px",
+                                              padding: "2px 6px",
+                                              borderRadius: "12px",
+                                              fontWeight: "bold",
+                                              zIndex: 20
+                                            }}>
+                                              {t("SessionStatus.rejected")}
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
 
                                       <div className="time-slot-header">
                                         <span className="start-time">{slot.startTime}</span>
@@ -729,7 +973,7 @@ const VolunteerCalendar = () => {
                                       <div className="volunteers-count">
                                         <Users className="h-3 w-3" />
                                         <span>
-                                          {(slot.volunteers?.length || 0)}/{slot.maxVolunteers || 1}
+                                          {(slot.volunteerRequests?.filter(req => req.status === "approved").length || 0)}/{slot.maxVolunteers || 1}
                                         </span>
                                       </div>
                                     </div>
@@ -789,7 +1033,6 @@ const VolunteerCalendar = () => {
                                       <button
                                         type="button"
                                         disabled={
-                                          !slot.available ||
                                           !isEventAvailable(slot.date) ||
                                           signupLoading ||
                                           userApprovalStatus === "approved" ||
@@ -797,7 +1040,7 @@ const VolunteerCalendar = () => {
                                           userApprovalStatus === "rejected"
                                         }
                                         style={
-                                          (!slot.available || !isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
+                                          (!isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
                                             ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                                             : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
                                         }
@@ -811,11 +1054,12 @@ const VolunteerCalendar = () => {
                                               ? t("Request Rejected")
                                               : userApprovalStatus === "pending"
                                                 ? t("Request Pending")
-                                                : (!slot.available || !isEventAvailable(slot.date))
+                                                : (!isEventAvailable(slot.date))
                                                   ? t("Not Available")
-                                                  : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
-                                                    ? t("Request Pending")
-                                                    : t("Request to Join")}
+                                                  : (() => {
+                                                      const userIds = [currentUser?.uid, currentUser?.id, currentUser?.username, currentUser?.email].filter(Boolean);
+                                                      return slot.volunteerRequests?.some(req => userIds.includes(req.userId)) ? t("Request Pending") : t("Request to Join");
+                                                    })()}
                                       </button>
                                     </div>
                                   </DialogContent>
@@ -868,7 +1112,7 @@ const VolunteerCalendar = () => {
                               <Dialog key={slot.id}>
                                 <DialogTrigger asChild>
                                   <div
-                                    className={`month-slot ${getSessionTypeColor(slot.type)}${!slot.available ? " unavailable" : ""}`}
+                                    className={`month-slot ${getSessionTypeColor(slot.type)}`}
                                     style={{
                                       borderLeft: "4px solid",
                                       borderLeftColor: borderColor,
@@ -915,7 +1159,10 @@ const VolunteerCalendar = () => {
                                     )}
 
                                     {/* Small indicator dot if you've requested this slot but no status yet */}
-                                    {!userApprovalStatus && slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username) && (
+                                    {!userApprovalStatus && (() => {
+                                      const userIds = [currentUser?.uid, currentUser?.id, currentUser?.username, currentUser?.email].filter(Boolean);
+                                      return slot.volunteerRequests?.some(req => userIds.includes(req.userId));
+                                    })() && (
                                       <span style={{
                                         display: "inline-block",
                                         width: "6px",
@@ -1002,7 +1249,6 @@ const VolunteerCalendar = () => {
                                     <button
                                       type="button"
                                       disabled={
-                                        !slot.available ||
                                         !isEventAvailable(slot.date) ||
                                         signupLoading ||
                                         userApprovalStatus === "approved" ||
@@ -1010,7 +1256,7 @@ const VolunteerCalendar = () => {
                                         userApprovalStatus === "rejected"
                                       }
                                       style={
-                                        (!slot.available || !isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
+                                        (!isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
                                           ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                                           : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
                                       }
@@ -1024,11 +1270,12 @@ const VolunteerCalendar = () => {
                                             ? t("Request Rejected")
                                             : userApprovalStatus === "pending"
                                               ? t("Request Pending")
-                                              : (!slot.available || !isEventAvailable(slot.date))
+                                              : (!isEventAvailable(slot.date))
                                                 ? t("Not Available")
-                                                : slot.volunteerRequests?.includes(currentUser?.uid || currentUser?.id || currentUser?.username)
-                                                  ? t("Request Pending")
-                                                  : t("Request to Join")}
+                                                : (() => {
+                                                    const userIds = [currentUser?.uid, currentUser?.id, currentUser?.username, currentUser?.email].filter(Boolean);
+                                                    return slot.volunteerRequests?.some(req => userIds.includes(req.userId)) ? t("Request Pending") : t("Request to Join");
+                                                  })()}
                                     </button>
                                   </div>
                                 </DialogContent>

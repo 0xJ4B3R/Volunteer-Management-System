@@ -102,7 +102,7 @@ const ServicesCarousel = () => {
   };
 
   return (
-    <div
+    <div 
       className="services-carousel"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -116,7 +116,7 @@ const ServicesCarousel = () => {
           <p>{services[currentService].description}</p>
         </div>
       </div>
-
+      
       <div className="carousel-indicators">
         {services.map((_, index) => (
           <button
@@ -127,7 +127,7 @@ const ServicesCarousel = () => {
           />
         ))}
       </div>
-
+      
       <div className="service-counter">
         {currentService + 1} {t('services.of')} {services.length}
       </div>
@@ -140,68 +140,13 @@ const Homepage = () => {
   const observerRef = useRef(null);
   const { t, i18n } = useTranslation();
   const [showLangOptions, setShowLangOptions] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
-  const langToggleRef = useRef(null);
-
-  // Robust language direction management
-  const applyLanguageDirection = (lang) => {
-    const dir = lang === 'he' ? 'rtl' : 'ltr';
-
-    // 1. Set the dir attribute on html element
-    document.documentElement.setAttribute('dir', dir);
-    document.documentElement.setAttribute('lang', lang);
-
-    // 2. Remove any stale RTL/LTR classes
-    document.body.classList.remove('rtl', 'ltr');
-    document.documentElement.classList.remove('rtl', 'ltr');
-
-    // 3. Add the correct direction class
-    document.body.classList.add(dir);
-    document.documentElement.classList.add(dir);
-
-    // 4. Set CSS direction property explicitly
-    document.body.style.direction = dir;
-    document.documentElement.style.direction = dir;
-
-    // 5. Remove any conflicting inline styles
-    const rootElements = document.querySelectorAll('[style*="direction"]');
-    rootElements.forEach(el => {
-      if (el !== document.body && el !== document.documentElement && el instanceof HTMLElement) {
-        el.style.direction = '';
-      }
-    });
-  };
 
   useEffect(() => {
-    applyLanguageDirection(currentLanguage);
-  }, [currentLanguage]);
-
-  // Sync currentLanguage with i18n.language
-  useEffect(() => {
-    if (i18n.language !== currentLanguage) {
-      setCurrentLanguage(i18n.language);
-    }
-  }, [i18n.language, currentLanguage]);
-
-  // Handle click outside language toggle to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
-        setShowLangOptions(false);
-      }
-    };
-
-    if (showLangOptions) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showLangOptions]);
+    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
+  }, [i18n.language]);
 
   useEffect(() => {
-    // Simplified intersection observer
+    // Intersection Observer for scroll animations
     const observerOptions = {
       threshold: 0.1,
       rootMargin: '0px 0px -50px 0px'
@@ -215,31 +160,24 @@ const Homepage = () => {
       });
     }, observerOptions);
 
-    // Observe elements only once
-    const fadeElements = document.querySelectorAll('.fade-in');
-    fadeElements.forEach(el => {
-      observerRef.current?.observe(el);
+    // Observe all elements with fade-in class
+    document.querySelectorAll('.fade-in').forEach(el => {
+      observerRef.current.observe(el);
     });
 
-    // Simplified header scroll with throttling
-    let ticking = false;
+    // Header background change on scroll
     const handleScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          const header = document.querySelector('.header') as HTMLElement;
-          if (header) {
-            header.style.background = window.scrollY > 100
-              ? 'rgba(255, 255, 255, 0.98)'
-              : 'rgba(255, 255, 255, 0.95)';
-          }
-          ticking = false;
-        });
-        ticking = true;
+      const header = document.querySelector('.header');
+      if (window.scrollY > 100) {
+        header.style.background = 'rgba(255, 255, 255, 0.98)';
+      } else {
+        header.style.background = 'rgba(255, 255, 255, 0.95)';
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll);
 
+    // Cleanup
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
@@ -248,18 +186,14 @@ const Homepage = () => {
     };
   }, []);
 
-  // Smooth scroll function with header offset
+  // Smooth scroll function
   const handleSmoothScroll = (e, targetId) => {
     e.preventDefault();
     const target = document.querySelector(targetId);
     if (target) {
-      const header = document.querySelector('.header') as HTMLElement;
-      const headerHeight = header ? header.offsetHeight : 100; // Fallback to 100px
-      const targetPosition = target.offsetTop - headerHeight + 1; // Extra 20px padding
-
-      window.scrollTo({
-        top: targetPosition,
-        behavior: 'smooth'
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
       });
     }
   };
@@ -273,17 +207,21 @@ const Homepage = () => {
     navigate('/login');
   };
 
-  // Removed inline style hover handlers - using CSS instead
+  // Feature card hover handlers
+  const handleCardMouseEnter = (e) => {
+    e.currentTarget.style.transform = 'translateY(-10px) scale(1.02)';
+  };
+
+  const handleCardMouseLeave = (e) => {
+    e.currentTarget.style.transform = 'translateY(0) scale(1)';
+  };
 
   return (
     <div className="homepage">
       {/* Header */}
       <header className="header">
         <nav className="nav">
-          <a href="#" className="logo">
-            <img src="/logo1.png" alt={t('nav.title')} className="logo-image" />
-            <span className="logo-text">{t('nav.title')}</span>
-          </a>
+          <a href="#" className="logo">{t('nav.title')}</a>
           <ul className="nav-links">
             <li><a href="#contact" onClick={(e) => handleSmoothScroll(e, '#contact')}>{t('nav.contact')}</a></li>
             <li><a href="#services" onClick={(e) => handleSmoothScroll(e, '#services')}>{t('nav.services')}</a></li>
@@ -318,28 +256,44 @@ const Homepage = () => {
             <h2>{t('features.title')}</h2>
           </div>
           <div className="features-grid">
-            <div className="feature-card fade-in">
+            <div 
+              className="feature-card fade-in"
+              onMouseEnter={handleCardMouseEnter}
+              onMouseLeave={handleCardMouseLeave}
+            >
               <div className="feature-icon">
                 📅
               </div>
               <h3>{t('features.smartScheduling.title')}</h3>
               <p>{t('features.smartScheduling.desc')}</p>
             </div>
-            <div className="feature-card fade-in">
+            <div 
+              className="feature-card fade-in"
+              onMouseEnter={handleCardMouseEnter}
+              onMouseLeave={handleCardMouseLeave}
+            >
               <div className="feature-icon">
                 🎯
               </div>
               <h3>{t('features.personalizedMatching.title')}</h3>
               <p>{t('features.personalizedMatching.desc')}</p>
             </div>
-            <div className="feature-card fade-in">
+            <div 
+              className="feature-card fade-in"
+              onMouseEnter={handleCardMouseEnter}
+              onMouseLeave={handleCardMouseLeave}
+            >
               <div className="feature-icon">
                 📱
               </div>
               <h3>{t('features.mobileFriendly.title')}</h3>
               <p>{t('features.mobileFriendly.desc')}</p>
             </div>
-            <div className="feature-card fade-in">
+            <div 
+              className="feature-card fade-in"
+              onMouseEnter={handleCardMouseEnter}
+              onMouseLeave={handleCardMouseLeave}
+            >
               <div className="feature-icon">
                 🏆
               </div>
@@ -419,7 +373,7 @@ const Homepage = () => {
                 width="100%"
                 height="550"
                 style={{ border: 0, borderRadius: '0.75rem' }}
-                allowFullScreen={true}
+                allowFullScreen=""
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 title="Neveh Horim Location"
@@ -446,28 +400,16 @@ const Homepage = () => {
         </div>
       </footer>
       {/* Language Toggle */}
-      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
         <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-          <Globe className="lang-icon" />
+          <Globe size={35} />
         </button>
         {showLangOptions && (
           <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-            <button onClick={async () => {
-              localStorage.setItem('language', 'en');
-              await i18n.changeLanguage('en');
-              setCurrentLanguage('en');
-              applyLanguageDirection('en');
-              setShowLangOptions(false);
-            }}>
+            <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
               English
             </button>
-            <button onClick={async () => {
-              localStorage.setItem('language', 'he');
-              await i18n.changeLanguage('he');
-              setCurrentLanguage('he');
-              applyLanguageDirection('he');
-              setShowLangOptions(false);
-            }}>
+            <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
               עברית
             </button>
           </div>
