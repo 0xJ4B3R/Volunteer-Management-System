@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Clock3, MapPin, Search, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { collection, getDocs, doc, updateDoc, arrayRemove, query, where } from "firebase/firestore";
@@ -13,9 +13,6 @@ const getSessionTypeColor = (type) => {
     case "art": return "bg-[#3b82f6] text-white";
     case "baking": return "bg-[#ec4899] text-white";
     case "music": return "bg-[#f59e0b] text-white";
-    // case "reading": return "bg-[#10b981] text-white";
-    // case "crafts": return "bg-[#8b5cf6] text-white";
-    // case "exercise": return "bg-[#ef4444] text-white";
     case "gardening": return "bg-[#6366f1] text-white";
     case "beading": return "bg-[#14b8a6] text-white";
     case "session": return "bg-[#6b7280] text-white";
@@ -28,9 +25,6 @@ const getSessionTypeBorderColor = (type) => {
     case "art": return "#2563eb";
     case "baking": return "#db2777";
     case "music": return "#d97706";
-    // case "reading": return "#059669";
-    // case "crafts": return "#7c3aed";
-    // case "exercise": return "#dc2626";
     case "gardening": return "#4f46e5";
     case "beading": return "#0d9488";
     case "session": return "#4b5563";
@@ -53,8 +47,6 @@ export default function Appointments() {
   const [userId, setUserId] = useState("");
   const [username, setUsername] = useState("");
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
-
-  // Add this function near the top of your component, after the existing utility functions
 
   // Helper function to translate session types
   const translateSessionType = (sessionType) => {
@@ -112,138 +104,117 @@ export default function Appointments() {
     document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
   }, [i18n.language]);
 
-  // Get the username from localStorage
+  // Get the username and volunteerId from localStorage
   useEffect(() => {
-    // Get username from localStorage
-    const storedUsername = localStorage.getItem('username');
+    // Try multiple storage locations and user object structures
+    let storedUsername = localStorage.getItem('username');
+    let storedUserId = localStorage.getItem('userId');
+    let storedVolunteerId = localStorage.getItem('volunteerId');
+    
+    // If not found in localStorage, try sessionStorage
+    if (!storedUsername) {
+      storedUsername = sessionStorage.getItem('username');
+    }
+    
+    if (!storedUserId) {
+      storedUserId = sessionStorage.getItem('userId');
+    }
+    
+    if (!storedVolunteerId) {
+      storedVolunteerId = sessionStorage.getItem('volunteerId');
+    }
+    
+    // Try to get from user object in localStorage/sessionStorage
+    if (!storedUsername || !storedVolunteerId) {
+      try {
+        const userStr = localStorage.getItem('user') || sessionStorage.getUser('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          storedUsername = storedUsername || user.username || user.email || user.name;
+          storedUserId = storedUserId || user.id || user.uid || user.userId;
+          storedVolunteerId = storedVolunteerId || user.volunteerId;
+        }
+      } catch (error) {
+        // Error parsing user object
+      }
+    }
+    
     if (storedUsername) {
       setUsername(storedUsername);
     }
-
-    // Also get userId if available
-    const storedUserId = localStorage.getItem('userId');
+    
     if (storedUserId) {
       setUserId(storedUserId);
     }
   }, []);
 
-  // Function to check if appointment date has passed and update status
-  const updatePastAppointments = async (appointmentsData) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const updatePromises = [];
-    const updatedAppointments = [...appointmentsData];
-
-    for (let i = 0; i < appointmentsData.length; i++) {
-      const appointment = appointmentsData[i];
-      const appointmentDate = new Date(appointment.rawData.date);
-      const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
-
-      // Check if appointment date has passed and status is not already "completed"
-      if (appointmentDay < today && appointment.rawData.status !== "completed") {
-        // Update in Firebase
-        const appointmentRef = doc(db, "calendar_slots", appointment.id);
-        const updatePromise = updateDoc(appointmentRef, {
-          status: "completed"
-        }).then(() => {
-          // Update local state
-          updatedAppointments[i] = {
-            ...appointment,
-            rawData: {
-              ...appointment.rawData,
-              status: "completed"
-            }
-          };
-        }).catch((error) => {
-          console.error(`Error updating appointment ${appointment.id}:`, error);
-        });
-
-        updatePromises.push(updatePromise);
-      }
-    }
-
-    // Wait for all updates to complete
-    if (updatePromises.length > 0) {
-      try {
-        await Promise.all(updatePromises);
-        return updatedAppointments;
-      } catch (error) {
-        console.error("Error updating some appointments:", error);
-        return updatedAppointments;
-      }
-    }
-
-    return appointmentsData;
-  };
-
-  // Fetch appointments from Firebase
+  // Fetch appointments from Firebase calendar_slots collection
   useEffect(() => {
     const fetchAppointments = async () => {
-      if (!username) return; // Don't fetch if username isn't available
+      if (!userId) {
+        return;
+      }
 
       try {
         setLoading(true);
+        
+        // Get all calendar slots
         const calendarRef = collection(db, "calendar_slots");
         const snapshot = await getDocs(calendarRef);
 
-        const appointmentsData = snapshot.docs.map(doc => {
+        let appointmentsData = [];
+
+        // Go through all calendar slots and find ones where this user has volunteer requests
+        snapshot.docs.forEach(doc => {
           const data = doc.data();
-
-          // Check if current user is a volunteer for this slot by username
-          const userVolunteer = data.volunteers?.find(v => v.username === username);
-
-          // Get session type from customLabel, fallback to "Session"
-          const sessionType = data.customLabel || "Session";
-
-          // Format the appointment data
-          return {
-            id: doc.id,
-            appointmentId: data.appointmentId,
-            date: formatFirebaseDate(data.date),
-            day: getDayFromDate(data.date),
-            time: `${data.startTime} - ${data.endTime}`,
-            location: translateSessionType(sessionType), // <-- Change this line
-            sessionType: sessionType, // Keep original for color logic
-            note: data.notes || "",
-            category: data.isCustom ? "Custom" : "Regular",
-            status: userVolunteer ? userVolunteer.status : (data.isOpen ? "Open" : "Closed"),
-            maxCapacity: data.maxCapacity,
-            volunteers: data.volunteers || [],
-            volunteerRequests: data.volunteerRequests || [],
-            isOpen: data.isOpen,
-            residentIds: data.residentIds || [],
-            rawData: data // Keep the raw data for reference
-          };
+          const volunteerRequests = data.volunteerRequests || [];
+          
+          // Find if this user has a volunteer request in this slot
+          const userRequest = volunteerRequests.find(req => req.userId === userId);
+          
+          if (userRequest) {
+            // Create appointment object from calendar slot data
+            const appointment = {
+              id: doc.id,
+              appointmentId: doc.id,
+              date: formatFirebaseDate(data.date?.toDate ? data.date.toDate() : data.date),
+              day: getDayFromDate(data.date?.toDate ? data.date.toDate() : data.date),
+              time: `${data.startTime || "N/A"} - ${data.endTime || "N/A"}`,
+              location: translateSessionType(data.sessionCategory || data.customLabel || "Session"),
+              sessionType: data.sessionCategory || data.customLabel || "Session",
+              note: data.notes || "",
+              category: data.isCustom ? "Custom" : "Regular",
+              status: userRequest.status, // Use the status from volunteer request
+              maxCapacity: data.maxCapacity || 1,
+              volunteers: data.volunteers || [],
+              volunteerRequests: volunteerRequests,
+              isOpen: data.isOpen,
+              residentIds: data.residentIds || [],
+              rawData: {
+                ...data,
+                date: data.date?.toDate ? data.date.toDate() : data.date,
+                userRequestStatus: userRequest.status
+              }
+            };
+            
+            appointmentsData.push(appointment);
+          }
         });
 
-        // Update past appointments automatically
-        const updatedAppointments = await updatePastAppointments(appointmentsData);
+        // Sort by date (newest first) and limit to latest 30
+        appointmentsData = appointmentsData
+          .sort((a, b) => new Date(b.rawData.date) - new Date(a.rawData.date))
+          .slice(0, 30);
 
-        setAppointments(updatedAppointments);
+        setAppointments(appointmentsData);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching appointments:", error);
         setLoading(false);
       }
     };
 
     fetchAppointments();
-  }, [username]); // Depend on username instead of userId
-
-  // Periodic check for past appointments (every 5 minutes)
-  useEffect(() => {
-    if (appointments.length === 0) return;
-
-    const intervalId = setInterval(async () => {
-      const updatedAppointments = await updatePastAppointments(appointments);
-      if (updatedAppointments !== appointments) {
-        setAppointments(updatedAppointments);
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
-
-    return () => clearInterval(intervalId);
-  }, [appointments]);
+  }, [userId]);
 
   // Format Firebase date string to "MONTH DATE for example May 27" format
   const formatFirebaseDate = (dateStr) => {
@@ -265,25 +236,14 @@ export default function Appointments() {
   const now = new Date();
 
   const tabAppointments = appointments.filter((a) => {
-    const dateObj = new Date(a.rawData.date);
-
     if (tab === "upcoming") {
-      // Show appointment where user is approved, but ONLY if the appointment is NOT completed
-      const isUserApproved = a.volunteers?.some(v =>
-        v.username === username && v.status === "approved"
-      );
-      // Make sure it's not a completed appointment
-      return (isUserApproved || a.rawData.status === "upcoming") && a.rawData.status !== "completed";
+      return a.status === "approved"; // Show approved status appointments as upcoming
     }
     if (tab === "past") {
-      // Show any appointment with status "completed" regardless of date
-      return a.rawData.status === "completed";
+      return a.status === "completed" || a.status === "rejected"; // Show completed or rejected appointments in past
     }
     if (tab === "pending") {
-      // Show appointments where this user's status is "pending"
-      return a.volunteers?.some(v =>
-        v.username === username && v.status === "pending"
-      );
+      return a.status === "pending"; // Show pending status appointments
     }
     return false;
   });
@@ -299,68 +259,36 @@ export default function Appointments() {
       if (tab === "past") {
         return new Date(b.rawData.date) - new Date(a.rawData.date); // Latest to oldest
       }
-      return new Date(a.rawData.date) - new Date(b.rawData.date); // Soonest to latest for other tabs
+      return new Date(a.rawData.date) - new Date(b.rawData.date); // Soonest to latest for other tabs
     });
 
   const handleCancel = async (id) => {
     try {
-      // Find the appointment to get volunteer data
+      // Find the appointment to get the volunteer request data
       const appointment = appointments.find(a => a.id === id);
       if (!appointment) return;
 
-      // Update Firestore: Remove the current user from volunteers array
-      const appointmentRef = doc(db, "calendar_slots", id);
+      // Find the user's volunteer request to remove
+      const userRequest = appointment.volunteerRequests.find(req => req.userId === userId);
 
-      // Find the volunteer entry to remove by username
-      const volunteerToRemove = appointment.volunteers.find(v => v.username === username);
-
-      if (volunteerToRemove) {
-        // Create update object to remove from both arrays
-        const updateData = {
-          volunteers: arrayRemove(volunteerToRemove)
-        };
-
-        // Also remove from volunteerRequests if the user ID exists there
-        // Check different possible ID formats that might be stored in volunteerRequests
-        const possibleIds = [
-          userId,
-          volunteerToRemove.id,
-          username,
-          volunteerToRemove.username
-        ].filter(Boolean); // Remove any null/undefined values
-
-        // Find which ID format is actually in the volunteerRequests array
-        const userIdInRequests = possibleIds.find(id =>
-          appointment.volunteerRequests?.includes(id)
-        );
-
-        if (userIdInRequests) {
-          updateData.volunteerRequests = arrayRemove(userIdInRequests);
-        }
-
-        // Perform the update
-        await updateDoc(appointmentRef, updateData);
+      if (userRequest) {
+        // Update Firestore: Remove the user's volunteer request from the calendar slot
+        const slotRef = doc(db, "calendar_slots", id);
+        await updateDoc(slotRef, {
+          volunteerRequests: arrayRemove(userRequest)
+        });
 
         // Update local state
-        setAppointments(prev => prev.map(a => {
-          if (a.id === id) {
-            return {
-              ...a,
-              volunteers: a.volunteers.filter(v => v.username !== username),
-              volunteerRequests: a.volunteerRequests.filter(reqId => reqId !== userIdInRequests),
-              status: "Open" // Reset status for this user's view
-            };
-          }
-          return a;
-        }));
+        setAppointments(prev => prev.filter(a => a.id !== id));
+
+        if (selected && selected.id === id) setSelected(null);
+
+        // Show success notification
+        showNotification("Appointment canceled successfully!", "success");
+      } else {
+        showNotification("Appointment not found or unable to cancel.", "error");
       }
-
-      if (selected && selected.id === id) setSelected(null);
-
-      // Show success notification
-      showNotification("Appointment canceled successfully!", "success");
     } catch (error) {
-      console.error("Error canceling appointment:", error);
       showNotification("Error canceling appointment. Please try again.", "error");
     }
   };
@@ -395,8 +323,7 @@ export default function Appointments() {
 
   // Get status tag with appropriate styling
   const getStatusTag = (appointment) => {
-    const userVolunteer = appointment.volunteers?.find(v => v.username === username);
-    const status = userVolunteer?.status || appointment.status;
+    const status = appointment.status;
 
     const getStatusClass = (status) => {
       switch (status) {
@@ -410,7 +337,7 @@ export default function Appointments() {
 
     return (
       <div className={`tag ${getSessionTypeClass(appointment.sessionType)} ${getStatusClass(status)}`}>
-        {translateSessionType(appointment.sessionType)} {/* <-- Change this line */}
+        {translateSessionType(appointment.sessionType)}
       </div>
     );
   };
@@ -600,7 +527,7 @@ export default function Appointments() {
                           display: 'inline-block'
                         }}
                       >
-                        {translateSessionType(selected.sessionType)} {/* <-- Change this line */}
+                        {translateSessionType(selected.sessionType)}
                       </span>
                     </div>
 
@@ -679,10 +606,12 @@ export default function Appointments() {
                             backgroundColor:
                               selected.status === "approved" ? "#d1fae5" :
                                 selected.status === "pending" ? "#fef3c7" :
-                                  selected.status === "rejected" ? "#fee2e2" : "#f3f4f6",
+                                  selected.status === "completed" ? "#e0e7ff" :
+                                    selected.status === "rejected" ? "#fee2e2" : "#f3f4f6",
                             border: `1px solid ${selected.status === "approved" ? "#10b981" :
                               selected.status === "pending" ? "#f59e0b" :
-                                selected.status === "rejected" ? "#ef4444" : "#d1d5db"
+                                selected.status === "completed" ? "#6366f1" :
+                                  selected.status === "rejected" ? "#ef4444" : "#d1d5db"
                               }`
                           }}
                         >
@@ -692,7 +621,8 @@ export default function Appointments() {
                               color:
                                 selected.status === "approved" ? "#065f46" :
                                   selected.status === "pending" ? "#92400e" :
-                                    selected.status === "rejected" ? "#991b1b" : "#374151"
+                                    selected.status === "completed" ? "#3730a3" :
+                                      selected.status === "rejected" ? "#991b1b" : "#374151"
                             }}>
                               {t("appointments.statusLabel")} {t(`appointments.status.${selected.status}`)}
                             </span>
