@@ -21,7 +21,10 @@
       "late": "You were late to a session. {{notes}}",
       "absent": "You missed a session. {{notes}}",
       "generic": "Status: {{status}}. {{notes}}",
-      "cancelledByVolunteer": "You missed the session. Cancelled by volunteer"
+      "cancelledByVolunteer": "You missed the session. Cancelled by volunteer",
+      "sessionApproved": "✅ {{session}} Session Approved\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
+      "sessionRejected": "❌ {{session}} Session Rejected\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}{{reason}}",
+      "sessionRequested": "⏳ {{session}} Session Requested\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}"
     },
     "stats": {
       "totalHours": "Total Hours since account creation",
@@ -48,7 +51,12 @@
       "yesterday": "1 day ago",
       "daysAgo": "{{count}} days ago",
       "weekAgo": "1 week ago",
-      "weeksAgo": "{{count}} weeks ago"
+      "weeksAgo": "{{count}} weeks ago",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago"
     },
     "months": {
       "0": "January",
@@ -97,6 +105,11 @@
       "gardening": "Gardening",
       "beading": "Beading",
       "session": "Session"
+    },
+    "periods": {
+      "morning": "Morning",
+      "afternoon": "Afternoon", 
+      "evening": "Evening"
     }
   }
 }
