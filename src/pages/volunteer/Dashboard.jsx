@@ -357,7 +357,8 @@ const Dashboard = () => {
           type: 'level-up',
           icon: Award,
           iconColor: 'dash-icon-gold',
-          timestamp: new Date() // Use current time for level up
+          timestamp: new Date(), // Use current time for level up
+          text: t("dashboard.activity.levelUp", { level: currentLevel.label })
         });
       }
 
