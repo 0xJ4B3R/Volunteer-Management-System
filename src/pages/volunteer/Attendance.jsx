@@ -28,49 +28,38 @@ const Attendance = () => {
 
   const RECORDS_PER_PAGE = 25;
 
-  // Helper function to translate session types
-  const translateSessionType = (sessionType) => {
-    if (!sessionType) return t('sessionTypes.session', 'Session');
+  // Helper function to translate session types and categories
+  const translateSessionType = (sessionType, sessionCategory) => {
+    if (!sessionType && !sessionCategory) return t('sessionTypes.session', 'Session');
 
-    // Handle common session type variations
-    const type = sessionType.toLowerCase().trim();
+    // Priority: sessionCategory > customLabel > sessionType
+    const typeToTranslate = sessionCategory || sessionType;
+    
+    if (!typeToTranslate) return t('sessionTypes.session', 'Session');
 
-    // Map variations to standard keys
+    // Handle common session type/category variations
+    const type = typeToTranslate.toLowerCase().trim();
+
+    // Map variations to standard keys for translation
     const typeMapping = {
       'general session': 'session',
       'volunteer session': 'session',
       'regular session': 'session',
       'default': 'session',
+      'art': 'art',
+      'baking': 'baking',
       'gardening': 'gardening',
-      'arts and crafts': 'artsAndCrafts',
-      'arts & crafts': 'artsAndCrafts',
       'music': 'music',
-      'reading': 'reading',
-      'games': 'games',
-      'cooking': 'cooking',
-      'exercise': 'exercise',
-      'outdoor activities': 'outdoorActivities',
-      'social hour': 'socialHour',
-      'bingo': 'bingo',
-      'crafts': 'crafts',
-      'storytelling': 'storytelling',
-      'meditation': 'meditation',
-      'walking': 'walking',
-      'puzzles': 'puzzles',
-      'movie night': 'movieNight',
-      'book club': 'bookClub',
-      'painting': 'painting',
-      'dancing': 'dancing'
+      'beading': 'beading',
     };
 
-    const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, ''); // Clean up for translation key
-    return t(`sessionTypes.${mappedType}`, sessionType); // Fallback to original if translation not found
+    const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, '');
+    return t(`sessionTypes.${mappedType}`, typeToTranslate); // Fallback to original if translation not found
   };
 
   // Function to show notifications
   const showNotification = (message, type = "error") => {
     setNotification({ show: true, message, type });
-    // Auto hide after 5 seconds
     setTimeout(() => {
       setNotification({ show: false, message: "", type: "" });
     }, 5000);
@@ -108,143 +97,214 @@ const Attendance = () => {
     return timeDate;
   };
 
+  // Helper function to check if session is within time window
+  const isSessionInTimeWindow = (startTime, endTime, windowMinutes = 30) => {
+    const now = new Date();
+    const sessionStart = parseTimeString(startTime);
+    const sessionEnd = parseTimeString(endTime);
+    
+    if (!sessionStart || !sessionEnd) return false;
+
+    // Calculate time differences in minutes
+    const minutesToStart = (sessionStart - now) / (1000 * 60);
+    const minutesSinceStart = (now - sessionStart) / (1000 * 60);
+    const minutesToEnd = (sessionEnd - now) / (1000 * 60);
+
+    // Show session if:
+    // 1. Starts within the next window minutes
+    // 2. Started within the last 15 minutes (grace period)
+    // 3. Is currently ongoing
+    return (minutesToStart <= windowMinutes && minutesToStart >= -15) || 
+           (minutesToEnd > 0 && minutesSinceStart >= 0);
+  };
+
   // Updated function to determine attendance status with 15-minute grace period
   const getAttendanceStatus = (startTime, endTime) => {
     const now = new Date();
     const sessionStart = parseTimeString(startTime);
     const sessionEnd = parseTimeString(endTime);
 
-    if (!sessionStart || !sessionEnd) return 'present'; // Default if time parsing fails
+    if (!sessionStart || !sessionEnd) return 'present';
 
-    // Create grace period: 15 minutes after session start
-    const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000); // 15 minutes in milliseconds
+    const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000);
 
     if (now > sessionEnd) {
-      return 'auto-absent'; // Session has ended
+      return 'auto-absent';
     } else if (now > gracePeriodEnd) {
-      return 'late'; // Grace period has ended, now considered late
+      return 'late';
     } else if (now > sessionStart) {
-      return 'grace-period'; // Within 15-minute grace period
+      return 'grace-period';
     } else {
-      return 'present'; // Before session start time
+      return 'present';
     }
   };
 
-  // Updated fetchTodaySessions to handle multiple sessions
+  // Updated fetchTodaySessions to include appointmentHistory and fix loading logic
   useEffect(() => {
     const fetchTodaySessions = async () => {
-      if (!username) return;
+      if (!username || !userId) return;
 
       try {
         setLoading(true);
         const today = new Date();
+        const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
         today.setHours(0, 0, 0, 0);
 
-        const calendarRef = collection(db, 'calendar_slots');
-        const snapshot = await getDocs(calendarRef);
+        let allTodaySessions = [];
 
-        const todayData = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(slot => {
-            // Check if date matches today
-            let slotDate;
-            if (slot.date && slot.date.toDate) {
-              slotDate = slot.date.toDate();
-            } else if (slot.date) {
-              slotDate = new Date(slot.date);
-            } else {
-              return false;
-            }
+        // 1. Fetch from calendar_slots
+        try {
+          const calendarRef = collection(db, 'calendar_slots');
+          const calendarSnapshot = await getDocs(calendarRef);
 
-            slotDate.setHours(0, 0, 0, 0);
+          const calendarTodayData = calendarSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(slot => {
+              // Check if date matches today
+              let slotDate;
+              if (slot.date && slot.date.toDate) {
+                slotDate = slot.date.toDate();
+              } else if (slot.date) {
+                slotDate = new Date(slot.date);
+              } else {
+                return false;
+              }
 
-            // Check all conditions
-            const isToday = slotDate.getTime() === today.getTime();
-            const isInProgress = slot.status === 'inProgress';
-            const userVolunteer = slot.volunteers?.find(v =>
-              v.username === username && v.status === 'approved'
-            );
+              slotDate.setHours(0, 0, 0, 0);
+              const isToday = slotDate.getTime() === today.getTime();
+              
+              // Check if user is approved volunteer
+              const userVolunteer = slot.volunteerRequests?.find(request =>
+                (request.userId === userId || request.volunteerId === userId) && 
+                request.status === 'approved'
+              );
 
-            return isToday && isInProgress && userVolunteer;
-          });
+              // Check if session is within time window (30 minutes before to session end)
+              const inTimeWindow = isSessionInTimeWindow(slot.startTime, slot.endTime, 30);
 
-        if (todayData.length > 0) {
-          // Check attendance for each session
-          const sessionsWithAttendance = await Promise.all(
-            todayData.map(async (session) => {
+              return isToday && userVolunteer && inTimeWindow;
+            });
+
+          // Format calendar sessions
+          const formattedCalendarSessions = calendarTodayData.map(slot => ({
+            id: slot.id,
+            time: `${slot.startTime} - ${slot.endTime}`,
+            residents: slot.residentIds || [],
+            description: slot.notes || t('attendance.defaultDescription'),
+            status: 'not_confirmed',
+            sessionType: slot.customLabel || slot.sessionCategory || slot.type || 'Session',
+            sessionCategory: slot.sessionCategory,
+            date: slot.date,
+            appointmentId: slot.appointmentId || slot.id,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            source: 'calendar_slots'
+          }));
+
+          allTodaySessions = [...allTodaySessions, ...formattedCalendarSessions];
+        } catch (calendarError) {
+          console.error('Error fetching calendar slots:', calendarError);
+        }
+
+        // 2. Fetch from appointmentHistory
+        try {
+          const volunteersRef = collection(db, 'volunteers');
+          const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
+          const volunteerSnapshot = await getDocs(volunteerQuery);
+
+          if (!volunteerSnapshot.empty) {
+            const volunteerDoc = volunteerSnapshot.docs[0];
+            const appointmentHistory = volunteerDoc.data().appointmentHistory || [];
+
+            const appointmentHistoryData = appointmentHistory.filter(appointment => {
+              const isToday = appointment.date === todayStr;
+              const isUpcoming = appointment.status === 'upcoming';
+              const inTimeWindow = isSessionInTimeWindow(appointment.startTime, appointment.endTime, 30);
+
+              return isToday && isUpcoming && inTimeWindow;
+            });
+
+            // Format appointment history sessions
+            const formattedAppointmentSessions = appointmentHistoryData.map(appointment => ({
+              id: `appointment_${appointment.appointmentId}`,
+              time: `${appointment.startTime} - ${appointment.endTime}`,
+              residents: appointment.residentIds || [],
+              description: appointment.notes || t('attendance.defaultDescription'),
+              status: 'not_confirmed',
+              sessionType: appointment.sessionType || 'Session',
+              sessionCategory: appointment.sessionCategory,
+              date: appointment.date,
+              appointmentId: appointment.appointmentId,
+              startTime: appointment.startTime,
+              endTime: appointment.endTime,
+              source: 'appointmentHistory'
+            }));
+
+            allTodaySessions = [...allTodaySessions, ...formattedAppointmentSessions];
+          }
+        } catch (appointmentError) {
+          console.error('Error fetching appointment history:', appointmentError);
+        }
+
+        // 3. Filter out sessions that already have attendance records
+        if (allTodaySessions.length > 0) {
+          const sessionsWithoutAttendance = await Promise.all(
+            allTodaySessions.map(async (session) => {
               const attendanceRef = collection(db, 'attendance');
+              const appointmentId = session.appointmentId || session.id;
 
               try {
-                // Check if attendance record already exists for this session
                 const existingAttendanceQuery = query(
                   attendanceRef,
-                  where('appointmentId', '==', session.appointmentId || session.id),
+                  where('appointmentId', '==', appointmentId),
                   where('volunteerId', 'in', [userId, username].filter(Boolean))
                 );
 
                 const existingAttendanceSnapshot = await getDocs(existingAttendanceQuery);
 
                 if (!existingAttendanceSnapshot.empty) {
-                  // Attendance already recorded - don't include this session
-                  return null;
+                  return null; // Attendance already recorded
                 }
               } catch (attendanceError) {
-                // If query fails, try manual filtering
-                const allAttendanceSnapshot = await getDocs(collection(db, 'attendance'));
-                const existingRecord = allAttendanceSnapshot.docs.find(doc => {
-                  const data = doc.data();
-                  return (data.appointmentId === (session.appointmentId || session.id)) &&
-                    (data.volunteerId === userId || data.volunteerId === username);
-                });
-
-                if (existingRecord) {
-                  return null;
-                }
+                console.error('Error checking attendance:', attendanceError);
+                // If query fails, include the session to be safe
               }
 
-              // Return session data if no attendance record exists
-              return {
-                id: session.id,
-                time: `${session.startTime} - ${session.endTime}`,
-                residents: session.residentIds || [],
-                description: session.notes || t('attendance.defaultDescription'),
-                status: 'not_confirmed',
-                sessionType: session.isCustom ? session.customLabel : (session.type || 'Session'),
-                date: session.date,
-                appointmentId: session.appointmentId || session.id,
-                startTime: session.startTime,
-                endTime: session.endTime
-              };
+              return session;
             })
           );
 
-          // Filter out null values (sessions with existing attendance)
-          const availableSessions = sessionsWithAttendance.filter(session => session !== null);
-
-          // Sort sessions by start time
-          availableSessions.sort((a, b) => {
-            const timeA = parseTimeString(a.startTime);
-            const timeB = parseTimeString(b.startTime);
-            return timeA - timeB;
-          });
+          // Filter out null values and sort by start time
+          const availableSessions = sessionsWithoutAttendance
+            .filter(session => session !== null)
+            .sort((a, b) => {
+              const timeA = parseTimeString(a.startTime);
+              const timeB = parseTimeString(b.startTime);
+              return timeA - timeB;
+            });
 
           setTodaySessions(availableSessions);
-          setSelectedSessions({}); // Reset selected sessions state
         } else {
           setTodaySessions([]);
-          setSelectedSessions({});
         }
+
+        setSelectedSessions({});
       } catch (error) {
-        // Error fetching today's sessions
+        console.error('Error fetching today\'s sessions:', error);
+        setTodaySessions([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchTodaySessions();
+    
+    // Refresh every 2 minutes to check for new sessions or time changes
+    const interval = setInterval(fetchTodaySessions, 120000);
+    return () => clearInterval(interval);
   }, [username, userId, t]);
 
-  // Updated handleConfirm function with grace period logic
+  // Updated handleConfirm function
   const handleConfirm = async (sessionId) => {
     const session = todaySessions.find(s => s.id === sessionId);
     if (!session) return;
@@ -253,13 +313,11 @@ const Attendance = () => {
       const [startTime, endTime] = session.time.split(' - ');
       const attendanceStatus = getAttendanceStatus(startTime, endTime);
 
-      // Don't allow confirmation if session has ended
       if (attendanceStatus === 'auto-absent') {
         showNotification(t('attendance.notifications.sessionEnded'), 'error');
         return;
       }
 
-      // Determine final status based on attendance status
       let finalStatus;
       let statusMessage;
 
@@ -296,7 +354,6 @@ const Attendance = () => {
         return;
       }
 
-      // Create attendance record with appropriate notes
       let notes;
       switch (attendanceStatus) {
         case 'present':
@@ -312,6 +369,7 @@ const Attendance = () => {
           notes = t('attendance.notesDetails.confirmed');
       }
 
+      // Add attendance record
       await addDoc(collection(db, 'attendance'), {
         appointmentId: session.appointmentId || session.id,
         volunteerId: userId || username,
@@ -321,25 +379,125 @@ const Attendance = () => {
         notes: notes
       });
 
-      showNotification(statusMessage, 'success');
-      // Remove this session from today's sessions after confirmation
-      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+      // Update calendar_slots volunteer status to "completed"
+      if (session.source === 'calendar_slots') {
+        try {
+          const calendarRef = collection(db, 'calendar_slots');
+          const calendarQuery = query(
+            calendarRef, 
+            where('appointmentId', '==', session.appointmentId || session.id)
+          );
+          const calendarSnapshot = await getDocs(calendarQuery);
 
-      // Refresh history to show the new attendance record
+          if (!calendarSnapshot.empty) {
+            const calendarDoc = calendarSnapshot.docs[0];
+            const calendarData = calendarDoc.data();
+            
+            const updatedVolunteerRequests = calendarData.volunteerRequests?.map(request => {
+              if (request.userId === userId || request.volunteerId === userId) {
+                return {
+                  ...request,
+                  status: 'completed',
+                  completedAt: Timestamp.now()
+                };
+              }
+              return request;
+            });
+
+            if (updatedVolunteerRequests) {
+              await updateDoc(calendarDoc.ref, {
+                volunteerRequests: updatedVolunteerRequests
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error updating calendar slot status:', error);
+        }
+      }
+
+      // Update appointmentHistory status to "completed"
+      if (session.source === 'appointmentHistory') {
+        try {
+          const volunteersRef = collection(db, 'volunteers');
+          const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
+          const volunteerSnapshot = await getDocs(volunteerQuery);
+
+          if (!volunteerSnapshot.empty) {
+            const volunteerDocRef = volunteerSnapshot.docs[0].ref;
+            const volunteerData = volunteerSnapshot.docs[0].data();
+            
+            const updatedAppointmentHistory = volunteerData.appointmentHistory?.map(appointment => {
+              if (appointment.appointmentId === (session.appointmentId || session.id)) {
+                return {
+                  ...appointment,
+                  status: 'completed'
+                };
+              }
+              return appointment;
+            });
+
+            if (updatedAppointmentHistory) {
+              await updateDoc(volunteerDocRef, {
+                appointmentHistory: updatedAppointmentHistory
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error updating appointment status:', error);
+        }
+      }
+
+      // Update totalAttendance statistics
+      try {
+        const volunteersRef = collection(db, 'volunteers');
+        const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
+        const volunteerSnapshot = await getDocs(volunteerQuery);
+
+        if (!volunteerSnapshot.empty) {
+          const volunteerDocRef = volunteerSnapshot.docs[0].ref;
+          const volunteerData = volunteerSnapshot.docs[0].data();
+          
+          const currentAttendance = volunteerData.totalAttendance || {
+            present: 0,
+            late: 0,
+            absent: 0,
+            totalSessions: 0,
+            totalHours: 0
+          };
+
+          const sessionHours = getHoursFromTimeRange(session.startTime, session.endTime);
+
+          const updatedAttendance = {
+            ...currentAttendance,
+            [finalStatus]: (currentAttendance[finalStatus] || 0) + 1,
+            totalSessions: (currentAttendance.totalSessions || 0) + 1,
+            totalHours: (currentAttendance.totalHours || 0) + sessionHours
+          };
+
+          await updateDoc(volunteerDocRef, {
+            totalAttendance: updatedAttendance
+          });
+        }
+      } catch (error) {
+        console.error('Error updating attendance statistics:', error);
+      }
+
+      showNotification(statusMessage, 'success');
+      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       await fetchInitialAttendanceHistory();
 
     } catch (error) {
+      console.error('Error confirming attendance:', error);
       showNotification(t('attendance.notifications.confirmError'), 'error');
     }
   };
 
-  // Updated handleCancel to work with specific session
+  // Updated handleCancel function
   const handleCancel = async (sessionId) => {
     const session = todaySessions.find(s => s.id === sessionId);
     if (!session) return;
 
     try {
-      // Check if attendance record already exists
       const attendanceRef = collection(db, 'attendance');
       const existingQuery = query(
         attendanceRef,
@@ -350,7 +508,6 @@ const Attendance = () => {
 
       if (!existingSnapshot.empty) {
         showNotification(t('attendance.notifications.alreadyRecorded'), 'warning');
-        // Remove this session from today's sessions
         setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
         return;
       }
@@ -365,14 +522,113 @@ const Attendance = () => {
         notes: t('attendance.notes.cancelledByVolunteer')
       });
 
-      showNotification(t('attendance.notifications.markedAbsent'), 'info');
-      // Remove this session from today's sessions after cancellation
-      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+      // Update calendar_slots volunteer status to "canceled"
+      if (session.source === 'calendar_slots') {
+        try {
+          const calendarRef = collection(db, 'calendar_slots');
+          const calendarQuery = query(
+            calendarRef, 
+            where('appointmentId', '==', session.appointmentId || session.id)
+          );
+          const calendarSnapshot = await getDocs(calendarQuery);
 
-      // Refresh history to show the new attendance record
+          if (!calendarSnapshot.empty) {
+            const calendarDoc = calendarSnapshot.docs[0];
+            const calendarData = calendarDoc.data();
+            
+            const updatedVolunteerRequests = calendarData.volunteerRequests?.map(request => {
+              if (request.userId === userId || request.volunteerId === userId) {
+                return {
+                  ...request,
+                  status: 'canceled',
+                  canceledAt: Timestamp.now(),
+                  cancelReason: 'Canceled by volunteer'
+                };
+              }
+              return request;
+            });
+
+            if (updatedVolunteerRequests) {
+              await updateDoc(calendarDoc.ref, {
+                volunteerRequests: updatedVolunteerRequests
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error updating calendar slot status:', error);
+        }
+      }
+
+      // Update appointmentHistory status to "completed"
+      if (session.source === 'appointmentHistory') {
+        try {
+          const volunteersRef = collection(db, 'volunteers');
+          const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
+          const volunteerSnapshot = await getDocs(volunteerQuery);
+
+          if (!volunteerSnapshot.empty) {
+            const volunteerDocRef = volunteerSnapshot.docs[0].ref;
+            const volunteerData = volunteerSnapshot.docs[0].data();
+            
+            const updatedAppointmentHistory = volunteerData.appointmentHistory?.map(appointment => {
+              if (appointment.appointmentId === (session.appointmentId || session.id)) {
+                return {
+                  ...appointment,
+                  status: 'completed'
+                };
+              }
+              return appointment;
+            });
+
+            if (updatedAppointmentHistory) {
+              await updateDoc(volunteerDocRef, {
+                appointmentHistory: updatedAppointmentHistory
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error updating appointment status:', error);
+        }
+      }
+
+      // Update totalAttendance statistics
+      try {
+        const volunteersRef = collection(db, 'volunteers');
+        const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
+        const volunteerSnapshot = await getDocs(volunteerQuery);
+
+        if (!volunteerSnapshot.empty) {
+          const volunteerDocRef = volunteerSnapshot.docs[0].ref;
+          const volunteerData = volunteerSnapshot.docs[0].data();
+          
+          const currentAttendance = volunteerData.totalAttendance || {
+            present: 0,
+            late: 0,
+            absent: 0,
+            totalSessions: 0,
+            totalHours: 0
+          };
+
+          const updatedAttendance = {
+            ...currentAttendance,
+            absent: (currentAttendance.absent || 0) + 1,
+            totalSessions: (currentAttendance.totalSessions || 0) + 1
+          };
+
+          await updateDoc(volunteerDocRef, {
+            totalAttendance: updatedAttendance
+          });
+        }
+      } catch (error) {
+        console.error('Error updating attendance statistics:', error);
+      }
+
+      showNotification(t('attendance.notifications.markedAbsent'), 'info');
+      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       await fetchInitialAttendanceHistory();
 
     } catch (error) {
+      console.error('Error cancelling attendance:', error);
       showNotification(t('attendance.notifications.cancelError'), 'error');
     }
   };
@@ -387,7 +643,6 @@ const Attendance = () => {
 
         if (attendanceStatus === 'auto-absent') {
           try {
-            // Check if attendance record already exists
             const attendanceRef = collection(db, 'attendance');
             const existingQuery = query(
               attendanceRef,
@@ -397,7 +652,6 @@ const Attendance = () => {
             const existingSnapshot = await getDocs(existingQuery);
 
             if (existingSnapshot.empty) {
-              // Create absent record automatically
               await addDoc(collection(db, 'attendance'), {
                 appointmentId: session.appointmentId || session.id,
                 volunteerId: userId || username,
@@ -406,38 +660,31 @@ const Attendance = () => {
                 status: 'absent',
                 notes: t('attendance.notes.autoAbsent')
               });
-              // Remove this session from today's sessions
+              
               setTodaySessions(prev => prev.filter(s => s.id !== session.id));
-
-              // Refresh history to show the new attendance record
               await fetchInitialAttendanceHistory();
             }
           } catch (error) {
-            // Error creating automatic absent record
+            console.error('Error creating automatic absent record:', error);
           }
         }
       }
     };
 
-    // Check every minute for auto-absent logic
     const interval = setInterval(checkAndCreateAbsentRecords, 60000);
-
-    // Check immediately
     checkAndCreateAbsentRecords();
 
     return () => clearInterval(interval);
   }, [todaySessions, username, userId, t]);
 
-  // Fetch initial attendance history (first 5 records)
+  // Fetch initial attendance history
   const fetchInitialAttendanceHistory = async () => {
     if (!userId && !username) return;
 
     try {
       const attendanceRef = collection(db, 'attendance');
-
-      // Get all attendance records and filter manually (no index required)
       const snapshot = await getDocs(attendanceRef);
-      // Filter records for this user
+      
       let userRecords = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(record => {
@@ -446,28 +693,24 @@ const Attendance = () => {
             record.confirmedBy === username;
         });
 
-      // Sort by confirmedAt date (most recent first)
       userRecords.sort((a, b) => {
         const dateA = a.confirmedAt?.toDate ? a.confirmedAt.toDate() : new Date(a.confirmedAt || 0);
         const dateB = b.confirmedAt?.toDate ? b.confirmedAt.toDate() : new Date(b.confirmedAt || 0);
         return dateB - dateA;
       });
 
-      // Store all records for pagination
       setAllUserRecords(userRecords);
       setTotalHistoryCount(userRecords.length);
 
-      // Set initial page data
       const initialRecords = userRecords.slice(0, RECORDS_PER_PAGE);
       setHasMoreHistory(userRecords.length > RECORDS_PER_PAGE);
       setHistoryPage(0);
 
-      // Get appointment details and enrich the data
       const enrichedHistory = await enrichHistoryData(initialRecords);
       setAttendanceHistory(enrichedHistory);
 
     } catch (error) {
-      // Error fetching attendance history
+      console.error('Error fetching attendance history:', error);
     }
   };
 
@@ -485,21 +728,16 @@ const Attendance = () => {
       const nextPageRecords = allUserRecords.slice(startIndex, endIndex);
 
       if (nextPageRecords.length > 0) {
-        // Enrich the new records
         const enrichedNewRecords = await enrichHistoryData(nextPageRecords);
-
-        // Append to existing history
         setAttendanceHistory(prev => [...prev, ...enrichedNewRecords]);
         setHistoryPage(nextPage);
-
-        // Check if there are more records
         setHasMoreHistory(endIndex < allUserRecords.length);
       } else {
         setHasMoreHistory(false);
       }
 
     } catch (error) {
-      // Error loading more history
+      console.error('Error loading more history:', error);
     } finally {
       setHistoryLoading(false);
     }
@@ -508,7 +746,6 @@ const Attendance = () => {
   // Helper function to enrich history data with appointment details
   const enrichHistoryData = async (records) => {
     try {
-      // Get appointment details for each attendance record
       const calendarRef = collection(db, 'calendar_slots');
       const calendarSnapshot = await getDocs(calendarRef);
       const calendarData = {};
@@ -525,7 +762,6 @@ const Attendance = () => {
       const enrichedHistory = records.map(record => {
         const appointmentData = calendarData[record.appointmentId];
 
-        // Handle date conversion safely
         let recordDate;
         if (record.confirmedAt?.toDate) {
           recordDate = record.confirmedAt.toDate();
@@ -535,17 +771,19 @@ const Attendance = () => {
           recordDate = new Date();
         }
 
-        // Get session type and translate it
         const sessionType = appointmentData?.customLabel ||
+          appointmentData?.sessionCategory ||
           appointmentData?.sessionType ||
           appointmentData?.type ||
           appointmentData?.notes ||
           'Session';
 
+        const sessionCategory = appointmentData?.sessionCategory;
+
         return {
           id: record.id,
           date: recordDate.toISOString().split('T')[0],
-          title: translateSessionType(sessionType),
+          title: translateSessionType(sessionType, sessionCategory),
           time: appointmentData ?
             `${appointmentData.startTime} - ${appointmentData.endTime}` :
             t('attendance.timeNotAvailable'),
@@ -558,6 +796,7 @@ const Attendance = () => {
 
       return enrichedHistory;
     } catch (error) {
+      console.error('Error enriching history data:', error);
       return records;
     }
   };
@@ -685,7 +924,7 @@ const Attendance = () => {
       };
 
       updateCountdown();
-      const interval = setInterval(updateCountdown, 30000); // Update every 30 seconds
+      const interval = setInterval(updateCountdown, 30000);
 
       return () => clearInterval(interval);
     }, [session]);
@@ -834,7 +1073,7 @@ const Attendance = () => {
                         <div className="session-card-content">
                           <div className="session-card-header">
                             <h3 className="session-card-title">
-                              {t('attendance.sessionNumber', { number: index + 1 })}: {translateSessionType(session.sessionType)}
+                              {t('attendance.sessionNumber', { number: index + 1 })}: {translateSessionType(session.sessionType, session.sessionCategory)}
                             </h3>
                             <span className="session-time-badge">{session.time}</span>
                           </div>
@@ -864,7 +1103,7 @@ const Attendance = () => {
                               <Users className="detail-icon" />
                               <div className="detail-content">
                                 <p className="detail-label">{t('attendance.sessionType')}</p>
-                                <p className="detail-value">{translateSessionType(session.sessionType)}</p>
+                                <p className="detail-value">{translateSessionType(session.sessionType, session.sessionCategory)}</p>
                               </div>
                             </div>
 

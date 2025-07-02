@@ -1,28 +1,29 @@
 {
   "appointments": {
-    "title": "הפגישות שלך",
-    "subtitle": "נהל וצפה בפגישות שנקבעו",
-    "search": "חפש פגישות...",
-    "filter": "סינון",
+    "title": "התנדבויות שלך",
+    "subtitle": "נהל וצפה בפעילויות המתוכננות שלך",
+    "search": "חפש התנדבויות...",
+    "filter": "סנן",
     "statusLabel": "סטטוס:",
     "status": {
-      "approved": "מאושר ✅",
-      "pending":  "ממתין ⏳",
+      "approved": "אושר ✅",
+      "pending": "ממתין ⏳",
       "rejected": "נדחה ❌",
-      "Closed": "נסגר"
+      "completed": "הושלם ✔️",
+      "Closed": "סגור"
     },
     "tabs": {
-      "past": "עברו",
+      "past": "עבר",
       "upcoming": "קרובות",
       "pending": "ממתינות"
     },
     "note": "הערה",
-    "noAppointments": "אין פגישות להצגה.",
+    "noAppointments": "אין לך התנדבויות להציג.",
     "actions": {
       "cancel": "בטל בקשה"
     },
     "modal": {
-      "title": "פרטי פגישה",
+      "title": "פרטי ההתנדבות",
       "close": "סגור",
       "date": "תאריך",
       "time": "שעה",
@@ -40,8 +41,8 @@
     },
     "filters": {
       "popular": "פופולרי",
-      "indoor": "בתוך מבנה",
-      "outdoor": "בחוץ"
+      "indoor": "פנימי",
+      "outdoor": "חיצוני"
     },
     "days": {
       "Sun": "ראשון",
@@ -67,30 +68,14 @@
       "December": "דצמבר"
     },
     "time": {
-      "AM": "בבוקר",
-      "PM": "אחה\"צ"
+      "AM": "בוקר",
+      "PM": "אחר הצהריים"
     },
     "sessionTypes": {
-      "session": "מפגש",
+      "session": "פגישה",
       "gardening": "גינון",
-      "artsAndCrafts": "אמנויות ויצירה",
       "music": "מוזיקה",
-      "reading": "קריאה", 
-      "games": "משחקים",
-      "cooking": "בישול",
-      "exercise": "התעמלות",
-      "outdoorActivities": "פעילויות חוץ",
-      "socialHour": "שעה חברתית",
-      "bingo": "בינגו",
       "crafts": "יצירה",
-      "storytelling": "סיפור",
-      "meditation": "מדיטציה",
-      "walking": "הליכה",
-      "puzzles": "פאזלים",
-      "movieNight": "ערב סרטים",
-      "bookClub": "מועדון ספרים",
-      "painting": "ציור",
-      "dancing": "ריקוד",
       "art": "אמנות",
       "baking": "אפייה",
       "beading": "חרוזים"

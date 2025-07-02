@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock3, MapPin, Search, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { collection, getDocs, doc, updateDoc, arrayRemove, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, arrayRemove, arrayUnion, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import { Layout } from "@/components/volunteer/layout"
@@ -87,7 +87,7 @@ export default function Appointments() {
     };
 
     const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, ''); // Clean up for translation key
-    return t(`sessionTypes.${mappedType}`, sessionType); // Fallback to original if translation not found
+    return t(`appointments.sessionTypes.${mappedType}`, sessionType);
   };
 
   // Function to show notifications
@@ -97,6 +97,91 @@ export default function Appointments() {
     setTimeout(() => {
       setNotification({ show: false, message: "", type: "" });
     }, 5000);
+  };
+
+  // Helper function to parse session date and time
+  const parseSessionDateTime = (dateStr, startTime, endTime) => {
+    try {
+      let sessionDate;
+      
+      // Handle different date formats
+      if (typeof dateStr === 'string') {
+        // If it's a string like "2025-07-02"
+        if (dateStr.includes('-')) {
+          sessionDate = new Date(dateStr);
+        } else {
+          // If it's already formatted like "May 27"
+          sessionDate = new Date(dateStr);
+        }
+      } else {
+        // If it's already a Date object
+        sessionDate = new Date(dateStr);
+      }
+
+      // Use endTime if available, otherwise startTime
+      const timeToUse = endTime || startTime;
+      
+      if (timeToUse) {
+        // Parse time (assuming format like "14:00" or "2:00 PM")
+        let hours = 0;
+        let minutes = 0;
+
+        if (timeToUse.includes('AM') || timeToUse.includes('PM')) {
+          // Handle 12-hour format
+          const timePart = timeToUse.replace(/\s*(AM|PM)/i, '');
+          const [hourStr, minuteStr = '0'] = timePart.split(':');
+          hours = parseInt(hourStr);
+          minutes = parseInt(minuteStr);
+
+          if (timeToUse.toUpperCase().includes('PM') && hours !== 12) {
+            hours += 12;
+          } else if (timeToUse.toUpperCase().includes('AM') && hours === 12) {
+            hours = 0;
+          }
+        } else {
+          // Handle 24-hour format
+          const [hourStr, minuteStr = '0'] = timeToUse.split(':');
+          hours = parseInt(hourStr);
+          minutes = parseInt(minuteStr);
+        }
+
+        sessionDate.setHours(hours, minutes, 0, 0);
+      }
+
+      return sessionDate;
+    } catch (error) {
+      console.error("Error parsing session date/time:", error);
+      return new Date();
+    }
+  };
+
+  // Function to update session status in Firestore
+  const updateSessionStatus = async (appointmentId, oldRequest, newStatus) => {
+    try {
+      const slotRef = doc(db, "calendar_slots", appointmentId);
+      
+      // Create updated request with new status and timestamp
+      const updatedRequest = {
+        ...oldRequest,
+        status: newStatus,
+        ...(newStatus === 'rejected' && { rejectedAt: new Date() }),
+        ...(newStatus === 'completed' && { completedAt: new Date() })
+      };
+
+      // Remove old request and add updated one
+      await updateDoc(slotRef, {
+        volunteerRequests: arrayRemove(oldRequest)
+      });
+
+      await updateDoc(slotRef, {
+        volunteerRequests: arrayUnion(updatedRequest)
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error updating session status:", error);
+      return false;
+    }
   };
 
   // Set RTL/LTR based on language
@@ -163,20 +248,55 @@ export default function Appointments() {
         const snapshot = await getDocs(calendarRef);
 
         let appointmentsData = [];
+        const now = new Date();
+        let statusUpdates = []; // Track sessions that need status updates
 
         // Go through all calendar slots and find ones where this user has volunteer requests
-        snapshot.docs.forEach(doc => {
-          const data = doc.data();
+        for (const docSnapshot of snapshot.docs) {
+          const data = docSnapshot.data();
           const volunteerRequests = data.volunteerRequests || [];
           
           // Find if this user has a volunteer request in this slot
           const userRequest = volunteerRequests.find(req => req.userId === userId);
           
           if (userRequest) {
+            // Parse session end time
+            const sessionEndTime = parseSessionDateTime(
+              data.date?.toDate ? data.date.toDate() : data.date,
+              data.startTime,
+              data.endTime
+            );
+
+            let currentStatus = userRequest.status;
+            let needsUpdate = false;
+
+            // ONLY update status if the session date/time has already passed
+            if (sessionEndTime < now) {
+              if (currentStatus === 'pending') {
+                // Pending sessions that have passed should be rejected
+                currentStatus = 'rejected';
+                needsUpdate = true;
+              } else if (currentStatus === 'approved') {
+                // Approved sessions that have passed should be completed
+                currentStatus = 'completed';
+                needsUpdate = true;
+              }
+            }
+            // If session hasn't passed yet, keep original status unchanged
+
+            // If status needs updating, add to update queue
+            if (needsUpdate) {
+              statusUpdates.push({
+                appointmentId: docSnapshot.id,
+                oldRequest: userRequest,
+                newStatus: currentStatus
+              });
+            }
+
             // Create appointment object from calendar slot data
             const appointment = {
-              id: doc.id,
-              appointmentId: doc.id,
+              id: docSnapshot.id,
+              appointmentId: docSnapshot.id,
               date: formatFirebaseDate(data.date?.toDate ? data.date.toDate() : data.date),
               day: getDayFromDate(data.date?.toDate ? data.date.toDate() : data.date),
               time: `${data.startTime || "N/A"} - ${data.endTime || "N/A"}`,
@@ -184,7 +304,7 @@ export default function Appointments() {
               sessionType: data.sessionCategory || data.customLabel || "Session",
               note: data.notes || "",
               category: data.isCustom ? "Custom" : "Regular",
-              status: userRequest.status, // Use the status from volunteer request
+              status: currentStatus, // Use the updated status (only if session has passed)
               maxCapacity: data.maxCapacity || 1,
               volunteers: data.volunteers || [],
               volunteerRequests: volunteerRequests,
@@ -193,13 +313,30 @@ export default function Appointments() {
               rawData: {
                 ...data,
                 date: data.date?.toDate ? data.date.toDate() : data.date,
-                userRequestStatus: userRequest.status
+                userRequestStatus: currentStatus,
+                sessionEndTime: sessionEndTime
               }
             };
             
             appointmentsData.push(appointment);
           }
-        });
+        }
+
+        // Update statuses in Firestore ONLY for sessions that have passed
+        if (statusUpdates.length > 0) {
+          console.log(`Updating ${statusUpdates.length} expired session statuses...`);
+          
+          const updatePromises = statusUpdates.map(update => 
+            updateSessionStatus(update.appointmentId, update.oldRequest, update.newStatus)
+          );
+          
+          try {
+            await Promise.all(updatePromises);
+            console.log("Expired session status updates completed successfully");
+          } catch (error) {
+            console.error("Some status updates failed:", error);
+          }
+        }
 
         // Sort by date (newest first) and limit to latest 30
         appointmentsData = appointmentsData
@@ -209,6 +346,7 @@ export default function Appointments() {
         setAppointments(appointmentsData);
         setLoading(false);
       } catch (error) {
+        console.error("Error fetching appointments:", error);
         setLoading(false);
       }
     };
@@ -235,15 +373,21 @@ export default function Appointments() {
 
   const now = new Date();
 
+  // Tab classification logic - sessions are classified based on BOTH status AND whether they've passed
   const tabAppointments = appointments.filter((a) => {
+    const sessionEndTime = a.rawData.sessionEndTime || new Date();
+    
     if (tab === "upcoming") {
-      return a.status === "approved"; // Show approved status appointments as upcoming
+      // Show approved sessions that haven't passed yet
+      return a.status === "approved" && sessionEndTime > now;
     }
     if (tab === "past") {
-      return a.status === "completed" || a.status === "rejected"; // Show completed or rejected appointments in past
+      // Show completed or rejected sessions (including auto-updated expired ones)
+      return a.status === "completed" || a.status === "rejected";
     }
     if (tab === "pending") {
-      return a.status === "pending"; // Show pending status appointments
+      // Show pending sessions that haven't passed yet
+      return a.status === "pending" && sessionEndTime > now;
     }
     return false;
   });

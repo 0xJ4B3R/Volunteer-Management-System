@@ -9,6 +9,7 @@
       "approved": "Approved ✅",
       "pending":  "Pending ⏳",
       "rejected": "Rejected ❌",
+      "completed": "Completed ✔️",
       "Closed": "Closed"
     },
     "tabs": {
@@ -17,7 +18,7 @@
       "pending": "Pending"
     },
     "note": "Note",
-    "noAppointments": "You don’t have any appointments to show.",
+    "noAppointments": "You don't have any appointments to show.",
     "actions": {
       "cancel": "Cancel Request"
     },
@@ -73,24 +74,8 @@
     "sessionTypes": {
       "session": "Session",
       "gardening": "Gardening",
-      "artsAndCrafts": "Arts & Crafts",
       "music": "Music", 
-      "reading": "Reading",
-      "games": "Games",
-      "cooking": "Cooking",
-      "exercise": "Exercise",
-      "outdoorActivities": "Outdoor Activities",
-      "socialHour": "Social Hour",
-      "bingo": "Bingo",
       "crafts": "Crafts",
-      "storytelling": "Storytelling",
-      "meditation": "Meditation",
-      "walking": "Walking",
-      "puzzles": "Puzzles",
-      "movieNight": "Movie Night",
-      "bookClub": "Book Club",
-      "painting": "Painting",
-      "dancing": "Dancing",
       "art": "Art",
       "baking": "Baking",
       "beading": "Beading"
