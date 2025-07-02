@@ -24,7 +24,8 @@
       "cancelledByVolunteer": "You missed the session. Cancelled by volunteer",
       "sessionApproved": "✅ {{session}} Session Approved\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
       "sessionRejected": "❌ {{session}} Session Rejected\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}{{reason}}",
-      "sessionRequested": "⏳ {{session}} Session Requested\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}"
+      "sessionRequested": "⏳ {{session}} Session Requested\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
+      "levelUp": "Congratulations! You've reached {{level}} level!🎉"
     },
     "stats": {
       "totalHours": "Total Hours since account creation",
@@ -34,7 +35,6 @@
     },
     "nextLevel": "Next: {{level}}",
     "hoursToGo": " {{count}} hours to go",
-    "levelUp": "Congratulations! You've reached {{level}} level!🎉",
     "levels": {
       "Beginner": "Beginner",
       "Helper": "Helper",

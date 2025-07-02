@@ -24,7 +24,8 @@
       "cancelledByVolunteer": "החמצת את הפעילות. בוטל על ידי מתנדב",
       "sessionApproved": "✅ פעילות {{session}} אושרה\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
       "sessionRejected": "❌ פעילות {{session}} נדחתה\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}{{reason}}",
-      "sessionRequested": "⏳ בקשה לפעילות {{session}}\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}"
+      "sessionRequested": "⏳ בקשה לפעילות {{session}}\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
+      "levelUp": "כל הכבוד! הגעת לדרגת {{level}}! 🎉"
     },
     "stats": {
       "totalHours": "סך הכל שעות מאז יצירת החשבון",
@@ -34,7 +35,6 @@
     },
     "nextLevel": "הבא: {{level}}",
     "hoursToGo": " {{count}} שעות נותרו",
-    "levelUp": "כל הכבוד! הגעת לדרגת {{level}}! 🎉",
     "levels": {
       "Beginner": "מתחיל",
       "Helper": "עוזר",
