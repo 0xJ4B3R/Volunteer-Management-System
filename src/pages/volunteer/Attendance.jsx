@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award, FileText, CheckCircle2, XCircle, History, CalendarDays, CalendarClock, ChevronRight } from 'lucide-react';
-import { collection, getDocs, query, where, orderBy, limit, doc, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, FileText, XCircle, History, CalendarDays, ChevronRight } from 'lucide-react';
+import { collection, getDocs, query, where, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTranslation } from 'react-i18next';
 import { Layout } from "@/components/volunteer/layout"

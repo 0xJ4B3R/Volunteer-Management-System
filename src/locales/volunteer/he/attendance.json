@@ -95,10 +95,10 @@
     "sessionTypes": {
       "session": "פגישה",
       "gardening": "גינון",
-      "music": "מוזיקה",
-      "beading": "חריזה",
       "art": "אמנות",
-      "baking": "אפייה"
+      "music": "מוזיקה",
+      "baking": "אפייה",
+      "beading": "חריזה"
     }
   }
 }
