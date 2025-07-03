@@ -102,7 +102,7 @@ export type SlotPeriod = 'morning' | 'afternoon' | 'evening' | null;
 export type SlotStatus = 'open' | 'full' | 'canceled';
 export type VolunteerRequestStatus = 'pending' | 'approved' | 'rejected';
 export type VolunteerRequestAssignedBy = 'ai' | 'manager';
-export type SessionCategory = 'music' | 'gardening' | 'beads' | 'beading' | 'art' | 'baking' | null;
+export type SessionCategory = 'music' | 'gardening' | 'beading' | 'art' | 'baking' | null;
 
 // New type for participant IDs
 export interface ParticipantId {
