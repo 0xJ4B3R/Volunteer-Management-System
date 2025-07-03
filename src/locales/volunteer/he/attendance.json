@@ -1,104 +1,132 @@
 {
   "attendance": {
-    "title": "נוכחות",
-    "subtitle": "נהל את נוכחותך בפגישות וצפה בהיסטוריה",
+    "title": "ניהול נוכחות",
+    "subtitle": "אשרו את נוכחותכם בפעילות",
+    
     "tabs": {
       "today": "היום",
       "history": "היסטוריה"
     },
-    "todaysSessions": "פגישות היום",
-    "sessionNumber": "פגישה {{number}}",
-    "pleaseConfirm": "אנא אשר את הגעתך לפגישה זו.",
-    "time": "זמן",
-    "date": "תאריך",
-    "today": "היום",
-    "sessionType": "סוג פגישה",
-    "description": "תיאור",
-    "defaultDescription": "פגישת התנדבות עם דיירים",
-    "status": "סטטוס",
-    "onTime": "בזמן",
-    "graceActive": "תקופת חסד פעילה",
-    "late": "אישור מאוחר",
-    "ended": "הפגישה הסתיימה",
-    "minuteLeft": "דקה נותרה בתקופת החסד",
-    "minutesLeft": "{{count}} דקות נותרו בתקופת החסד",
-    "sessionTiming": "זמני הפגישה",
-    "sessionEnded": "הפגישה הסתיימה",
-    "autoMarkedAbsent": "הפגישה הסתיימה ונרשמת אוטומטית כנעדר/ת.",
-    "confirmTitle": "אנא אשר את נוכחותך",
-    "confirmMessage": "יש לאשר את נוכחותך בפגישה זו.",
-    "confirm": "אשר נוכחות",
-    "confirmLate": "אשר (מאוחר)",
-    "confirmGrace": "אשר (תקופת חסד)",
-    "unableToAttend": "לא יכול/ה להגיע",
-    "noSessions": "אין פגישות היום",
-    "noSessionsDesc": "אין לך פגישות מאושרות המתוכננות להיום.",
-    "noSessionsTitle": "לא נמצאו פגישות",
-    "noSessionsMessage": "בדוק את לוח השנה לראות את הפגישות הקרובות או פנה לרכז/ת.",
-    "thisMonth": "סיכום החודש",
-    "sessions": "פגישות",
-    "hours": "שעות",
-    "attendanceRate": "אחוז נוכחות",
-    "noHistory": "לא נמצאה היסטוריית נוכחות.",
-    "hoursCompleted": "{{hours}} שעות הושלמו",
-    "sessionLabel": "פגישה",
-    "timeNotAvailable": "זמן לא זמין",
-    "defaultSessionTitle": "פגישת התנדבות",
-    "loading": "טוען...",
-    "loadMore": "טען עוד היסטוריה",
-    "showingRecords": "מציג {{showing}} מתוך {{total}} רשומות",
-    "allLoaded": "כל ההיסטוריה נטענה ({{count}} רשומות)",
+    
+    "language": {
+      "english": "English",
+      "hebrew": "עברית"
+    },
+    
+    "sessionTypes": {
+      "session": "פגישה",
+      "art": "אמנות",
+      "baking": "אפייה",
+      "gardening": "גינון",
+      "music": "מוזיקה",
+      "beading": "חרוזים",
+      "reading": "קריאה"
+    },
+    
     "statuses": {
-      "not_confirmed": "לא מאושר",
-      "confirmed": "מאושר",
-      "cancelled": "מבוטל",
+      "not_confirmed": "לא אושר",
+      "confirmed": "אושר",
+      "cancelled": "בוטל",
       "auto-absent": "נעדר אוטומטי",
       "grace-period": "תקופת חסד",
       "present": "נוכח",
       "absent": "נעדר",
-      "late": "מאוחר"
+      "late": "איחור",
+      "completed": "הושלם",
+      "unknown": "לא ידוע"
     },
-    "historyItem": {
-      "title": "{{title}}",
-      "status": {
-        "present": "נוכח",
-        "late": "מאוחר",
-        "absent": "נעדר"
-      }
+    
+    "fields": {
+      "time": "שעה",
+      "date": "תאריך",
+      "status": "סטטוס",
+      "sessionType": "סוג פעילות",
+      "description": "תיאור",
+      "notes": "הערות"
     },
-    "notifications": {
-      "sessionEnded": "לא ניתן לאשר נוכחות - הפגישה כבר הסתיימה.",
-      "confirmedPresent": "נוכחות אושרה כנוכח",
-      "confirmedGrace": "נוכחות אושרה כנוכח (בתקופת החסד)",
-      "confirmedLate": "נוכחות אושרה כמאוחר (תקופת החסד פגה)",
-      "confirmed": "נוכחות אושרה",
-      "alreadyRecorded": "נוכחות כבר נרשמה עבור פגישה זו.",
-      "markedAbsent": "נרשם כלא יכול להגיע.",
-      "confirmError": "שגיאה באישור נוכחות. אנא נסה שוב.",
-      "cancelError": "שגיאה בביטול נוכחות. אנא נסה שוב."
+    
+    "messages": {
+      "todaysSessions": "פעילויות היום",
+      "sessionNumber": "פעילות {{number}}",
+      "pleaseConfirm": "אנא אשרו את נוכחותכם בפעילות זו",
+      "today": "היום",
+      "defaultDescription": "פעילות עם דיירים",
+      "timeNotAvailable": "שעה לא זמינה",
+      "noSessions": "אין פעילויות היום",
+      "noSessionsDesc": "אין לכם פעילויות מתוכננות להיום",
+      "noSessionsTitle": "אין פעילויות זמינות",
+      "noSessionsMessage": "בדקו שוב מאוחר יותר או פנו למתאם שלכם אם אתם מצפים לראות פעילויות כאן",
+      "sessionTiming": "זמני פעילות",
+      "sessionEnded": "הפעילות הסתיימה",
+      "autoMarkedAbsent": "הפעילות נרשמה אוטומטית כנעדרות",
+      "confirmTitle": "אישור נוכחות",
+      "confirmMessage": "יש לאשר את נוכחותכם בפעילות זו"
     },
-    "notes": "הערות",
-    "notesDetails": {
-      "beforeStart": "אושר לפני זמן תחילת הפגישה",
-      "graceConfirmed": "אושר בתוך תקופת חסד של 15 דקות",
-      "lateConfirmed": "אושר לאחר שתקופת החסד פגה",
-      "confirmed": "נוכחות אושרה",
-      "cancelledByVolunteer": "בוטל על ידי המתנדב/ת",
-      "autoAbsent": "נרשם אוטומטית כנעדר - הפגישה הסתיימה ללא אישור"
-    },
+    
     "timeStatus": {
-      "sessionEnded": "הפגישה הסתיימה - נרשם אוטומטית כנעדר",
-      "graceExpired": "תקופת החסד פגה - אישור עכשיו ירשום אותך כמאוחר",
-      "graceActive": "הפגישה התחילה - יש לך {{minutes}} דקה/ות לאשר בזמן",
-      "sessionStarts": "הפגישה מתחילה בעוד {{minutes}} דקה/ות"
+      "sessionEnded": "הפעילות הסתיימה",
+      "graceExpired": "תקופת החסד הסתיימה - תסומנו כמאחרים",
+      "graceActive": "תקופת החסד פעילה - {{minutes}} דקות נותרו",
+      "sessionStarts": "הפעילות מתחילה בעוד {{minutes}} דקות",
+      "onTime": "בזמן",
+      "graceActive": "תקופת חסד פעילה",
+      "late": "איחור",
+      "ended": "הסתיים"
     },
-    "sessionTypes": {
-      "session": "פגישה",
-      "gardening": "גינון",
-      "art": "אמנות",
-      "music": "מוזיקה",
-      "baking": "אפייה",
-      "beading": "חריזה"
+    
+    "buttons": {
+      "confirm": "אשר נוכחות",
+      "confirmLate": "אשר איחור",
+      "confirmGrace": "אשר (תקופת חסד)",
+      "unableToAttend": "לא יכול להגיע",
+      "loading": "טוען...",
+      "loadMore": "טען עוד"
+    },
+    
+    "countdown": {
+      "minuteLeft": "דקה נותרה",
+      "minutesLeft": "{{count}} דקות נותרו"
+    },
+    
+    "notifications": {
+      "sessionEnded": "הפעילות הסתיימה - לא ניתן לאשר נוכחות",
+      "confirmedPresent": "נוכחות אושרה - אתם בזמן!",
+      "confirmedGrace": "נוכחות אושרה בתקופת החסד",
+      "confirmedLate": "נוכחות אושרה - סומנה כאיחור",
+      "confirmed": "נוכחות אושרה בהצלחה",
+      "alreadyRecorded": "נוכחות כבר נרשמה עבור פעילות זו",
+      "markedAbsent": "סומנתם כנעדרים עבור פעילות זו",
+      "confirmError": "שגיאה באישור נוכחות. אנא נסו שוב",
+      "cancelError": "שגיאה בביטול נוכחות. אנא נסו שוב"
+    },
+    
+    "notes": {
+      "beforeStart": "אושר לפני תחילת הפעילות",
+      "graceConfirmed": "אושר בתקופת החסד",
+      "lateConfirmed": "אושר אחרי תקופת החסד - סומן כאיחור",
+      "confirmed": "נוכחות אושרה על ידי המתנדב",
+      "cancelledByVolunteer": "בוטל על ידי המתנדב",
+      "autoAbsent": "נרשם אוטומטית כנעדר - הפעילות הסתיימה ללא אישור"
+    },
+    
+    "cancelReasons": {
+      "volunteerCanceled": "בוטל על ידי המתנדב"
+    },
+    
+    "stats": {
+      "sessions": "פעילויות",
+      "hours": "שעות",
+      "attendanceRate": "אחוז נוכחות"
+    },
+    
+    "history": {
+      "thisMonth": "החודש הנוכחי",
+      "monthlyHistory": "פעילויות החודש",
+      "allTimeHistory": "היסטוריה כללית",
+      "noMonthlyHistory": "לא הושלמו פעילויות החודש",
+      "hoursCompleted": "{{hours}} שעות הושלמו",
+      "showingRecords": "מציג {{showing}} מתוך {{total}} רשומות",
+      "allLoaded": "כל {{count}} הרשומות נטענו"
     }
   }
 }

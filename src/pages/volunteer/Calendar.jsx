@@ -2,7 +2,7 @@ import { Calendar, CalendarDays, Filter, Users, ChevronLeft, ChevronRight } from
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, arrayUnion, Timestamp, query, where } from 'firebase/firestore';
 import { Layout } from "@/components/volunteer/layout"
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -149,28 +149,12 @@ const groupSlotsByTime = (slotsForDay) => {
 
 // Utility: Check user approval status for a slot
 const getUserApprovalStatus = (slot, currentUser) => {
-  if (!currentUser) {
-    return null;
-  }
-  
-  if (!slot?.volunteerRequests || !Array.isArray(slot.volunteerRequests)) {
+  if (!currentUser || !slot?.volunteerRequests || !Array.isArray(slot.volunteerRequests)) {
     return null;
   }
 
-  // Get all possible user identifiers for userId field
-  const userIds = [
-    currentUser.uid,
-    currentUser.id, 
-    currentUser.username,
-    currentUser.email
-  ].filter(Boolean); // Remove any null/undefined values
-
-  const userRequest = slot.volunteerRequests.find(req => {
-    // Check against the userId field instead of volunteerId
-    const match = userIds.includes(req.userId);
-    return match;
-  });
-
+  // Find request by userId (which should match currentUser.id)
+  const userRequest = slot.volunteerRequests.find(req => req.userId === currentUser.id);
   return userRequest ? userRequest.status : null;
 };
 
@@ -206,129 +190,65 @@ const VolunteerCalendar = () => {
   const [selectedSessionType, setSelectedSessionType] = useState("all");
   const [signupLoading, setSignupLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [volunteerDocId, setVolunteerDocId] = useState(null);
   
-  // Temporary function to fix existing volunteer requests with proper volunteerId
-  const fixExistingVolunteerRequests = async () => {
-    if (!currentUser) return;
-    
+  // Function to find the volunteer document ID based on userId
+  const findVolunteerDocId = async (userId) => {
     try {
-      // First, try to find the actual volunteer document
-      let actualVolunteerId = "default-volunteer-id";
-      try {
-        const volunteersSnapshot = await getDocs(collection(db, "volunteers"));
-        const volunteerDoc = volunteersSnapshot.docs.find(doc => {
-          const data = doc.data();
-          return data.username === currentUser.username || 
-                 data.email === currentUser.email ||
-                 doc.id === currentUser.id ||
-                 doc.id === currentUser.uid;
-        });
-
-        if (volunteerDoc) {
-          actualVolunteerId = volunteerDoc.id;
-        }
-      } catch (error) {
-        // Could not fetch volunteers collection
-      }
-
-      const querySnapshot = await getDocs(collection(db, "calendar_slots"));
+      const volunteersQuery = query(
+        collection(db, "volunteers"),
+        where("userId", "==", userId)
+      );
+      const querySnapshot = await getDocs(volunteersQuery);
       
-      for (const docSnapshot of querySnapshot.docs) {
-        const data = docSnapshot.data();
-        const volunteerRequests = data.volunteerRequests || [];
-        
-        // Find requests that need to be fixed
-        let hasUpdates = false;
-        const updatedRequests = volunteerRequests.map(req => {
-          // If this request has the wrong volunteerId or is missing userId
-          if ((req.volunteerId === currentUser.id || req.volunteerId === 'yv5CABJ36fmsF2bBbtic') && 
-              (!req.userId || req.userId !== currentUser.id)) {
-            hasUpdates = true;
-            return {
-              ...req,
-              volunteerId: actualVolunteerId, // Set to actual volunteer document ID
-              userId: currentUser.id || currentUser.uid || currentUser.username // Set userId for badge matching
-            };
-          }
-          return req;
-        });
-        
-        if (hasUpdates) {
-          // Update the document
-          await updateDoc(doc(db, "calendar_slots", docSnapshot.id), {
-            volunteerRequests: updatedRequests
-          });
-        }
+      if (!querySnapshot.empty) {
+        return querySnapshot.docs[0].id;
       }
+      
+      // If no match found by userId, try other methods as fallback
+      const allVolunteersSnapshot = await getDocs(collection(db, "volunteers"));
+      const volunteerDoc = allVolunteersSnapshot.docs.find(doc => {
+        const data = doc.data();
+        return data.userId === userId || 
+               data.username === currentUser?.username || 
+               data.email === currentUser?.email;
+      });
+      
+      return volunteerDoc ? volunteerDoc.id : null;
     } catch (error) {
-      // Error fixing volunteer requests
+      console.error("Error finding volunteer document:", error);
+      return null;
     }
   };
 
-  // Run the fix when component mounts (only once)
-  useEffect(() => {
-    if (currentUser) {
-      fixExistingVolunteerRequests();
-    }
-  }, [currentUser]);
-
-  const { rules, loading: loadingRules } = useMatchingRules();
-
-  // Check authentication
-  useEffect(() => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
-      
-      if (!user.username) {
-        navigate("/login");
-      } else if (user.role !== "volunteer") {
-        navigate("/manager");
-      } else {
-        setCurrentUser(user);
-      }
-    } catch (error) {
-      // Auth check error
-    }
-  }, [navigate]);
-
   // Function to calculate match score and find best resident match with real data
   const calculateMatchDetails = async (currentUser, slot) => {
-    if (!currentUser || !rules.length || loadingRules) {
+    if (!currentUser || !rules.length || loadingRules || !volunteerDocId) {
       return {
-        matchScore: 50, // Default score instead of null
+        matchScore: 50,
         assignedResidentId: slot.assignedResidentId || "default-resident-id",
-        actualVolunteerId: "default-volunteer-id", // Default volunteer ID
-        currentUserId: currentUser?.id || currentUser?.uid || currentUser?.username
+        actualVolunteerId: volunteerDocId || "default-volunteer-id",
+        currentUserId: currentUser?.id
       };
     }
 
     try {
-      // Try to fetch the actual volunteer document from the volunteers collection
-      let actualVolunteerId = "default-volunteer-id"; // Default fallback
+      // Get the volunteer document data
       let volunteerData = currentUser;
-
-      try {
-        const volunteersSnapshot = await getDocs(collection(db, "volunteers"));
-        const volunteerDoc = volunteersSnapshot.docs.find(doc => {
-          const data = doc.data();
-          // Match by username, email, or any identifier that links to this user
-          return data.username === currentUser.username || 
-                 data.email === currentUser.email ||
-                 doc.id === currentUser.id ||
-                 doc.id === currentUser.uid;
-        });
-
-        if (volunteerDoc) {
-          actualVolunteerId = volunteerDoc.id; // Use the actual document ID from volunteers collection
-          volunteerData = { ...volunteerDoc.data(), id: volunteerDoc.id };
+      if (volunteerDocId) {
+        try {
+          const volunteerDoc = await getDoc(doc(db, "volunteers", volunteerDocId));
+          if (volunteerDoc.exists()) {
+            volunteerData = { ...volunteerDoc.data(), id: volunteerDoc.id };
+          }
+        } catch (error) {
+          console.error("Error fetching volunteer document:", error);
         }
-      } catch (error) {
-        // Could not fetch volunteer from collection, using default ID
       }
 
       // Convert volunteer data to the format expected by matching algorithm
       const volunteer = {
-        id: actualVolunteerId,
+        id: volunteerDocId,
         fullName: volunteerData.fullName || volunteerData.username || "Unknown Volunteer",
         createdAt: volunteerData.createdAt || Timestamp.now(),
         skills: volunteerData.skills || [],
@@ -351,7 +271,7 @@ const VolunteerCalendar = () => {
           createdAt: doc.data().createdAt || Timestamp.now()
         }));
       } catch (error) {
-        // Error fetching residents
+        console.error("Error fetching residents:", error);
       }
 
       // If slot has a specific assigned resident, use that
@@ -369,8 +289,8 @@ const VolunteerCalendar = () => {
             return {
               matchScore: Math.round(matchResults[0].score),
               assignedResidentId: targetResidentId,
-              actualVolunteerId: actualVolunteerId, // Actual volunteer document ID
-              currentUserId: currentUser.id || currentUser.uid || currentUser.username // Current user session ID
+              actualVolunteerId: volunteerDocId,
+              currentUserId: currentUser.id
             };
           }
         }
@@ -394,8 +314,8 @@ const VolunteerCalendar = () => {
           return {
             matchScore: Math.round(bestMatch.score),
             assignedResidentId: bestMatch.residentId,
-            actualVolunteerId: actualVolunteerId, // Actual volunteer document ID
-            currentUserId: currentUser.id || currentUser.uid || currentUser.username // Current user session ID
+            actualVolunteerId: volunteerDocId,
+            currentUserId: currentUser.id
           };
         }
       }
@@ -405,20 +325,307 @@ const VolunteerCalendar = () => {
                                  (residents.length > 0 ? residents[0].id : "default-resident-id");
       
       return {
-        matchScore: 75, // Default reasonable score
+        matchScore: 75,
         assignedResidentId: fallbackResidentId,
-        actualVolunteerId: actualVolunteerId, // Will be actual volunteer doc ID or default
-        currentUserId: currentUser.id || currentUser.uid || currentUser.username // Current user session ID
+        actualVolunteerId: volunteerDocId,
+        currentUserId: currentUser.id
       };
 
     } catch (error) {
+      console.error("Error calculating match details:", error);
       return {
-        matchScore: 60, // Default score on error
+        matchScore: 60,
         assignedResidentId: slot.assignedResidentId || "default-resident-id",
-        actualVolunteerId: "default-volunteer-id",
-        currentUserId: currentUser.id || currentUser.uid || currentUser.username
+        actualVolunteerId: volunteerDocId || "default-volunteer-id",
+        currentUserId: currentUser.id
       };
     }
+  };
+
+  const { rules, loading: loadingRules } = useMatchingRules();
+
+  // Sync approved volunteers to volunteer requests
+  const syncApprovedVolunteersToRequests = async () => {
+    if (!currentUser) return;
+
+    try {
+      const querySnapshot = await getDocs(collection(db, "calendar_slots"));
+      
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data();
+        const approvedVolunteers = data.approvedVolunteers || [];
+        const volunteerRequests = data.volunteerRequests || [];
+        
+        // Check if there are approved volunteers that don't have corresponding volunteer requests
+        let needsUpdate = false;
+        const updatedRequests = [...volunteerRequests];
+        
+        for (const approvedVolunteer of approvedVolunteers) {
+          // Check if this approved volunteer already has a volunteer request
+          const existingRequest = volunteerRequests.find(req => 
+            req.volunteerId === approvedVolunteer.id || 
+            req.userId === approvedVolunteer.id
+          );
+          
+          if (!existingRequest) {
+            // This approved volunteer doesn't have a volunteer request, so we need to create one
+            needsUpdate = true;
+            
+            // Calculate match details for this volunteer if possible
+            let matchScore = 75; // Default score
+            let assignedResidentId = data.residentIds?.[0] || data.assignedResidentId || "default-resident-id";
+            let volunteerUserId = null; // Will be set from volunteer document
+            
+            try {
+              // Try to get better match data if we have the matching algorithm available
+              if (rules.length > 0 && !loadingRules) {
+                // Get volunteer data from the volunteers collection
+                const volunteerDoc = await getDoc(doc(db, "volunteers", approvedVolunteer.id));
+                if (volunteerDoc.exists()) {
+                  const volunteerData = volunteerDoc.data();
+                  
+                  // Extract the userId from the volunteer document
+                  volunteerUserId = volunteerData.userId;
+                  
+                  // Get residents for matching
+                  const residentsSnapshot = await getDocs(collection(db, "residents"));
+                  const residents = residentsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    createdAt: doc.data().createdAt || Timestamp.now()
+                  }));
+                  
+                  if (residents.length > 0) {
+                    const volunteer = {
+                      id: approvedVolunteer.id,
+                      fullName: volunteerData.fullName || "Unknown Volunteer",
+                      createdAt: volunteerData.createdAt || Timestamp.now(),
+                      skills: volunteerData.skills || [],
+                      hobbies: volunteerData.hobbies || [],
+                      languages: volunteerData.languages || [],
+                      availability: volunteerData.availability || [],
+                      gender: volunteerData.gender || null,
+                      birthDate: volunteerData.birthDate || null,
+                    };
+                    
+                    // If there's a specific resident assigned to this slot
+                    if (assignedResidentId && assignedResidentId !== "default-resident-id") {
+                      const targetResident = residents.find(r => r.id === assignedResidentId);
+                      if (targetResident) {
+                        const convertedRules = rules.map(rule => ({ 
+                          ...rule, 
+                          updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
+                        }));
+                        
+                        const matchResults = matchVolunteersToResidents([volunteer], [targetResident], convertedRules);
+                        if (matchResults.length > 0) {
+                          matchScore = Math.round(matchResults[0].score);
+                        }
+                      }
+                    } else {
+                      // Find best match from all residents
+                      const convertedRules = rules.map(rule => ({ 
+                        ...rule, 
+                        updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
+                      }));
+                      
+                      const matchResults = matchVolunteersToResidents([volunteer], residents, convertedRules);
+                      if (matchResults.length > 0) {
+                        const bestMatch = matchResults.reduce((best, current) => 
+                          current.score > best.score ? current : best
+                        );
+                        matchScore = Math.round(bestMatch.score);
+                        assignedResidentId = bestMatch.residentId;
+                      }
+                    }
+                  }
+                } else {
+                  console.warn(`Volunteer document not found for ID: ${approvedVolunteer.id}`);
+                }
+              } else {
+                // If we don't have matching rules, still try to get the userId
+                const volunteerDoc = await getDoc(doc(db, "volunteers", approvedVolunteer.id));
+                if (volunteerDoc.exists()) {
+                  const volunteerData = volunteerDoc.data();
+                  volunteerUserId = volunteerData.userId;
+                } else {
+                  console.warn(`Volunteer document not found for ID: ${approvedVolunteer.id}`);
+                }
+              }
+            } catch (error) {
+              console.error("Error calculating match details for approved volunteer:", error);
+              // Continue with default values
+            }
+            
+            // If we couldn't get the userId from the volunteer document, skip this volunteer
+            if (!volunteerUserId) {
+              console.error(`Could not find userId for volunteer ${approvedVolunteer.id}. Available data:`, approvedVolunteer);
+              console.error(`Volunteer document structure might be different than expected.`);
+              continue;
+            }
+            
+            // Create the volunteer request with approved status
+            const newVolunteerRequest = {
+              status: "approved",
+              volunteerId: approvedVolunteer.id, // The volunteer document ID (e.g., K8V3Sq3wTYgs2JTn7vyS)
+              userId: volunteerUserId, // The user's session ID (e.g., hpaD9TokamimKSYF458U)
+              requestedAt: approvedVolunteer.createdAt || Timestamp.now(),
+              approvedAt: approvedVolunteer.createdAt || Timestamp.now(),
+              assignedBy: 'manager', // Indicate this was assigned by manager
+              assignedResidentId: assignedResidentId,
+              matchScore: matchScore,
+              rejectedAt: null,
+              rejectedReason: null
+            };
+            
+            updatedRequests.push(newVolunteerRequest);
+          } else if (existingRequest.status !== "approved") {
+            // If there's an existing request but it's not approved, update it to approved
+            needsUpdate = true;
+            const requestIndex = updatedRequests.findIndex(req => 
+              req.volunteerId === approvedVolunteer.id || 
+              req.userId === approvedVolunteer.id
+            );
+            
+            if (requestIndex !== -1) {
+              updatedRequests[requestIndex] = {
+                ...updatedRequests[requestIndex],
+                status: "approved",
+                approvedAt: approvedVolunteer.createdAt || Timestamp.now(),
+                assignedBy: 'manager',
+                rejectedAt: null,
+                rejectedReason: null
+              };
+            }
+          }
+        }
+        
+        // NEW LOGIC: Check for volunteers in volunteerRequests who are approved but not in approvedVolunteers
+        // These should be rejected as "Removed by manager"
+        for (const volunteerRequest of volunteerRequests) {
+          if (volunteerRequest.status === "approved") {
+            // Check if this approved volunteer is still in the approvedVolunteers array
+            const stillApproved = approvedVolunteers.some(approvedVol => 
+              approvedVol.id === volunteerRequest.volunteerId
+            );
+            
+            if (!stillApproved) {
+              // This volunteer was approved but is no longer in approvedVolunteers
+              // Manager must have removed them, so reject the request
+              needsUpdate = true;
+              const requestIndex = updatedRequests.findIndex(req => 
+                req.volunteerId === volunteerRequest.volunteerId && req.userId === volunteerRequest.userId
+              );
+              
+              if (requestIndex !== -1) {
+                updatedRequests[requestIndex] = {
+                  ...updatedRequests[requestIndex],
+                  status: "rejected",
+                  rejectedAt: Timestamp.now(),
+                  rejectedReason: "Removed by manager",
+                  approvedAt: null // Clear the approved timestamp
+                };
+              }
+            }
+          }
+        }
+        
+        // Update the document if changes were made
+        if (needsUpdate) {
+          await updateDoc(doc(db, "calendar_slots", docSnapshot.id), {
+            volunteerRequests: updatedRequests
+          });
+        }
+      }
+      
+      console.log("Finished syncing approved volunteers to volunteer requests");
+      
+    } catch (error) {
+      console.error("Error syncing approved volunteers:", error);
+    }
+  };
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+        
+        if (!user.username) {
+          navigate("/login");
+          return;
+        }
+        
+        if (user.role !== "volunteer") {
+          navigate("/manager");
+          return;
+        }
+        
+        setCurrentUser(user);
+        
+        // Find the volunteer document ID
+        const docId = await findVolunteerDocId(user.id);
+        setVolunteerDocId(docId);
+        
+      } catch (error) {
+        console.error("Auth check error:", error);
+        navigate("/login");
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  // Sync approved volunteers when component mounts and data changes
+  useEffect(() => {
+    if (currentUser && volunteerDocId && !loadingRules && calendarSlots.length > 0) {
+      syncApprovedVolunteersToRequests();
+    }
+  }, [currentUser, volunteerDocId, loadingRules, calendarSlots]);
+
+  // Manual sync function that can be called when needed
+  const manualSyncAndRefresh = async () => {
+    console.log("Starting manual sync of approved volunteers...");
+    await syncApprovedVolunteersToRequests();
+    
+    // Refresh calendar data after sync
+    const querySnapshot = await getDocs(collection(db, "calendar_slots"));
+    const updatedSlots = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+
+      let dateObj = null;
+      if (data.date) {
+        if (data.date.toDate) {
+          dateObj = data.date.toDate();
+        } else {
+          dateObj = new Date(data.date);
+        }
+      }
+
+      const sessionType = data.sessionCategory || data.type || "Session";
+      const isOpen = true;
+
+      return {
+        id: doc.id,
+        appointmentId: data.appointmentId || null,
+        customLabel: data.sessionCategory || 'Session',
+        type: sessionType,
+        isCustom: data.isCustom || false,
+        startTime: data.startTime || '9:00 AM',
+        endTime: data.endTime || '10:00 AM',
+        available: isOpen,
+        isOpen: isOpen,
+        status: data.status || "open",
+        date: dateObj,
+        volunteers: data.volunteers || [],
+        volunteerRequests: data.volunteerRequests || [],
+        maxVolunteers: data.maxCapacity || 1,
+        assignedResidentId: data.assignedResidentId || null
+      };
+    });
+
+    setCalendarSlots(updatedSlots);
+    console.log("Manual sync completed and calendar refreshed");
   };
 
   // Fetch slots from Firestore
@@ -468,7 +675,7 @@ const VolunteerCalendar = () => {
 
         setCalendarSlots(slots);
       } catch (err) {
-        // Error fetching slots
+        console.error("Error fetching slots:", err);
       } finally {
         setIsLoading(false);
       }
@@ -506,8 +713,13 @@ const VolunteerCalendar = () => {
 
   // Function to handle user signup for a session
   const handleSignUp = async (slot) => {
-    if (!currentUser || !currentUser.username) {
+    if (!currentUser || !currentUser.id) {
       navigate("/");
+      return;
+    }
+
+    if (!volunteerDocId) {
+      console.error("Volunteer document ID not found");
       return;
     }
 
@@ -537,16 +749,8 @@ const VolunteerCalendar = () => {
       const slotData = slotDoc.data();
       const volunteerRequests = slotData.volunteerRequests || [];
 
-      // Get all possible user identifiers for checking duplicates
-      const userIds = [
-        currentUser.uid,
-        currentUser.id, 
-        currentUser.username,
-        currentUser.email
-      ].filter(Boolean);
-
       // Check if user already has a request (check by userId)
-      if (volunteerRequests && volunteerRequests.some(req => userIds.includes(req.userId))) {
+      if (volunteerRequests.some(req => req.userId === currentUser.id)) {
         setSignupLoading(false);
         return;
       }
@@ -554,19 +758,19 @@ const VolunteerCalendar = () => {
       // Count approved requests instead of volunteers
       const approvedVolunteersCount = volunteerRequests.filter(req => req.status === "approved").length;
 
-      if (approvedVolunteersCount >= (slotData.maxVolunteers || 1)) {
+      if (approvedVolunteersCount >= (slotData.maxCapacity || 1)) {
         setSignupLoading(false);
         return;
       }
 
       // Calculate match details using the matching algorithm with real data
-      const { matchScore, assignedResidentId, actualVolunteerId, currentUserId } = await calculateMatchDetails(currentUser, slot);
+      const { matchScore, assignedResidentId } = await calculateMatchDetails(currentUser, slot);
 
       // Create new volunteer request object with all required fields including match data
       const newVolunteerRequest = {
         status: "pending",
-        volunteerId: actualVolunteerId, // The actual volunteer document ID from volunteers collection
-        userId: currentUserId, // Current user's session ID for badge matching
+        volunteerId: volunteerDocId, // The actual volunteer document ID from volunteers collection
+        userId: currentUser.id, // Current user's session ID for badge matching
         requestedAt: Timestamp.now(),
         approvedAt: null,
         assignedBy: 'ai',
@@ -622,7 +826,7 @@ const VolunteerCalendar = () => {
       setCalendarSlots(updatedSlots);
 
     } catch (error) {
-      // Error signing up for session
+      console.error("Error signing up for session:", error);
     } finally {
       setSignupLoading(false);
     }
@@ -1056,10 +1260,7 @@ const VolunteerCalendar = () => {
                                                 ? t("Request Pending")
                                                 : (!isEventAvailable(slot.date))
                                                   ? t("Not Available")
-                                                  : (() => {
-                                                      const userIds = [currentUser?.uid, currentUser?.id, currentUser?.username, currentUser?.email].filter(Boolean);
-                                                      return slot.volunteerRequests?.some(req => userIds.includes(req.userId)) ? t("Request Pending") : t("Request to Join");
-                                                    })()}
+                                                  : t("Request to Join")}
                                       </button>
                                     </div>
                                   </DialogContent>
@@ -1159,10 +1360,7 @@ const VolunteerCalendar = () => {
                                     )}
 
                                     {/* Small indicator dot if you've requested this slot but no status yet */}
-                                    {!userApprovalStatus && (() => {
-                                      const userIds = [currentUser?.uid, currentUser?.id, currentUser?.username, currentUser?.email].filter(Boolean);
-                                      return slot.volunteerRequests?.some(req => userIds.includes(req.userId));
-                                    })() && (
+                                    {!userApprovalStatus && slot.volunteerRequests?.some(req => req.userId === currentUser?.id) && (
                                       <span style={{
                                         display: "inline-block",
                                         width: "6px",
@@ -1272,10 +1470,7 @@ const VolunteerCalendar = () => {
                                               ? t("Request Pending")
                                               : (!isEventAvailable(slot.date))
                                                 ? t("Not Available")
-                                                : (() => {
-                                                    const userIds = [currentUser?.uid, currentUser?.id, currentUser?.username, currentUser?.email].filter(Boolean);
-                                                    return slot.volunteerRequests?.some(req => userIds.includes(req.userId)) ? t("Request Pending") : t("Request to Join");
-                                                  })()}
+                                                : t("Request to Join")}
                                     </button>
                                   </div>
                                 </DialogContent>

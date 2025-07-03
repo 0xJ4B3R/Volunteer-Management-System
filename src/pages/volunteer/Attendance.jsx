@@ -26,16 +26,23 @@ const Attendance = () => {
   const [allUserRecords, setAllUserRecords] = useState([]);
   const [totalHistoryCount, setTotalHistoryCount] = useState(0);
 
+  // Monthly stats state
+  const [monthlyStats, setMonthlyStats] = useState({
+    thisMonthHours: 0,
+    thisMonthSessions: 0,
+    thisMonthHistory: []
+  });
+
   const RECORDS_PER_PAGE = 25;
 
   // Helper function to translate session types and categories
   const translateSessionType = (sessionType, sessionCategory) => {
-    if (!sessionType && !sessionCategory) return t('sessionTypes.session', 'Session');
+    if (!sessionType && !sessionCategory) return t('attendance.sessionTypes.session');
 
     // Priority: sessionCategory > customLabel > sessionType
     const typeToTranslate = sessionCategory || sessionType;
     
-    if (!typeToTranslate) return t('sessionTypes.session', 'Session');
+    if (!typeToTranslate) return t('attendance.sessionTypes.session');
 
     // Handle common session type/category variations
     const type = typeToTranslate.toLowerCase().trim();
@@ -51,10 +58,12 @@ const Attendance = () => {
       'gardening': 'gardening',
       'music': 'music',
       'beading': 'beading',
+      'reading': 'reading',
+      'reading session': 'reading',
     };
 
     const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, '');
-    return t(`sessionTypes.${mappedType}`, typeToTranslate); // Fallback to original if translation not found
+    return t(`attendance.sessionTypes.${mappedType}`, typeToTranslate);
   };
 
   // Function to show notifications
@@ -139,7 +148,217 @@ const Attendance = () => {
     }
   };
 
-  // Updated fetchTodaySessions to include appointmentHistory and fix loading logic
+  // Helper function to calculate hours from time range
+  const getHoursFromTimeRange = (startTime, endTime) => {
+    if (!startTime || !endTime) return 0;
+
+    const parseTime = (timeStr) => {
+      const [time, period] = timeStr.split(' ');
+      let [hours, minutes] = time.split(':').map(Number);
+
+      if (period?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
+      if (period?.toLowerCase() === 'am' && hours === 12) hours = 0;
+
+      return hours + (minutes || 0) / 60;
+    };
+
+    try {
+      const start = parseTime(startTime);
+      const end = parseTime(endTime);
+      return Math.max(0, end - start);
+    } catch (error) {
+      return 0;
+    }
+  };
+
+  // Updated function to fetch monthly stats from calendar_slots
+  const fetchMonthlyStats = async () => {
+    if (!userId && !username) return { 
+      thisMonthHours: 0, 
+      thisMonthSessions: 0,
+      thisMonthHistory: [] 
+    };
+
+    try {
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+      const currentYear = now.getFullYear();
+      
+      // Create month string in YYYY-MM format for comparison
+      const currentMonthStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+
+      console.log('Fetching monthly stats for:', currentMonthStr, 'UserId:', userId, 'Username:', username);
+
+      const calendarRef = collection(db, 'calendar_slots');
+      const calendarSnapshot = await getDocs(calendarRef);
+      
+      let thisMonthHours = 0;
+      let thisMonthSessions = 0;
+      let thisMonthHistory = [];
+
+      calendarSnapshot.docs.forEach(doc => {
+        const slot = { id: doc.id, ...doc.data() };
+        
+        // Check if the slot is from this month
+        if (slot.date && slot.date.startsWith(currentMonthStr)) {
+          console.log('Found slot for current month:', slot.date, slot.appointmentId);
+          
+          // Find the user's volunteer request - be more flexible with matching
+          const userVolunteerRequest = slot.volunteerRequests?.find(request => 
+            (request.userId === userId || request.volunteerId === userId || 
+             request.userId === username || request.volunteerId === username) && 
+            (request.status === 'approved' || request.status === 'completed')
+          );
+
+          if (userVolunteerRequest) {
+            console.log('Found user volunteer request:', userVolunteerRequest);
+            
+            // Parse the date to check if it's in the past (completed sessions)
+            const slotDate = new Date(slot.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Include sessions that have already happened OR sessions that are marked as completed
+            if (slotDate <= today || userVolunteerRequest.status === 'completed') {
+              thisMonthSessions++;
+              
+              // Calculate hours from start and end time
+              const sessionHours = getHoursFromTimeRange(slot.startTime, slot.endTime);
+              thisMonthHours += sessionHours;
+              
+              // Create history entry
+              const historyEntry = {
+                id: slot.id,
+                appointmentId: slot.appointmentId || slot.id,
+                date: slot.date,
+                title: translateSessionType(
+                  slot.customLabel || slot.sessionCategory || slot.type || 'Session',
+                  slot.sessionCategory
+                ),
+                time: `${slot.startTime} - ${slot.endTime}`,
+                hours: sessionHours,
+                status: userVolunteerRequest.status === 'completed' ? 'present' : 'unknown',
+                sessionType: slot.customLabel || slot.sessionCategory || slot.type || 'Session',
+                sessionCategory: slot.sessionCategory,
+                notes: slot.notes || '',
+                volunteerRequestStatus: userVolunteerRequest.status,
+                approvedAt: userVolunteerRequest.approvedAt,
+                completedAt: userVolunteerRequest.completedAt || null,
+                source: 'calendar_slots'
+              };
+              
+              thisMonthHistory.push(historyEntry);
+              console.log('Added history entry:', historyEntry);
+            }
+          }
+        }
+      });
+
+      console.log('Total monthly sessions found:', thisMonthSessions);
+      console.log('Monthly history entries:', thisMonthHistory);
+
+      // Now check for attendance records to get the actual status
+      if (thisMonthHistory.length > 0 || thisMonthSessions > 0) {
+        const attendanceRef = collection(db, 'attendance');
+        const attendanceSnapshot = await getDocs(attendanceRef);
+        
+        const attendanceRecords = {};
+        attendanceSnapshot.docs.forEach(doc => {
+          const record = doc.data();
+          if (record.volunteerId === userId || record.volunteerId === username || record.confirmedBy === username) {
+            attendanceRecords[record.appointmentId] = record;
+          }
+        });
+
+        console.log('Attendance records found:', Object.keys(attendanceRecords));
+
+        // Update history entries with attendance data
+        thisMonthHistory = thisMonthHistory.map(entry => {
+          const attendanceRecord = attendanceRecords[entry.appointmentId];
+          if (attendanceRecord) {
+            console.log('Found attendance record for', entry.appointmentId, attendanceRecord);
+            return {
+              ...entry,
+              status: attendanceRecord.status,
+              notes: attendanceRecord.notes || entry.notes,
+              attendanceConfirmedAt: attendanceRecord.confirmedAt
+            };
+          }
+          return entry;
+        });
+
+        // Also check if there are attendance records for this month that don't have calendar slots
+        Object.values(attendanceRecords).forEach(record => {
+          if (record.confirmedAt) {
+            const confirmDate = record.confirmedAt.toDate ? record.confirmedAt.toDate() : new Date(record.confirmedAt);
+            const confirmMonth = confirmDate.getMonth() + 1;
+            const confirmYear = confirmDate.getFullYear();
+            const confirmMonthStr = `${confirmYear}-${confirmMonth.toString().padStart(2, '0')}`;
+            
+            if (confirmMonthStr === currentMonthStr) {
+              // Check if this attendance record is already in our history
+              const existingEntry = thisMonthHistory.find(entry => entry.appointmentId === record.appointmentId);
+              if (!existingEntry) {
+                // Add this attendance record as a history entry
+                const historyEntry = {
+                  id: record.appointmentId,
+                  appointmentId: record.appointmentId,
+                  date: confirmDate.toISOString().split('T')[0],
+                  title: t('attendance.sessionTypes.session'),
+                  time: t('attendance.messages.timeNotAvailable'),
+                  hours: 0,
+                  status: record.status,
+                  sessionType: 'Session',
+                  sessionCategory: null,
+                  notes: record.notes || '',
+                  volunteerRequestStatus: 'completed',
+                  attendanceConfirmedAt: record.confirmedAt,
+                  source: 'attendance_only'
+                };
+                
+                thisMonthHistory.push(historyEntry);
+                console.log('Added attendance-only entry:', historyEntry);
+              }
+            }
+          }
+        });
+      }
+
+      // Sort history by date (most recent first)
+      thisMonthHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      console.log('Final monthly stats:', {
+        thisMonthHours,
+        thisMonthSessions: thisMonthHistory.length, // Use actual history length
+        thisMonthHistory: thisMonthHistory
+      });
+
+      return {
+        thisMonthHours,
+        thisMonthSessions: thisMonthHistory.length,
+        thisMonthHistory
+      };
+
+    } catch (error) {
+      console.error('Error fetching monthly stats from calendar_slots:', error);
+      return { 
+        thisMonthHours: 0, 
+        thisMonthSessions: 0,
+        thisMonthHistory: [] 
+      };
+    }
+  };
+
+  // Fetch monthly stats
+  useEffect(() => {
+    if (userId || username) {
+      fetchMonthlyStats().then(stats => {
+        setMonthlyStats(stats);
+      });
+    }
+  }, [userId, username]);
+
+  // Updated fetchTodaySessions with deduplication
   useEffect(() => {
     const fetchTodaySessions = async () => {
       if (!username || !userId) return;
@@ -190,7 +409,7 @@ const Attendance = () => {
             id: slot.id,
             time: `${slot.startTime} - ${slot.endTime}`,
             residents: slot.residentIds || [],
-            description: slot.notes || t('attendance.defaultDescription'),
+            description: slot.notes || t('attendance.messages.defaultDescription'),
             status: 'not_confirmed',
             sessionType: slot.customLabel || slot.sessionCategory || slot.type || 'Session',
             sessionCategory: slot.sessionCategory,
@@ -229,7 +448,7 @@ const Attendance = () => {
               id: `appointment_${appointment.appointmentId}`,
               time: `${appointment.startTime} - ${appointment.endTime}`,
               residents: appointment.residentIds || [],
-              description: appointment.notes || t('attendance.defaultDescription'),
+              description: appointment.notes || t('attendance.messages.defaultDescription'),
               status: 'not_confirmed',
               sessionType: appointment.sessionType || 'Session',
               sessionCategory: appointment.sessionCategory,
@@ -246,10 +465,35 @@ const Attendance = () => {
           console.error('Error fetching appointment history:', appointmentError);
         }
 
-        // 3. Filter out sessions that already have attendance records
-        if (allTodaySessions.length > 0) {
+        // 3. DEDUPLICATION: Remove duplicates based on appointmentId
+        // Keep the calendar_slots version over appointmentHistory if both exist
+        const uniqueSessions = [];
+        const seenAppointmentIds = new Set();
+        
+        // First pass: Add all calendar_slots sessions
+        allTodaySessions
+          .filter(session => session.source === 'calendar_slots')
+          .forEach(session => {
+            if (!seenAppointmentIds.has(session.appointmentId)) {
+              uniqueSessions.push(session);
+              seenAppointmentIds.add(session.appointmentId);
+            }
+          });
+        
+        // Second pass: Add appointmentHistory sessions only if not already seen
+        allTodaySessions
+          .filter(session => session.source === 'appointmentHistory')
+          .forEach(session => {
+            if (!seenAppointmentIds.has(session.appointmentId)) {
+              uniqueSessions.push(session);
+              seenAppointmentIds.add(session.appointmentId);
+            }
+          });
+
+        // 4. Filter out sessions that already have attendance records
+        if (uniqueSessions.length > 0) {
           const sessionsWithoutAttendance = await Promise.all(
-            allTodaySessions.map(async (session) => {
+            uniqueSessions.map(async (session) => {
               const attendanceRef = collection(db, 'attendance');
               const appointmentId = session.appointmentId || session.id;
 
@@ -357,16 +601,16 @@ const Attendance = () => {
       let notes;
       switch (attendanceStatus) {
         case 'present':
-          notes = t('attendance.notesDetails.beforeStart');
+          notes = t('attendance.notes.beforeStart');
           break;
         case 'grace-period':
-          notes = t('attendance.notesDetails.graceConfirmed');
+          notes = t('attendance.notes.graceConfirmed');
           break;
         case 'late':
-          notes = t('attendance.notesDetails.lateConfirmed');
+          notes = t('attendance.notes.lateConfirmed');
           break;
         default:
-          notes = t('attendance.notesDetails.confirmed');
+          notes = t('attendance.notes.confirmed');
       }
 
       // Add attendance record
@@ -485,6 +729,10 @@ const Attendance = () => {
       showNotification(statusMessage, 'success');
       setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
       await fetchInitialAttendanceHistory();
+      
+      // Refresh monthly stats
+      const newMonthlyStats = await fetchMonthlyStats();
+      setMonthlyStats(newMonthlyStats);
 
     } catch (error) {
       console.error('Error confirming attendance:', error);
@@ -542,7 +790,7 @@ const Attendance = () => {
                   ...request,
                   status: 'canceled',
                   canceledAt: Timestamp.now(),
-                  cancelReason: 'Canceled by volunteer'
+                  cancelReason: t('attendance.cancelReasons.volunteerCanceled')
                 };
               }
               return request;
@@ -786,10 +1034,10 @@ const Attendance = () => {
           title: translateSessionType(sessionType, sessionCategory),
           time: appointmentData ?
             `${appointmentData.startTime} - ${appointmentData.endTime}` :
-            t('attendance.timeNotAvailable'),
+            t('attendance.messages.timeNotAvailable'),
           status: record.status || 'present',
           hours: getHoursFromTimeRange(appointmentData?.startTime, appointmentData?.endTime),
-          notes: record.notes || t('attendance.notesDetails.confirmed'),
+          notes: record.notes || t('attendance.notes.confirmed'),
           appointmentId: record.appointmentId
         };
       });
@@ -807,29 +1055,6 @@ const Attendance = () => {
       fetchInitialAttendanceHistory();
     }
   }, [userId, username]);
-
-  // Helper function to calculate hours from time range
-  const getHoursFromTimeRange = (startTime, endTime) => {
-    if (!startTime || !endTime) return 0;
-
-    const parseTime = (timeStr) => {
-      const [time, period] = timeStr.split(' ');
-      let [hours, minutes] = time.split(':').map(Number);
-
-      if (period?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-      if (period?.toLowerCase() === 'am' && hours === 12) hours = 0;
-
-      return hours + (minutes || 0) / 60;
-    };
-
-    try {
-      const start = parseTime(startTime);
-      const end = parseTime(endTime);
-      return Math.max(0, end - start);
-    } catch (error) {
-      return 0;
-    }
-  };
 
   // Function to get the appropriate tab icon
   const getTabIcon = (key) => {
@@ -939,15 +1164,15 @@ const Attendance = () => {
           </div>
           <p className="countdown-text">
             {timeLeft === 1
-              ? t('attendance.minuteLeft')
-              : t('attendance.minutesLeft', { count: timeLeft })}
+              ? t('attendance.countdown.minuteLeft')
+              : t('attendance.countdown.minutesLeft', { count: timeLeft })}
           </p>
         </div>
       </div>
     );
   };
 
-  // Calculate stats from history
+  // Updated stats calculation to use the separate monthly stats
   const stats = {
     totalHours: attendanceHistory.reduce((sum, session) =>
       sum + (session.status === 'present' || session.status === 'late' ? session.hours : 0), 0
@@ -958,15 +1183,8 @@ const Attendance = () => {
     attendanceRate: attendanceHistory.length > 0
       ? ((attendanceHistory.filter(session => session.status === 'present' || session.status === 'late').length / attendanceHistory.length) * 100).toFixed(1)
       : 0,
-    thisMonthHours: attendanceHistory
-      .filter(session => {
-        const sessionDate = new Date(session.date);
-        const now = new Date();
-        return sessionDate.getMonth() === now.getMonth() &&
-          sessionDate.getFullYear() === now.getFullYear() &&
-          (session.status === 'present' || session.status === 'late');
-      })
-      .reduce((sum, session) => sum + session.hours, 0)
+    thisMonthHours: monthlyStats.thisMonthHours,
+    thisMonthSessions: monthlyStats.thisMonthSessions
   };
 
   if (loading) {
@@ -1031,8 +1249,12 @@ const Attendance = () => {
           </button>
           {showLangOptions && (
             <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-              <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>English</button>
-              <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>עברית</button>
+              <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+                {t('attendance.language.english')}
+              </button>
+              <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+                {t('attendance.language.hebrew')}
+              </button>
             </div>
           )}
         </div>
@@ -1066,18 +1288,18 @@ const Attendance = () => {
                 {todaySessions.length > 0 ? (
                   <div className="sessions-container">
                     <h2 className="sessions-title">
-                      {t('attendance.todaysSessions')} ({todaySessions.length})
+                      {t('attendance.messages.todaysSessions')} ({todaySessions.length})
                     </h2>
                     {todaySessions.map((session, index) => (
                       <div key={session.id} className="session-card">
                         <div className="session-card-content">
                           <div className="session-card-header">
                             <h3 className="session-card-title">
-                              {t('attendance.sessionNumber', { number: index + 1 })}: {translateSessionType(session.sessionType, session.sessionCategory)}
+                              {t('attendance.messages.sessionNumber', { number: index + 1 })}: {translateSessionType(session.sessionType, session.sessionCategory)}
                             </h3>
                             <span className="session-time-badge">{session.time}</span>
                           </div>
-                          <p className="session-card-description">{t('attendance.pleaseConfirm')}</p>
+                          <p className="session-card-description">{t('attendance.messages.pleaseConfirm')}</p>
 
                           {/* Progress Bar */}
                           <div className="session-progress-bar">
@@ -1089,20 +1311,20 @@ const Attendance = () => {
                               <div className="detail-content">
                                 <Clock className="detail-icon" />
                                 <div>
-                                  <p className="detail-label">{t('attendance.time')}</p>
+                                  <p className="detail-label">{t('attendance.fields.time')}</p>
                                   <p className="detail-value">{session.time}</p>
                                 </div>
                               </div>
                               <div className="detail-section">
-                                <p className="detail-label">{t('attendance.date')}</p>
-                                <p className="detail-value">{t('attendance.today')}</p>
+                                <p className="detail-label">{t('attendance.fields.date')}</p>
+                                <p className="detail-value">{t('attendance.messages.today')}</p>
                               </div>
                             </div>
 
                             <div className="detail-row">
                               <Users className="detail-icon" />
                               <div className="detail-content">
-                                <p className="detail-label">{t('attendance.sessionType')}</p>
+                                <p className="detail-label">{t('attendance.fields.sessionType')}</p>
                                 <p className="detail-value">{translateSessionType(session.sessionType, session.sessionCategory)}</p>
                               </div>
                             </div>
@@ -1112,7 +1334,7 @@ const Attendance = () => {
                             <div className="detail-row">
                               <FileText className="detail-icon" />
                               <div className="detail-content">
-                                <p className="detail-label" style={{ marginBottom: '0.5rem' }}>{t('attendance.description')}</p>
+                                <p className="detail-label" style={{ marginBottom: '0.5rem' }}>{t('attendance.fields.description')}</p>
                                 <p className="detail-value">{session.description}</p>
                               </div>
                             </div>
@@ -1120,7 +1342,7 @@ const Attendance = () => {
 
                           <div className="status-section">
                             <div className="status-row">
-                              <span className="status-label">{t('attendance.status')}:</span>
+                              <span className="status-label">{t('attendance.fields.status')}:</span>
                               <span className={`status-badge ${getStatusClass(selectedSessions[session.id]?.status || session.status)}`}>
                                 {getStatusText(selectedSessions[session.id]?.status || session.status)}
                               </span>
@@ -1131,10 +1353,10 @@ const Attendance = () => {
                               const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
                               return (
                                 <div className={`time-status-indicator ${attendanceStatus}`}>
-                                  {attendanceStatus === 'present' && `✅ ${t('attendance.onTime')}`}
-                                  {attendanceStatus === 'grace-period' && `⏰ ${t('attendance.graceActive')}`}
-                                  {attendanceStatus === 'late' && `⚠️ ${t('attendance.late')}`}
-                                  {attendanceStatus === 'auto-absent' && `❌ ${t('attendance.ended')}`}
+                                  {attendanceStatus === 'present' && `✅ ${t('attendance.timeStatus.onTime')}`}
+                                  {attendanceStatus === 'grace-period' && `⏰ ${t('attendance.timeStatus.graceActive')}`}
+                                  {attendanceStatus === 'late' && `⚠️ ${t('attendance.timeStatus.late')}`}
+                                  {attendanceStatus === 'auto-absent' && `❌ ${t('attendance.timeStatus.ended')}`}
                                 </div>
                               );
                             })()}
@@ -1152,7 +1374,7 @@ const Attendance = () => {
                                   <div className={`alert-box alert-${timeStatus.type}`}>
                                     <AlertCircle className="alert-icon" />
                                     <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.sessionTiming')}</p>
+                                      <p className="alert-title">{t('attendance.messages.sessionTiming')}</p>
                                       <p className="alert-message">{timeStatus.message}</p>
                                     </div>
                                   </div>
@@ -1171,9 +1393,9 @@ const Attendance = () => {
                                   <div className="status-message status-error">
                                     <div className="status-message-header">
                                       <XCircle className="status-message-icon" />
-                                      <p className="status-message-title">{t('attendance.sessionEnded')}</p>
+                                      <p className="status-message-title">{t('attendance.messages.sessionEnded')}</p>
                                     </div>
-                                    <p className="status-message-text">{t('attendance.autoMarkedAbsent')}</p>
+                                    <p className="status-message-text">{t('attendance.messages.autoMarkedAbsent')}</p>
                                   </div>
                                 );
                               }
@@ -1183,8 +1405,8 @@ const Attendance = () => {
                                   <div className="alert-box alert-warning">
                                     <AlertCircle className="alert-icon" />
                                     <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.confirmTitle')}</p>
-                                      <p className="alert-message">{t('attendance.confirmMessage')}</p>
+                                      <p className="alert-title">{t('attendance.messages.confirmTitle')}</p>
+                                      <p className="alert-message">{t('attendance.messages.confirmMessage')}</p>
                                     </div>
                                   </div>
 
@@ -1194,7 +1416,7 @@ const Attendance = () => {
                                       className="btn btn-cancel"
                                     >
                                       <X className="btn-icon" />
-                                      <span className="btn-text">{t('attendance.unableToAttend')}</span>
+                                      <span className="btn-text">{t('attendance.buttons.unableToAttend')}</span>
                                     </button>
                                     <button
                                       onClick={() => handleConfirm(session.id)}
@@ -1203,10 +1425,10 @@ const Attendance = () => {
                                       <Check className="btn-icon" />
                                       <span className="btn-text">
                                         {attendanceStatus === 'late'
-                                          ? t('attendance.confirmLate')
+                                          ? t('attendance.buttons.confirmLate')
                                           : attendanceStatus === 'grace-period'
-                                            ? t('attendance.confirmGrace')
-                                            : t('attendance.confirm')}
+                                            ? t('attendance.buttons.confirmGrace')
+                                            : t('attendance.buttons.confirm')}
                                       </span>
                                     </button>
                                   </div>
@@ -1221,13 +1443,13 @@ const Attendance = () => {
                 ) : (
                   <div className="session-card">
                     <div className="session-card-content">
-                      <h2 className="session-card-title">{t('attendance.noSessions')}</h2>
-                      <p className="session-card-description">{t('attendance.noSessionsDesc')}</p>
+                      <h2 className="session-card-title">{t('attendance.messages.noSessions')}</h2>
+                      <p className="session-card-description">{t('attendance.messages.noSessionsDesc')}</p>
                       <div className="alert-box alert-info">
                         <AlertCircle className="alert-icon" />
                         <div className="alert-content">
-                          <p className="alert-title">{t('attendance.noSessionsTitle')}</p>
-                          <p className="alert-message">{t('attendance.noSessionsMessage')}</p>
+                          <p className="alert-title">{t('attendance.messages.noSessionsTitle')}</p>
+                          <p className="alert-message">{t('attendance.messages.noSessionsMessage')}</p>
                         </div>
                       </div>
                     </div>
@@ -1242,18 +1464,18 @@ const Attendance = () => {
             <div>
               {/* Monthly Summary */}
               <div className="monthly-summary">
-                <h3 className="monthly-summary-title">{t('attendance.thisMonth')}</h3>
+                <h3 className="monthly-summary-title">{t('attendance.history.thisMonth')}</h3>
                 <div className="monthly-stats" style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
                   <div>
-                    <p className="monthly-stat-label">{t('attendance.sessions')}</p>
-                    <p className="monthly-stat-value">{stats.completedSessions}</p>
+                    <p className="monthly-stat-label">{t('attendance.stats.sessions')}</p>
+                    <p className="monthly-stat-value">{monthlyStats.thisMonthSessions}</p>
                   </div>
                   <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                    <p className="monthly-stat-label">{t('attendance.hours')}</p>
-                    <p className="monthly-stat-value">{stats.thisMonthHours.toFixed(1)}</p>
+                    <p className="monthly-stat-label">{t('attendance.stats.hours')}</p>
+                    <p className="monthly-stat-value">{monthlyStats.thisMonthHours.toFixed(1)}</p>
                   </div>
                   <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                    <p className="monthly-stat-label">{t('attendance.attendanceRate')}</p>
+                    <p className="monthly-stat-label">{t('attendance.stats.attendanceRate')}</p>
                     <p className="monthly-stat-value">{stats.attendanceRate}%</p>
                   </div>
                 </div>
@@ -1261,13 +1483,16 @@ const Attendance = () => {
 
               {/* History List */}
               <div className="history-list">
-                {attendanceHistory.length > 0 ? (
+                {monthlyStats.thisMonthHistory.length > 0 ? (
                   <>
-                    {attendanceHistory.map((session) => (
+                    <h3 className="history-section-title">{t('attendance.history.monthlyHistory')}</h3>
+                    {monthlyStats.thisMonthHistory.map((session) => (
                       <div key={session.id} className="history-item">
                         <div>
                           <div className="history-item-header">
-                            <h3 className="history-item-title">{session.title}</h3>
+                            <h3 className="history-item-title">
+                              {translateSessionType(session.sessionType, session.sessionCategory)}
+                            </h3>
                             <span className={`status-badge ${getStatusClass(session.status)}`}>
                               {getStatusText(session.status)}
                             </span>
@@ -1293,15 +1518,90 @@ const Attendance = () => {
                             <div className="history-metrics">
                               <div className="metric-item">
                                 <TrendingUp className="metric-icon" />
-                                <span className="metric-text">{t('attendance.hoursCompleted', { hours: session.hours.toFixed(1) })}</span>
+                                <span className="metric-text">
+                                  {t('attendance.history.hoursCompleted', { hours: session.hours.toFixed(1) })}
+                                </span>
                               </div>
                             </div>
                           )}
 
                           {session.notes && (
                             <p className="reason-text">
-                              <span className="reason-label">{t('attendance.notes')}: </span>
-                              {session.notes}
+                              <span className="reason-label">{t('attendance.fields.notes')}: </span>
+                              {/* Translate notes if they match known patterns */}
+                              {session.notes === 'Cancelled by volunteer' ? t('attendance.notes.cancelledByVolunteer') : 
+                               session.notes === 'Confirmed before session start' ? t('attendance.notes.beforeStart') :
+                               session.notes === 'Confirmed during grace period' ? t('attendance.notes.graceConfirmed') :
+                               session.notes === 'Confirmed after grace period - marked late' ? t('attendance.notes.lateConfirmed') :
+                               session.notes === 'Attendance confirmed by volunteer' ? t('attendance.notes.confirmed') :
+                               session.notes === 'Automatically marked absent - session ended without confirmation' ? t('attendance.notes.autoAbsent') :
+                               session.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="history-item">
+                    <p>{t('attendance.history.noMonthlyHistory')}</p>
+                  </div>
+                )}
+
+                {/* All Time History */}
+                {attendanceHistory.length > 0 && (
+                  <>
+                    <h3 className="history-section-title">{t('attendance.history.allTimeHistory')}</h3>
+                    {attendanceHistory.map((session) => (
+                      <div key={session.id} className="history-item">
+                        <div>
+                          <div className="history-item-header">
+                            <h3 className="history-item-title">
+                              {translateSessionType(session.title, session.sessionCategory)}
+                            </h3>
+                            <span className={`status-badge ${getStatusClass(session.status)}`}>
+                              {getStatusText(session.status)}
+                            </span>
+                          </div>
+
+                          <div className="history-item-details">
+                            <div className="history-detail">
+                              <CalendarDays className="history-detail-icon" />
+                              <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}</span>
+                            </div>
+                            <div className="history-detail">
+                              <Clock className="history-detail-icon" />
+                              <span>{session.time}</span>
+                            </div>
+                          </div>
+
+                          {(session.status === 'present' || session.status === 'late') && (
+                            <div className="history-metrics">
+                              <div className="metric-item">
+                                <TrendingUp className="metric-icon" />
+                                <span className="metric-text">
+                                  {t('attendance.history.hoursCompleted', { hours: session.hours.toFixed(1) })}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {session.notes && (
+                            <p className="reason-text">
+                              <span className="reason-label">{t('attendance.fields.notes')}: </span>
+                              {/* Translate notes if they match known patterns */}
+                              {session.notes === 'Cancelled by volunteer' ? t('attendance.notes.cancelledByVolunteer') : 
+                               session.notes === 'Confirmed before session start' ? t('attendance.notes.beforeStart') :
+                               session.notes === 'Confirmed during grace period' ? t('attendance.notes.graceConfirmed') :
+                               session.notes === 'Confirmed after grace period - marked late' ? t('attendance.notes.lateConfirmed') :
+                               session.notes === 'Attendance confirmed by volunteer' ? t('attendance.notes.confirmed') :
+                               session.notes === 'Automatically marked absent - session ended without confirmation' ? t('attendance.notes.autoAbsent') :
+                               session.notes}
                             </p>
                           )}
                         </div>
@@ -1319,17 +1619,17 @@ const Attendance = () => {
                           {historyLoading ? (
                             <>
                               <div className="loading-spinner"></div>
-                              <span>{t('attendance.loading')}</span>
+                              <span>{t('attendance.buttons.loading')}</span>
                             </>
                           ) : (
                             <>
-                              <span>{t('attendance.loadMore')}</span>
+                              <span>{t('attendance.buttons.loadMore')}</span>
                               <ChevronRight className="load-more-icon" />
                             </>
                           )}
                         </button>
                         <p className="load-more-info">
-                          {t('attendance.showingRecords', { showing: attendanceHistory.length, total: totalHistoryCount })}
+                          {t('attendance.history.showingRecords', { showing: attendanceHistory.length, total: totalHistoryCount })}
                         </p>
                       </div>
                     )}
@@ -1337,15 +1637,11 @@ const Attendance = () => {
                     {!hasMoreHistory && attendanceHistory.length >= RECORDS_PER_PAGE && (
                       <div className="load-more">
                         <p className="all-loaded-text">
-                          ✅ {t('attendance.allLoaded', { count: attendanceHistory.length })}
+                          ✅ {t('attendance.history.allLoaded', { count: attendanceHistory.length })}
                         </p>
                       </div>
                     )}
                   </>
-                ) : (
-                  <div className="history-item">
-                    <p>{t('attendance.noHistory')}</p>
-                  </div>
                 )}
               </div>
             </div>
