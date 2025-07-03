@@ -1,28 +1,41 @@
+// React and Router
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+// Internationalization
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Button } from "@/components/ui/button";
+
+// Icons
+import { FileText, CalendarIcon, DownloadIcon, PrinterIcon, CheckCircleIcon, Loader2, BarChart3, Menu, Search } from "lucide-react";
+
+// UI Components
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { FileText, CalendarIcon, DownloadIcon, PrinterIcon, CheckCircleIcon, AlertCircleIcon, Loader2, BarChart3, Menu, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getReports, generateReport } from '@/services/reportService';
-import { doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
-import { Report, ReportSubject, ReportScope, reportsRef, ReportType } from '@/services/firestore';
-import { jsPDF } from 'jspdf';
+
+// Custom Components
 import ManagerSidebar from "@/components/manager/ManagerSidebar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { query, getDocs } from "firebase/firestore";
-import { volunteersRef, residentsRef, external_groupsRef } from '@/services/firestore';
-import { toast } from "@/components/ui/use-toast";
 import ReportsSkeleton from "@/components/skeletons/ReportsSkeleton";
+
+// Utilities and Helpers
+import { cn } from "@/lib/utils";
+
+// Firebase
+import { doc, updateDoc, getDoc, setDoc, query, getDocs } from "firebase/firestore";
+
+// Services and Types
+import { getReports, generateReport } from '@/services/reportService';
+import { Report, ReportSubject, ReportScope, reportsRef, ReportType, volunteersRef, residentsRef, external_groupsRef } from '@/services/firestore';
+
+// PDF Libraries
+import { jsPDF } from 'jspdf';
 import { pdf, Document, Page, Text, View, Font, Image } from '@react-pdf/renderer';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 
 // Constants
 const MOBILE_BREAKPOINT = 1024;

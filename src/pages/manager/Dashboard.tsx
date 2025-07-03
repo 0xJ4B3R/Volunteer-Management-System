@@ -1,6 +1,12 @@
+// React and Router
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+// Internationalization
 import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+// Icons
 import {
   Menu,
   Users,
@@ -19,19 +25,26 @@ import {
   TrendingUp,
   TrendingDown
 } from "lucide-react";
+
+// UI Components
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+// Custom Components
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
+import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
+
+// Utilities and Helpers
 import { cn } from "@/lib/utils";
+
+// Hooks
+import { useAttendance } from "@/hooks/useAttendance";
 import { useResidents } from "@/hooks/useFirestoreResidents";
 import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
-import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
 import { useAppointments } from "@/hooks/useFirestoreCalendar";
-import { useAttendance } from "@/hooks/useAttendance";
-import ManagerSidebar from "@/components/manager/ManagerSidebar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
+import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
 
 const ManagerDashboard = () => {
   const navigate = useNavigate();
@@ -56,12 +69,6 @@ const ManagerDashboard = () => {
   const unconfirmedSessions = todaySessions.filter(slot => slot.status !== "full").length;
   const volunteersScheduled = todaySessions.reduce((acc, slot) => acc + (slot.approvedVolunteers?.length || 0), 0);
   const pendingVolunteers = todaySessions.reduce((acc, slot) => acc + (slot.volunteerRequests?.filter(vr => vr.status === "pending").length || 0), 0);
-
-  // Calculate average hours by volunteers this month
-  const thisMonthSessions = slots.filter(slot => {
-    const slotDate = new Date(slot.date);
-    return slotDate.getMonth() === today.getMonth() && slotDate.getFullYear() === today.getFullYear();
-  });
 
   // Get appointments for this month's sessions
   const thisMonthAppointments = appointments.filter(appointment => {

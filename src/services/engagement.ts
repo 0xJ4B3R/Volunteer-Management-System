@@ -1,5 +1,5 @@
-import { Volunteer, VolunteerAppointmentEntry, VolunteerAttendanceStats, Resident, ResidentAppointmentEntry, volunteersRef, residentsRef } from './firestore';
-import { Timestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { VolunteerAppointmentEntry, VolunteerAttendanceStats, ResidentAppointmentEntry, volunteersRef, residentsRef } from './firestore';
+import { updateDoc, doc, getDoc } from 'firebase/firestore';
 
 /**
  * Add an appointment entry to a volunteer or resident's appointmentHistory.

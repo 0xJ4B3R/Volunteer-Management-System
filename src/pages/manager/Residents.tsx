@@ -1,7 +1,12 @@
-import { useNavigate } from "react-router-dom";
+// React and Router
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+
+// Internationalization
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+// Icons
 import {
   Plus,
   Menu,
@@ -27,31 +32,43 @@ import {
   Upload,
   Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+// UI Components
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Timestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
-import { Resident } from "@/services/firestore";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useResidents, useAddResident, useUpdateResident, useDeleteResident, ResidentUI } from "@/hooks/useFirestoreResidents";
+
+// Custom Components
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import DataTableSkeleton from "@/components/skeletons/DataTableSkeleton";
+
+// Utilities and Helpers
+import { cn } from "@/lib/utils";
 import { validatePhoneNumber, getPhoneNumberError, formatPhoneNumber } from "@/utils/validation";
+
+// Firebase
+import { Timestamp } from "firebase/firestore";
+
+// Services and Types
+import { Resident } from "@/services/firestore";
+
+// Hooks
+import { useResidents, useAddResident, useUpdateResident, useDeleteResident, ResidentUI } from "@/hooks/useFirestoreResidents";
 
 // Full name validation functions
 const validateFullName = (name: string): boolean => {
   if (!name || name.trim().length === 0) return false;
-  
+
   // Allow English letters, Hebrew letters, spaces, hyphens, and apostrophes
   // Hebrew Unicode range: \u0590-\u05FF (includes Hebrew letters)
   // English letters: a-z, A-Z
   const nameRegex = /^[a-zA-Z\u0590-\u05FF\s'-]+$/;
-  
+
   return nameRegex.test(name.trim());
 };
 
@@ -59,40 +76,40 @@ const getFullNameError = (name: string): string | null => {
   if (!name || name.trim().length === 0) {
     return 'errors.fullNameRequired';
   }
-  
+
   if (name.trim().length < 2) {
     return 'errors.fullNameTooShort';
   }
-  
+
   if (name.trim().length > 50) {
     return 'errors.fullNameTooLong';
   }
-  
+
   if (!validateFullName(name)) {
     return 'errors.fullNameInvalid';
   }
-  
+
   return null;
 };
 
 // Birth date validation function
 const validateBirthDate = (dateString: string): boolean => {
   if (!dateString) return false;
-  
+
   const birthDate = new Date(dateString);
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const birthYear = birthDate.getFullYear();
-  
+
   // Check if it's a valid date
   if (isNaN(birthDate.getTime())) return false;
-  
+
   // Check year range (1900 to current year minus 16)
   if (birthYear < 1900 || birthYear > currentYear - 16) return false;
-  
+
   // Check if birth date is not in the future
   if (birthDate > currentDate) return false;
-  
+
   return true;
 };
 
@@ -100,32 +117,32 @@ const getBirthDateError = (dateString: string): string | null => {
   if (!dateString || dateString.trim().length === 0) {
     return 'errors.birthDateRequired';
   }
-  
+
   if (!validateBirthDate(dateString)) {
     const birthDate = new Date(dateString);
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const birthYear = birthDate.getFullYear();
-    
+
     if (isNaN(birthDate.getTime())) {
       return 'errors.birthDateInvalid';
     }
-    
+
     if (birthYear < 1900) {
       return 'errors.birthDateTooOld';
     }
-    
+
     if (birthYear > currentYear - 16) {
       return 'errors.birthDateTooYoung';
     }
-    
+
     if (birthDate > currentDate) {
       return 'errors.birthDateFuture';
     }
-    
+
     return 'errors.birthDateInvalid';
   }
-  
+
   return null;
 };
 
@@ -416,7 +433,10 @@ const ManagerResidents = () => {
   });
   const [selectedResidents, setSelectedResidents] = useState<string[]>([]);
   const [residentsToDelete, setResidentsToDelete] = useState<ResidentUI[]>([]);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    const saved = localStorage.getItem('residentsItemsPerPage');
+    return saved ? parseInt(saved, 10) : 10;
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
   const [ageRange, setAgeRange] = useState<[number | null, number | null]>([null, null]);
@@ -1715,6 +1735,8 @@ const ManagerResidents = () => {
                           onValueChange={(value) => {
                             const newItemsPerPage = Number(value);
                             setItemsPerPage(newItemsPerPage);
+                            // Save to localStorage for persistence
+                            localStorage.setItem('residentsItemsPerPage', newItemsPerPage.toString());
                             setCurrentPage(1);
                             // Clear selections when changing page size
                             setSelectedResidents([]);
@@ -1762,8 +1784,8 @@ const ManagerResidents = () => {
       </div>
 
       {/* Create Resident Dialog */}
-      <Dialog 
-        open={isCreateDialogOpen} 
+      <Dialog
+        open={isCreateDialogOpen}
         onOpenChange={(open) => {
           setIsCreateDialogOpen(open);
           setIsCreatingInstant(false);

@@ -70,7 +70,7 @@ import {
 } from "@/services/firestore";
 import { generateRecurringSlots } from "@/utils/recurringSlots";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, deleteDoc, collection, query, where, getDocs, getDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { addAppointmentToHistory, updateAppointmentStatusInHistory, incrementSessionStats, decrementSessionStats, updateVolunteerAttendanceStats, decrementVolunteerAttendanceStats, removeAppointmentFromHistory, updateAppointmentTimeInHistory, updateAppointmentVolunteerIdsInHistory, updateAppointmentResidentIdsInHistory, incrementHoursOnly, decrementHoursOnly } from '@/services/engagement';
 import { AppointmentStatus } from '@/services/firestore';
 

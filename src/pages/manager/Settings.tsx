@@ -1,7 +1,12 @@
+// React and Router
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+// Internationalization
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+// Icons
 import {
   Menu,
   Settings,
@@ -11,16 +16,24 @@ import {
   Globe,
   Search
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+// UI Components
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Custom Components
 import ManagerSidebar from "@/components/manager/ManagerSidebar";
+
+// Utilities and Helpers
 import { cn } from "@/lib/utils";
 import { validatePassword } from "@/utils/validation";
+
+// Firebase
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 // Constants
 const MOBILE_BREAKPOINT = 1024;

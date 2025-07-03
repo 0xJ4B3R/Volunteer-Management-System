@@ -14,33 +14,33 @@ import {
   CalendarRange,
   FileText
 } from "lucide-react";
+import i18n from '@/i18n';
 import { cn } from "@/lib/utils";
 import { db } from "@/lib/firebase";
+import { he } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Timestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { deleteDoc, doc, updateDoc, collection, query, where, getDocs, getDoc } from "firebase/firestore";
+import { AppointmentStatus } from '@/services/firestore';
 import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
 import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
 import { useExternalGroups } from "@/hooks/useFirestoreCalendar";
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUpdateAppointment } from "@/hooks/useFirestoreCalendar";
 import { AttendanceStatus, ParticipantId } from "@/services/firestore";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, startOfDay, endOfDay, isWithinInterval } from "date-fns";
-import { he } from "date-fns/locale";
 import { useAppointments, AppointmentUI } from "@/hooks/useFirestoreCalendar";
+import { AppointmentSkeleton } from "@/components/skeletons/AppointmentSkeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { deleteDoc, doc, updateDoc, collection, query, where, getDocs, getDoc } from "firebase/firestore";
 import { useAttendanceByAppointment, useAddAttendance, useUpdateAttendance } from "@/hooks/useAttendance";
-import ManagerSidebar from "@/components/manager/ManagerSidebar";
-import { addAppointmentToHistory, updateAppointmentStatusInHistory, incrementSessionStats, decrementSessionStats, updateVolunteerAttendanceStats, removeAppointmentFromHistory } from '@/services/engagement';
-import { AppointmentStatus } from '@/services/firestore';
-import { AppointmentSkeleton } from "@/components/skeletons/AppointmentSkeleton";
-import i18n from '@/i18n';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { updateAppointmentStatusInHistory, incrementSessionStats, decrementSessionStats, updateVolunteerAttendanceStats, removeAppointmentFromHistory } from '@/services/engagement';
 
 const ManagerAppointments = () => {
   const navigate = useNavigate();

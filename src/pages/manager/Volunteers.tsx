@@ -47,12 +47,12 @@ import { validatePhoneNumber, getPhoneNumberError, formatPhoneNumber, validateUs
 // Full name validation functions
 const validateFullName = (name: string): boolean => {
   if (!name || name.trim().length === 0) return false;
-  
+
   // Allow English letters, Hebrew letters, spaces, hyphens, and apostrophes
   // Hebrew Unicode range: \u0590-\u05FF (includes Hebrew letters)
   // English letters: a-z, A-Z
   const nameRegex = /^[a-zA-Z\u0590-\u05FF\s'-]+$/;
-  
+
   return nameRegex.test(name.trim());
 };
 
@@ -60,19 +60,19 @@ const getFullNameError = (name: string): string | null => {
   if (!name || name.trim().length === 0) {
     return 'errors.fullNameRequired';
   }
-  
+
   if (name.trim().length < 2) {
     return 'errors.fullNameTooShort';
   }
-  
+
   if (name.trim().length > 50) {
     return 'errors.fullNameTooLong';
   }
-  
+
   if (!validateFullName(name)) {
     return 'errors.fullNameInvalid';
   }
-  
+
   return null;
 };
 
@@ -81,19 +81,19 @@ const getUsernameError = (username: string): string | null => {
   if (!username || username.trim().length === 0) {
     return 'errors.usernameRequired';
   }
-  
+
   if (username.trim().length < 3) {
     return 'errors.usernameTooShort';
   }
-  
+
   if (username.trim().length > 20) {
     return 'errors.usernameTooLong';
   }
-  
+
   if (!validateUsername(username)) {
     return 'errors.usernameInvalid';
   }
-  
+
   return null;
 };
 
@@ -102,31 +102,31 @@ const getPasswordError = (password: string): string | null => {
   if (!password || password.trim().length === 0) {
     return 'errors.passwordRequired';
   }
-  
+
   if (password.length < 8) {
     return 'errors.passwordTooShort';
   }
-  
+
   if (!/[A-Z]/.test(password)) {
     return 'errors.passwordNoUppercase';
   }
-  
+
   if (!/[a-z]/.test(password)) {
     return 'errors.passwordNoLowercase';
   }
-  
+
   if (!/[0-9]/.test(password)) {
     return 'errors.passwordNoNumber';
   }
-  
+
   if (!/[^A-Za-z0-9]/.test(password)) {
     return 'errors.passwordNoSpecialChar';
   }
-  
+
   if (!validatePassword(password)) {
     return 'errors.passwordInvalid';
   }
-  
+
   return null;
 };
 
@@ -143,7 +143,7 @@ const createHash = async (password: string): Promise<string> => {
   } catch (error) {
     // Fall through to JavaScript implementation
   }
-  
+
   // Fallback SHA-256 implementation
   const sha256 = async (message: string): Promise<string> => {
     const msgBuffer = new TextEncoder().encode(message);
@@ -152,28 +152,28 @@ const createHash = async (password: string): Promise<string> => {
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     return hashHex;
   };
-  
+
   return await sha256(password);
 };
 
 // Birth date validation function
 const validateBirthDate = (dateString: string): boolean => {
   if (!dateString) return false;
-  
+
   const birthDate = new Date(dateString);
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const birthYear = birthDate.getFullYear();
-  
+
   // Check if it's a valid date
   if (isNaN(birthDate.getTime())) return false;
-  
+
   // Check year range (1900 to current year minus 16)
   if (birthYear < 1900 || birthYear > currentYear - 16) return false;
-  
+
   // Check if birth date is not in the future
   if (birthDate > currentDate) return false;
-  
+
   return true;
 };
 
@@ -181,32 +181,32 @@ const getBirthDateError = (dateString: string): string | null => {
   if (!dateString || dateString.trim().length === 0) {
     return 'errors.birthDateRequired';
   }
-  
+
   if (!validateBirthDate(dateString)) {
     const birthDate = new Date(dateString);
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const birthYear = birthDate.getFullYear();
-    
+
     if (isNaN(birthDate.getTime())) {
       return 'errors.birthDateInvalid';
     }
-    
+
     if (birthYear < 1900) {
       return 'errors.birthDateTooOld';
     }
-    
+
     if (birthYear > currentYear - 16) {
       return 'errors.birthDateTooYoung';
     }
-    
+
     if (birthDate > currentDate) {
       return 'errors.birthDateFuture';
     }
-    
+
     return 'errors.birthDateInvalid';
   }
-  
+
   return null;
 };
 
@@ -588,7 +588,10 @@ const ManagerVolunteers = () => {
   const [ageRange, setAgeRange] = useState<[number | null, number | null]>([null, null]);
 
   // Pagination
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    const saved = localStorage.getItem('volunteersItemsPerPage');
+    return saved ? parseInt(saved, 10) : 10;
+  });
   const [currentPage, setCurrentPage] = useState(1);
 
   // Loading and async states
@@ -1053,20 +1056,21 @@ const ManagerVolunteers = () => {
       const { id, createdAt, ...updateData } = selectedVolunteer;
       await updateVolunteer(id, updateData);
 
-      // Update user data (username and password only if password is provided)
+      // Update user data (username, password, and isActive status)
       if (selectedVolunteer.userId) {
-        const updateData: any = {
-          username: editedUsername
+        const userUpdateData: any = {
+          username: editedUsername,
+          isActive: selectedVolunteer.isActive // Sync the isActive status with the volunteer
         };
-        
+
         // Only update password if a new one is provided
         if (editedPassword.trim()) {
           // Hash the new password before updating
           const hashedPassword = await createHash(editedPassword);
-          updateData.passwordHash = hashedPassword;
+          userUpdateData.passwordHash = hashedPassword;
         }
-        
-        await updateUser(selectedVolunteer.userId, updateData);
+
+        await updateUser(selectedVolunteer.userId, userUpdateData);
       }
 
       setIsEditDialogOpen(false);
@@ -1122,10 +1126,19 @@ const ManagerVolunteers = () => {
     }[action];
 
     if (window.confirm(confirmMessage)) {
-      // Update each selected volunteer's status
-      await Promise.all(visibleSelectedVolunteers.map(id =>
-        updateVolunteer(id, { isActive: action === "activate" })
-      ));
+      // Update each selected volunteer's status and their corresponding user's status
+      await Promise.all(visibleSelectedVolunteers.map(async (id) => {
+        const volunteer = volunteers.find(v => v.id === id);
+        if (volunteer) {
+          // Update volunteer status
+          await updateVolunteer(id, { isActive: action === "activate" });
+
+          // Update corresponding user status if userId exists
+          if (volunteer.userId) {
+            await updateUser(volunteer.userId, { isActive: action === "activate" });
+          }
+        }
+      }));
       // Clear selection after action
       setSelectedVolunteers([]);
     }
@@ -2130,6 +2143,8 @@ const ManagerVolunteers = () => {
                           onValueChange={(value) => {
                             const newItemsPerPage = Number(value);
                             setItemsPerPage(newItemsPerPage);
+                            // Save to localStorage for persistence
+                            localStorage.setItem('volunteersItemsPerPage', newItemsPerPage.toString());
                             setCurrentPage(1);
                             // Clear selections when changing page size
                             setSelectedVolunteers([]);
