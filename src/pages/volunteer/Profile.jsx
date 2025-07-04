@@ -90,17 +90,17 @@ const Icon = ({ size = 50 }) => (
 );
 
 const getLevel = (hours, t) => {
-  if (hours >= 0 && hours < 9)
+  if (hours >= 0 && hours < 10)
     return { label: t("profile.badges.Beginner"), icon: <Star size={36} /> };
-  if (hours >= 10 && hours < 29)
+  if (hours >= 10 && hours < 30)
     return { label: t("profile.badges.Helper"), icon: <Hand size={36} /> };
-  if (hours >= 30 && hours < 59)
+  if (hours >= 30 && hours < 60)
     return { label: t("profile.badges.Contributor"), icon: <UserCheck size={36} /> };
-  if (hours >= 60 && hours < 99)
+  if (hours >= 60 && hours < 100)
     return { label: t("profile.badges.Supporter"), icon: <HeartHandshake size={36} /> };
-  if (hours >= 100 && hours < 149)
+  if (hours >= 100 && hours < 150)
     return { label: t("profile.badges.Advocate"), icon: <ThumbsUp size={36} /> };
-  if (hours >= 150 && hours < 199)
+  if (hours >= 150 && hours < 200)
     return { label: t("profile.badges.Champion"), icon: <ShieldCheck size={36} /> };
   if (hours >= 200 && hours < 420)
     return { label: t("profile.badges.Humanitarian"), icon: <Globe size={36} /> };
