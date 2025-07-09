@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, arrayUnion, Timestamp, query, where } from 'firebase/firestore';
-import { Layout } from "@/components/volunteer/layout"
+import { Layout } from "@/components/volunteer/Layout"
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

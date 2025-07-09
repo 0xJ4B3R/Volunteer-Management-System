@@ -52,7 +52,6 @@ const WarningLoadingScreen = ({ isDefaultPassword = false, message = null, count
       zIndex: 9999,
       padding: '1rem',
       direction: i18n.language === 'he' ? 'rtl' : 'ltr',
-      minHeight: '100vh',
       minHeight: '100dvh', // Dynamic viewport height for mobile
       overflowY: 'auto'
     }}>
@@ -75,7 +74,6 @@ const WarningLoadingScreen = ({ isDefaultPassword = false, message = null, count
           border: '2px solid #ef4444',
           borderRadius: '0.75rem',
           padding: '1.25rem',
-          maxWidth: '90%',
           width: '100%',
           maxWidth: '400px',
           textAlign: 'center',
@@ -152,7 +150,6 @@ const WarningLoadingScreen = ({ isDefaultPassword = false, message = null, count
           border: '1px solid #0ea5e9',
           borderRadius: '0.5rem',
           padding: '1rem',
-          maxWidth: '90%',
           width: '100%',
           maxWidth: '350px',
           textAlign: 'center',

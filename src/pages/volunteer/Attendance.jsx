@@ -3,7 +3,7 @@ import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, FileText, XCirc
 import { collection, getDocs, query, where, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTranslation } from 'react-i18next';
-import { Layout } from "@/components/volunteer/layout"
+import { Layout } from "@/components/volunteer/Layout"
 import LoadingScreen from '@/components/volunteer/InnerLS';
 import './styles/Attendance.css';
 

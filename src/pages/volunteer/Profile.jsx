@@ -6,7 +6,7 @@ import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "fireb
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
-import { Layout } from "@/components/volunteer/layout";
+import { Layout } from "@/components/volunteer/Layout";
 import "./styles/Profile.css";
 
 const Icon = ({ size = 50 }) => (

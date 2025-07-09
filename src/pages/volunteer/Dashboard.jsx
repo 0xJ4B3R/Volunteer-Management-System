@@ -3,7 +3,7 @@ import { Clock, Award, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, Act
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { useTranslation } from 'react-i18next';
 import { db } from '@/lib/firebase';
-import { Layout } from '@/components/volunteer/layout';
+import { Layout } from '@/components/volunteer/Layout';
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import './styles/Dashboard.css';
 

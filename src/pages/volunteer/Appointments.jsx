@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { collection, getDocs, doc, updateDoc, arrayRemove, arrayUnion, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
-import { Layout } from "@/components/volunteer/layout"
+import { Layout } from "@/components/volunteer/Layout"
 import "./styles/Appointments.css";
 
 // Utility functions for session type colors
