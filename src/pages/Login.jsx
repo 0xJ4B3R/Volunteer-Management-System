@@ -279,7 +279,7 @@ export default function LoginPage() {
       <div className="login-container">
         <div className="login-logo-section">
           <img
-            src="./public/logo.png"
+            src="/logo.png"
             alt="Login Logo"
             className="login-logo"
           />
