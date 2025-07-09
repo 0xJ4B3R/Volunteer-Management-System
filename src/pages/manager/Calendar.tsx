@@ -237,8 +237,6 @@ const deleteAttendanceByVolunteerAndAppointment = async (volunteerId: string, ap
     // Delete all matching attendance records
     const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
-
-    console.log(`[deleteAttendanceByVolunteerAndAppointment] Deleted ${querySnapshot.docs.length} attendance records for volunteer ${volunteerId} and appointment ${appointmentId}`);
   } catch (error) {
     console.error(`[deleteAttendanceByVolunteerAndAppointment] Error deleting attendance records for volunteer ${volunteerId} and appointment ${appointmentId}:`, error);
   }
@@ -842,8 +840,6 @@ const ManagerCalendar = () => {
       if (isPastSession && !newSlot.externalGroup) {
         createdSlot.maxCapacity = selectedVolunteers.length;
       }
-
-      console.log("Attempting to add calendar slot with data:", createdSlot);
 
       // Create a clean data object with only necessary fields for Firestore
       const slotDataForFirestore: Omit<CalendarSlot, 'id'> = {

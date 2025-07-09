@@ -836,9 +836,7 @@ const ManagerVolunteers = () => {
   );
 
   const handleMoreFilters = () => {
-    console.log('handleMoreFilters called');
     setIsMoreFiltersOpen(true);
-    console.log('isMoreFiltersOpen set to true');
   };
 
   // Add this function before handleCreateVolunteer
@@ -913,10 +911,13 @@ const ManagerVolunteers = () => {
       // Generate unique username
       const username = await generateVolunteerUsername();
 
+      // Hash the default password
+      const hashedPassword = await createHash("Welcome123!");
+
       // 1. Create the user first
       const newUser: Omit<FirestoreUser, 'id'> = {
         username,
-        passwordHash: "Welcome123!", // Default password
+        passwordHash: hashedPassword, // Hashed default password
         fullName: newVolunteer.fullName,
         role: "volunteer",
         isActive: true,
@@ -1287,10 +1288,13 @@ const ManagerVolunteers = () => {
             // Generate unique username
             const username = await generateVolunteerUsername();
 
+            // Hash the default password
+            const hashedPassword = await createHash("Welcome123!");
+
             // Create user account first
             const newUser: Omit<FirestoreUser, 'id'> = {
               username,
-              passwordHash: "Welcome123!", // Default password
+              passwordHash: hashedPassword, // Hashed default password
               fullName: row[0],
               role: "volunteer",
               isActive: translateStatus(row[4], isRTL) === 'active',

@@ -305,7 +305,6 @@ const ManagerSettings = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, LOADING_DURATION));
       changeLanguage(selectedLanguage);
-      console.log("Language changed successfully to:", selectedLanguage);
       // Add success notification here
     } catch (error) {
       console.error("Error changing language:", error);
