@@ -3078,7 +3078,7 @@ const ManagerVolunteers = () => {
                   <div className="flex items-center mb-2">
                     <span className="font-medium">{t('dialogs.selectedVolunteers')}</span>
                   </div>
-                  <div className="pl-6 space-y-1">
+                  <div className="space-y-1">
                     {volunteersToDelete.map(volunteer => (
                       <div key={volunteer.id} className="flex items-center">
                         <span>{volunteer.fullName}</span>
