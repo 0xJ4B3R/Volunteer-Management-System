@@ -626,22 +626,31 @@ const ManagerDashboard = () => {
     }
   };
 
-  // Get all sessions with pending volunteer requests (not just today's)
-  const sessionsWithPendingRequests = slots.filter(slot =>
-    slot.volunteerRequests && slot.volunteerRequests.some(vr => vr.status === "pending")
-  );
+  // Get future sessions with pending volunteer requests (from now on)
+  const now = new Date();
+  const sessionsWithPendingRequests = slots.filter(slot => {
+    const slotDate = new Date(slot.date);
 
-  // Calculate total pending requests from all sessions
+    // Check if session is in the future or today but hasn't started yet
+    const isFutureOrTodayNotStarted = (() => {
+      if (slotDate > now) return true; // Future dates
+      if (slotDate.toDateString() === now.toDateString()) {
+        // Today's session - check if it hasn't started yet
+        const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+        const sessionStartTime = new Date(slotDate);
+        sessionStartTime.setHours(startHour, startMinute, 0, 0);
+        return now < sessionStartTime;
+      }
+      return false; // Past sessions
+    })();
+
+    return isFutureOrTodayNotStarted &&
+      slot.volunteerRequests && 
+      slot.volunteerRequests.some(vr => vr.status === "pending");
+  });
+
+  // Calculate total pending requests from future sessions
   const totalPendingRequestsAllSessions = sessionsWithPendingRequests.reduce((acc, slot) =>
-    acc + (slot.volunteerRequests?.filter(vr => vr.status === "pending").length || 0), 0
-  );
-
-  // Get today's sessions with pending requests for the badge count
-  const todaySessionsWithPendingRequests = todaySessions.filter(slot =>
-    slot.volunteerRequests && slot.volunteerRequests.some(vr => vr.status === "pending")
-  );
-
-  const totalPendingRequests = todaySessionsWithPendingRequests.reduce((acc, slot) =>
     acc + (slot.volunteerRequests?.filter(vr => vr.status === "pending").length || 0), 0
   );
 
