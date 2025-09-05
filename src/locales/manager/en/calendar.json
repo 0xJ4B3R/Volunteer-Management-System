@@ -334,7 +334,7 @@
     "missingVolunteer": "Missing volunteer",
     "missingVolunteerDescription": "Past sessions must have at least one assigned volunteer.",
     "missingResident": "Missing resident",
-    "missingResidentDescription": "Past sessions must have at least one assigned resident.",
+    "missingResidentDescription": "Session must have at least one assigned resident.",
     "missingMaxCapacity": "Missing information",
     "missingMaxCapacityDescription": "Please fill in max capacity for regular sessions.",
     "missingExternalGroupInfo": "Missing external group information",

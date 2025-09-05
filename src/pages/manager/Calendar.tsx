@@ -697,6 +697,18 @@ const ManagerCalendar = () => {
     const isPastSession = sessionTiming === 'past';
     const isOngoingSession = sessionTiming === 'ongoing';
 
+    // Validate that sessions with volunteers must have residents
+    if (!newSlot.externalGroup && selectedVolunteers.length > 0 && (newSlot.residentIds || []).length === 0) {
+      toast({
+        title: t('messages.missingResident'),
+        description: t('messages.missingResidentDescription'),
+        variant: "destructive"
+      });
+      setIsCreatingSession(false);
+      return;
+    }
+
+    // Validate that past sessions must have volunteers if no external group
     if (isPastSession && !newSlot.externalGroup && selectedVolunteers.length === 0) {
       toast({
         title: t('messages.missingVolunteer'),
@@ -707,6 +719,7 @@ const ManagerCalendar = () => {
       return;
     }
 
+    // Validate that past sessions must have residents if no external group
     if (isPastSession && !newSlot.externalGroup && (newSlot.residentIds || []).length === 0) {
       toast({
         title: t('messages.missingResident'),
@@ -1121,6 +1134,20 @@ const ManagerCalendar = () => {
       return;
     }
 
+    // Check if this is an external group session
+    const isExternalGroup = selectedSlot.approvedVolunteers.some(v => v.type === 'external_group');
+    
+    // Validate that sessions with volunteers must have residents
+    if (!isExternalGroup && selectedSlot.approvedVolunteers.length > 0 && (selectedSlot.residentIds || []).length === 0) {
+      toast({
+        title: t('messages.missingResident'),
+        description: t('messages.missingResidentDescription'),
+        variant: "destructive"
+      });
+      setIsSavingEdit(false);
+      return;
+    }
+
     try {
       // Calculate new status and isOpen based on volunteer count and maxCapacity
       let newStatus = selectedSlot.status;
@@ -1129,9 +1156,6 @@ const ManagerCalendar = () => {
       // Check if this is a past session
       const sessionTiming = getSessionTiming(selectedSlot.date, selectedSlot.startTime, selectedSlot.endTime);
       const isPastSession = sessionTiming === 'past';
-
-      // Check if this is an external group session
-      const isExternalGroup = selectedSlot.approvedVolunteers.some(v => v.type === 'external_group');
 
       // Only skip auto-calculation if status is manually set to 'canceled'
       // Allow recalculation for 'full' status when volunteers are removed (but not for past sessions)

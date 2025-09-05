@@ -343,7 +343,7 @@
     "missingVolunteer": "מתנדב חסר",
     "missingVolunteerDescription": "פגישות בעבר חייבות לכלול לפחות מתנדב אחד.",
     "missingResident": "דייר חסר",
-    "missingResidentDescription": "פגישות בעבר חייבות לכלול לפחות דייר אחד.",
+    "missingResidentDescription": "פגישה חייבת לכלול לפחות דייר אחד.",
     "missingMaxCapacity": "מידע חסר",
     "missingMaxCapacityDescription": "נא למלא קיבולת מקסימלית לפגישות רגילות.",
     "missingExternalGroupInfo": "מידע קבוצה חיצונית חסר",
