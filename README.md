@@ -127,7 +127,22 @@ The application will automatically create the necessary collections in Firestore
 - `reports` - Generated reports
 - `external_groups` - External group visit management
 
-### 6. Run the Development Server
+### 6. Initialize Manager Account
+
+Before running the application, you need to create the first manager account:
+
+```bash
+npm run init-manager
+```
+
+This script will guide you through creating a manager account with:
+- Username and full name
+- Secure password (automatically hashed)
+- Proper role assignment
+
+The script includes validation and will prevent duplicate usernames. After creation, you can use these credentials to log in as a manager.
+
+### 7. Run the Development Server
 
 ```bash
 npm run dev
@@ -135,7 +150,7 @@ npm run dev
 
 The application will be available at `http://localhost:8080`
 
-### 7. Build for Production
+### 8. Build for Production
 
 ```bash
 npm run build
