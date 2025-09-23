@@ -1,29 +1,32 @@
 {
   "appointments": {
-    "title": "התנדבויות שלך",
-    "subtitle": "נהל וצפה בפעילויות המתוכננות שלך",
-    "search": "חפש התנדבויות...",
-    "filter": "סנן",
-    "statusLabel": "סטטוס:",
+    "title": "הפגישות שלך",
+    "subtitle": "נהל וצפה בפגישות שנקבעו",
+    "search": "חפש פגישות...",
+    "filter": "סינון",
+    "statusLabel": "סטטוס",
     "status": {
-      "approved": "אושר ✅",
-      "pending": "ממתין ⏳",
-      "rejected": "נדחה ❌",
-      "completed": "הושלם ✔️",
-      "Closed": "סגור"
+      "approved": "מאושר",
+      "pending":  "ממתין",
+      "rejected": "נדחה",
+      "completed": "הושלמה",
+      "upcoming": "בקרוב",
+      "inProgress": "בתהליך",
+      "canceled": "בוטלה",
+      "closed": "נסגר"
     },
     "tabs": {
-      "past": "עבר",
+      "past": "עברו",
       "upcoming": "קרובות",
       "pending": "ממתינות"
     },
     "note": "הערה",
-    "noAppointments": "אין לך התנדבויות להציג.",
+    "noAppointments": "אין פגישות להצגה.",
     "actions": {
       "cancel": "בטל בקשה"
     },
     "modal": {
-      "title": "פרטי ההתנדבות",
+      "title": "פרטי פגישה",
       "close": "סגור",
       "date": "תאריך",
       "time": "שעה",
@@ -39,10 +42,19 @@
       "Talk": "שיחה",
       "Other": "אחר"
     },
+    "sessionCategories": {
+      "music": "פגישת מוזיקה",
+      "gardening": "פגישת גינון",
+      "beading": "פגישת חרוזים",
+      "art": "פגישת אמנות", 
+      "baking": "פגישת אפייה",
+      "custom": "פגישה מותאמת אישית",
+      "general": "פגישה כללית"
+    },
     "filters": {
       "popular": "פופולרי",
-      "indoor": "פנימי",
-      "outdoor": "חיצוני"
+      "indoor": "בתוך מבנה",
+      "outdoor": "בחוץ"
     },
     "days": {
       "Sun": "ראשון",
@@ -68,17 +80,15 @@
       "December": "דצמבר"
     },
     "time": {
-      "AM": "בוקר",
-      "PM": "אחר הצהריים"
+      "AM": "בבוקר",
+      "PM": "אחה\"צ"
     },
-    "sessionTypes": {
-      "session": "פגישה",
-      "gardening": "גינון",
-      "music": "מוזיקה",
-      "crafts": "יצירה",
-      "art": "אמנות",
-      "baking": "אפייה",
-      "beading": "חרוזים"
+    "requestStatusLabel": "סטטוס בקשה",
+    "attendanceLabel": "נוכחות",
+    "attendance": {
+      "present": "נוכח",
+      "late": "מאחר",
+      "absent": "נעדר"
     },
     "room": "חדר"
   }

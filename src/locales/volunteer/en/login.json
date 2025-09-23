@@ -1,20 +1,14 @@
 {
-  "login": {
-    "login_title": "Login!",
-    "login_subtitle": "Welcome! So good to have you back!",
-    "username": "Username",
-    "password": "Password",
-    "login_button": "Log in",
-    "Back_to_home_page": "Back to home page",
-    "error_fill_fields": "Please fill all the fields above",
-    "error_user_not_found": "User not found",
-    "error_user_inactive": "Your account is inactive. Please contact an administrator.",
-    "error_invalid_role": "Invalid user role",
-    "error_wrong_credentials": "Wrong password or username",
-    "error_login_failed": "Couldn't login",
-    "security_alert_title": "Security Alert",
-    "default_password_warning": "You are using the default password 'Welcome123!'. For security reasons, you must change your password before continuing. You will be redirected to the security settings to update your password.",
-    "redirecting_countdown": "Redirecting to password change in {{count}} seconds..."
-  },
-  "loading": "Loading..."
+  "login_title": "Sign In",
+  "login_subtitle": "Welcome to the Volunteer Management System",
+  "username": "Username",
+  "password": "Password",
+  "login_button": "Sign In",
+  "Back_to_home_page": "Return to Homepage",
+  "error_fill_fields": "Please complete all required fields to proceed.",
+  "error_user_not_found": "The specified username does not exist in our system.",
+  "error_user_inactive": "Your account has been deactivated. Please contact the administrator for assistance.",
+  "error_invalid_role": "Your account does not have the appropriate permissions to access this system.",
+  "error_wrong_credentials": "The username or password entered is incorrect. Please verify your credentials and try again.",
+  "error_login_failed": "Authentication failed. Please try again or contact support if the issue persists."
 }

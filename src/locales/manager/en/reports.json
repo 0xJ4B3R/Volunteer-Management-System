@@ -14,7 +14,8 @@
     "allReports": "All Reports",
     "volunteerReports": "Volunteer Reports",
     "residentReports": "Resident Reports",
-    "externalGroupReports": "External Group Reports"
+    "externalGroupReports": "External Group Reports",
+    "groupAffiliationReports": "Group Affiliation Reports"
   },
   "filters": {
     "status": "Status",
@@ -69,7 +70,8 @@
     "participants": {
       "volunteer": "Volunteer",
       "resident": "Resident",
-      "externalGroup": "External Group"
+      "externalGroup": "External Group",
+      "groupAffiliation": "Group Affiliation"
     },
     "scope": {
       "all": "All",

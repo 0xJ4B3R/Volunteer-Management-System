@@ -1,46 +1,73 @@
 {
   "dashboard": {
-    "title": "לוח בקרת מתנדב",
+    "title": "פורטל מתנדבים",
+    "defaultName": "מתנדב",
     "greeting": {
       "morning": "בוקר טוב",
       "afternoon": "צהריים טובים",
       "evening": "ערב טוב"
     },
     "checkIn": {
-      "title": "נוכחות",
-      "subtitle": "רשום את הפעילות שלך עכשיו"
+      "title": "הגעתי",
+      "subtitle": "רשום את נוכחותך עכשיו",
+      "logging": "רושם...",
+      "pleaseWait": "אנא המתן..."
+    },
+    "smartLogging": {
+      "noAppointments": "אין פגישות מתוכננות להיום.",
+      "noActiveSessions": "אין פגישות פעילות כרגע. ניתן לרשום פגישות משעה לפני תחילת הפגישה ועד סיום הפגישה.",
+      "alreadyLogged": "כל הפגישות התקפות להיום כבר נרשמו.",
+      "success": "נרשמו בהצלחה {{count}} פגישה{{statusText}}!",
+      "success_other": "נרשמו בהצלחה {{count}} פגישות{{statusText}}!",
+      "error": "שגיאה ברישום הפגישה. אנא נסה שוב.",
+      "volunteerNotFound": "מידע המתנדב לא זמין. אנא רענן את הדף.",
+      "lateStatus": " (חלקן מסומנות כאיחור)"
     },
     "upcoming": {
-      "title": "פעילויות קרובות",
-      "viewAll": "צפה בהכל",
-      "none": "לא נמצאו פעילויות קרובות"
+      "title": "פגישות קרובות",
+      "viewAll": "הצג הכול",
+      "none": "אין פגישות קרובות",
+      "loading": "טוען פגישות קרובות...",
+      "loadingSubtitle": "אנא המתן בזמן שאנו מביאים את לוח הזמנים שלך.",
+      "noSessionsMessage": "עבודה טובה! הזדמנויות חדשות יופיעו כאן כאשר הן יהיו זמינות."
     },
     "activity": {
       "title": "פעילות אחרונה",
-      "present": "השתתפת בפעילות. {{notes}}",
-      "late": "הגעת מאוחר לפעילות. {{notes}}",
-      "absent": "החמצת פעילות. {{notes}}",
-      "generic": "סטטוס: {{status}}. {{notes}}",
-      "cancelledByVolunteer": "החמצת את הפעילות. בוטל על ידי מתנדב",
-      "sessionApproved": "✅ פעילות {{session}} אושרה\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
-      "sessionRejected": "❌ פעילות {{session}} נדחתה\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}{{reason}}",
-      "sessionRequested": "⏳ בקשה לפעילות {{session}}\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
-      "levelUp": "כל הכבוד! הגעת לדרגת {{level}}! 🎉"
+      "present": "נכחת בפגישה{{notes}}",
+      "late": "איחרת לפגישה{{notes}}",
+      "absent": "לא נכחת בפגישה{{notes}}",
+      "generic": "סטטוס: {{status}}{{notes}}",
+      "cancelledByVolunteer": "הפגישה בוטלה על ידי המתנדב",
+      "loading": "טוען פעילות אחרונה...",
+      "loadingSubtitle": "אנא המתן בזמן שאנו מביאים את היסטוריית הפעילות שלך.",
+      "noActivity": "אין פעילות אחרונה",
+      "noActivityMessage": "פעילויות ההתנדבות שלך יופיעו כאן. התחל לעשות הבדל היום!",
+      "unknownStatus": "לא ידוע"
     },
     "stats": {
-      "totalHours": "סך הכל שעות מאז יצירת החשבון",
+      "totalHours": "סה\"כ שעות מאז שהצטרפת",
       "hoursLabel": "שעות",
-      "level": "דרגה נוכחית",
-      "sessionsCompleted": "פעילויות שהושלמו מאז יצירת החשבון"
+      "level": "רמה נוכחית",
+      "sessionsCompleted": "סה\"כ פגישות מאז שהצטרפת",
+      "sessionsLabel": "פגישות",
+      "sessionLabelSingular": "פגישה אחת"
     },
-    "nextLevel": "הבא: {{level}}",
-    "hoursToGo": " {{count}} שעות נותרו",
+    "session": {
+      "defaultTitle": "פגישת התנדבות",
+      "defaultLocation": "מיקום הפגישה",
+      "timeTBD": "זמן ייקבע"
+    },
+    "nextLevel": "הרמה הבאה: {{level}}",
+    "hoursToGo": ", {{count}} שעות נותרו",
+    "hoursToMilestone": "{{count}} שעות לציון הדרך הבא ({{level}})",
+    "maxLevelAchieved": "🎉 הושגה הרמה המקסימלית!",
+    "levelUp": "ברכות! הגעת לרמת {{level}}!🎉",
     "levels": {
       "Beginner": "מתחיל",
       "Helper": "עוזר",
       "Contributor": "תורם",
       "Supporter": "תומך",
-      "Advocate": "תומך פעיל",
+      "Advocate": "שגריר",
       "Champion": "אלוף",
       "Humanitarian": "הומניטרי",
       "Lord of the deeds": "אדון המעשים"
@@ -48,15 +75,10 @@
     "time": {
       "recent": "לאחרונה",
       "today": "היום",
-      "yesterday": "לפני יום",
+      "yesterday": "אתמול",
       "daysAgo": "לפני {{count}} ימים",
       "weekAgo": "לפני שבוע",
-      "weeksAgo": "לפני {{count}} שבועות",
-      "justNow": "עכשיו",
-      "minutesAgo": "לפני דקה",
-      "minutesAgo_other": "לפני {{count}} דקות",
-      "hoursAgo": "לפני שעה",
-      "hoursAgo_other": "לפני {{count}} שעות"
+      "weeksAgo": "לפני {{count}} שבועות"
     },
     "months": {
       "0": "ינואר",
@@ -73,18 +95,18 @@
       "11": "דצמבר"
     },
     "months_short": {
-      "0": "ינו",
-      "1": "פבר",
+      "0": "ינו׳",
+      "1": "פבר׳",
       "2": "מרץ",
-      "3": "אפר",
+      "3": "אפר׳",
       "4": "מאי",
-      "5": "יונ",
-      "6": "יול",
-      "7": "אוג",
-      "8": "ספט",
-      "9": "אוק",
-      "10": "נוב",
-      "11": "דצמ"
+      "5": "יונ׳",
+      "6": "יול׳",
+      "7": "אוג׳",
+      "8": "ספט׳",
+      "9": "אוק׳",
+      "10": "נו׳",
+      "11": "דצמ׳"
     },
     "days": {
       "0": "א׳",
@@ -95,21 +117,9 @@
       "5": "ו׳",
       "6": "ש׳"
     },
-    "sessions": {
-      "art": "אמנות",
-      "baking": "אפייה",
-      "music": "מוזיקה",
-      "reading": "קריאה",
-      "crafts": "יצירה",
-      "exercise": "התעמלות",
-      "gardening": "גינון",
-      "beading": "חרוזים",
-      "session": "פגישה"
-    },
-    "periods": {
-      "morning": "בוקר",
-      "afternoon": "צהריים",
-      "evening": "ערב"
+    "languages": {
+      "english": "English",
+      "hebrew": "עברית"
     }
   }
 }

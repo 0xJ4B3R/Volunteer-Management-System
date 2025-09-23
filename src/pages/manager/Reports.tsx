@@ -552,6 +552,8 @@ const ManagerReports = () => {
   const [generating, setGenerating] = useState(false);
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [availableGroupAffiliations, setAvailableGroupAffiliations] = useState<string[]>([]);
+  const [loadingGroupAffiliations, setLoadingGroupAffiliations] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -613,6 +615,12 @@ const ManagerReports = () => {
         return 'דוח פעילות קבוצות חיצוניות';
       } else {
         return 'External Group Report';
+      }
+    } else if (subject === 'group_affiliation') {
+      if (isRTL) {
+        return 'דוח פעילות השתייכות קבוצתית';
+      } else {
+        return 'Group Affiliation Report';
       }
     }
     return '';
@@ -676,14 +684,41 @@ const ManagerReports = () => {
         }
       }
 
-      const reportType = `${newReport.subject}_${newReport.scope}` as ReportType;
-      const report = await generateReport(
-        reportType,
-        startDate,
-        endDate,
-        user.id,
-        newReport.scope === 'individual' ? newReport.selectedSubjectId : undefined
-      );
+      // For group affiliation, always use individual scope
+      const scope = newReport.subject === 'group_affiliation' ? 'individual' : newReport.scope;
+      const reportType = `${newReport.subject}_${scope}` as ReportType;
+      
+      let report;
+      try {
+        report = await generateReport(
+          reportType,
+          startDate,
+          endDate,
+          user.id,
+          (scope === 'individual' || newReport.subject === 'group_affiliation') ? newReport.selectedSubjectId : undefined
+        );
+      } catch (error: any) {
+        setGenerating(false);
+        
+        // Provide more user-friendly error messages
+        let errorMessage = error.message;
+        if (error.message.includes('No appointments found for group affiliation')) {
+          errorMessage = isRTL 
+            ? `לא נמצאו פגישות עבור ההשתייכות הקבוצתית "${newReport.selectedSubjectId}" בטווח התאריכים שנבחר. נסה טווח תאריכים אחר או בחר השתייכות קבוצתית אחרת.`
+            : `No appointments found for group affiliation "${newReport.selectedSubjectId}" in the selected date range. Please try a different date range or select a different group affiliation.`;
+        } else if (error.message.includes('No volunteers found for group affiliation')) {
+          errorMessage = isRTL 
+            ? `לא נמצאו מתנדבים עבור ההשתייכות הקבוצתית "${newReport.selectedSubjectId}".`
+            : `No volunteers found for group affiliation "${newReport.selectedSubjectId}".`;
+        }
+        
+        toast({
+          title: isRTL ? "שגיאה ביצירת הדוח" : "Error Generating Report",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        return;
+      }
 
       if (!report.data.subjects || report.data.subjects.length === 0) {
         setGenerating(false);
@@ -1174,7 +1209,12 @@ const ManagerReports = () => {
     try {
       // Update report in Firestore
       const reportRef = doc(reportsRef, report.id);
-      await updateDoc(reportRef, { exported: true });
+      const reportDoc = await getDoc(reportRef);
+      if (!reportDoc.exists()) {
+        await setDoc(reportRef, { ...report, exported: true });
+      } else {
+        await updateDoc(reportRef, { exported: true });
+      }
       setReports(reports.map(r =>
         r.id === report.id ? { ...r, exported: true } : r
       ));
@@ -1422,30 +1462,55 @@ const ManagerReports = () => {
 
   useEffect(() => {
     const fetchParticipants = async () => {
-      if (newReport.scope === 'individual') {
+      if (newReport.scope === 'individual' || newReport.subject === 'group_affiliation') {
         setLoadingParticipants(true);
-        let participantsQuery;
-        switch (newReport.subject) {
-          case 'volunteer':
-            participantsQuery = query(volunteersRef);
-            break;
-          case 'resident':
-            participantsQuery = query(residentsRef);
-            break;
-          case 'external_group':
-            participantsQuery = query(external_groupsRef);
-            break;
-        }
+        
+        if (newReport.subject === 'group_affiliation') {
+          // For group affiliation, fetch unique group affiliations from volunteers
+          try {
+            const volunteersSnapshot = await getDocs(volunteersRef);
+            const groupAffiliations = new Set<string>();
+            
+            volunteersSnapshot.docs.forEach(doc => {
+              const volunteerData = doc.data() as any;
+              if (volunteerData.groupAffiliation && volunteerData.groupAffiliation.trim() !== '') {
+                groupAffiliations.add(volunteerData.groupAffiliation);
+              }
+            });
+            
+            const participants = Array.from(groupAffiliations).sort().map(affiliation => ({
+              id: affiliation,
+              name: affiliation
+            }));
+            setAvailableParticipants(participants);
+          } catch (error) {
+            console.error('Error fetching group affiliations:', error);
+            setAvailableParticipants([]);
+          }
+        } else {
+          let participantsQuery;
+          switch (newReport.subject) {
+            case 'volunteer':
+              participantsQuery = query(volunteersRef);
+              break;
+            case 'resident':
+              participantsQuery = query(residentsRef);
+              break;
+            case 'external_group':
+              participantsQuery = query(external_groupsRef);
+              break;
+          }
 
-        if (participantsQuery) {
-          const snapshot = await getDocs(participantsQuery);
-          const participants = snapshot.docs.map(doc => ({
-            id: doc.id,
-            name: newReport.subject === 'external_group'
-              ? (doc.data() as any).groupName
-              : (doc.data() as any).fullName
-          }));
-          setAvailableParticipants(participants);
+          if (participantsQuery) {
+            const snapshot = await getDocs(participantsQuery);
+            const participants = snapshot.docs.map(doc => ({
+              id: doc.id,
+              name: newReport.subject === 'external_group'
+                ? (doc.data() as any).groupName
+                : (doc.data() as any).fullName
+            }));
+            setAvailableParticipants(participants);
+          }
         }
         setLoadingParticipants(false);
       } else {
@@ -1456,6 +1521,7 @@ const ManagerReports = () => {
 
     fetchParticipants();
   }, [newReport.subject, newReport.scope]);
+
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50 min-h-screen" dir={dir}>
@@ -1602,6 +1668,9 @@ const ManagerReports = () => {
                     </TabsTrigger>
                     <TabsTrigger value="external_group" className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm px-6">
                       {t('tabs.externalGroupReports')}
+                    </TabsTrigger>
+                    <TabsTrigger value="group_affiliation" className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm px-6">
+                      {t('tabs.groupAffiliationReports')}
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -1859,37 +1928,41 @@ const ManagerReports = () => {
                       <SelectItem value="volunteer">{t('generateDialog.participants.volunteer')}</SelectItem>
                       <SelectItem value="resident">{t('generateDialog.participants.resident')}</SelectItem>
                       <SelectItem value="external_group">{t('generateDialog.participants.externalGroup')}</SelectItem>
+                      <SelectItem value="group_affiliation">{t('generateDialog.participants.groupAffiliation')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className={cn(isRTL && "text-right")}>{t('generateDialog.reportScope')}</Label>
-                  <Select
-                    value={newReport.scope}
-                    onValueChange={(value) => {
-                      setNewReport({
-                        ...newReport,
-                        scope: value as ReportScope,
-                        selectedSubjectId: "" // Reset selected participant when scope changes
-                      });
-                    }}
-                    dir={dir}
-                  >
-                    <SelectTrigger className={cn(
-                      "w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                      isRTL && "text-right"
-                    )}>
-                      <SelectValue placeholder={t('generateDialog.selectScope')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('generateDialog.scope.all')}</SelectItem>
-                      <SelectItem value="individual">{t('generateDialog.scope.individual')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Report Scope - Hide for group affiliation since it's always individual */}
+                {newReport.subject !== 'group_affiliation' && (
+                  <div className="space-y-2">
+                    <Label className={cn(isRTL && "text-right")}>{t('generateDialog.reportScope')}</Label>
+                    <Select
+                      value={newReport.scope}
+                      onValueChange={(value) => {
+                        setNewReport({
+                          ...newReport,
+                          scope: value as ReportScope,
+                          selectedSubjectId: "" // Reset selected participant when scope changes
+                        });
+                      }}
+                      dir={dir}
+                    >
+                      <SelectTrigger className={cn(
+                        "w-full focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                        isRTL && "text-right"
+                      )}>
+                        <SelectValue placeholder={t('generateDialog.selectScope')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('generateDialog.scope.all')}</SelectItem>
+                        <SelectItem value="individual">{t('generateDialog.scope.individual')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-                {newReport.scope === 'individual' && (
+                {(newReport.scope === 'individual' || newReport.subject === 'group_affiliation') && (
                   <div className="space-y-2">
                     {loadingParticipants ? (
                       <p className={cn(
@@ -1904,7 +1977,9 @@ const ManagerReports = () => {
                               ? t('generateDialog.participants.externalGroup')
                               : newReport.subject === 'volunteer'
                                 ? t('generateDialog.participants.volunteer')
-                                : t('generateDialog.participants.resident')
+                                : newReport.subject === 'group_affiliation'
+                                  ? t('generateDialog.participants.groupAffiliation')
+                                  : t('generateDialog.participants.resident')
                           })}
                         </Label>
                         <Select
@@ -1921,7 +1996,9 @@ const ManagerReports = () => {
                                 ? t('generateDialog.participants.externalGroup')
                                 : newReport.subject === 'volunteer'
                                   ? t('generateDialog.participants.volunteer')
-                                  : t('generateDialog.participants.resident')
+                                  : newReport.subject === 'group_affiliation'
+                                    ? t('generateDialog.participants.groupAffiliation')
+                                    : t('generateDialog.participants.resident')
                             })} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1943,12 +2020,15 @@ const ManagerReports = () => {
                             ? t('generateDialog.participants.externalGroup').toLowerCase()
                             : newReport.subject === 'volunteer'
                               ? t('generateDialog.participants.volunteer').toLowerCase()
-                              : t('generateDialog.participants.resident').toLowerCase()
+                              : newReport.subject === 'group_affiliation'
+                                ? t('generateDialog.participants.groupAffiliation').toLowerCase()
+                                : t('generateDialog.participants.resident').toLowerCase()
                         })}
                       </p>
                     )}
                   </div>
                 )}
+
               </div>
             </div>
 
@@ -1998,7 +2078,7 @@ const ManagerReports = () => {
                   !newReport.scope ||
                   !newReport.startDate ||
                   !newReport.endDate ||
-                  (newReport.scope === 'individual' && !newReport.selectedSubjectId)
+                  ((newReport.scope === 'individual' || newReport.subject === 'group_affiliation') && !newReport.selectedSubjectId)
                 }
                 className={cn(
                   "w-[200px] transition-all duration-200 flex items-center space-x-1",

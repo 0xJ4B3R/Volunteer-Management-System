@@ -998,7 +998,7 @@ const ManagerDashboard = () => {
                                   <div className="text-sm text-slate-500 mt-1">
                                     {volunteer.slotTime}
                                     {volunteer.confirmedAt && (
-                                      <span className="text-slate-500"> • {t('checkedInToday.checkedInAt')} {new Date(volunteer.confirmedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                      <span className="text-slate-500"> • {t('checkedInToday.checkedInAt')} {new Date(volunteer.confirmedAt).toLocaleTimeString(language === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                                     )}
                                   </div>
                                 </div>

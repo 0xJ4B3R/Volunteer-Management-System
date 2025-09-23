@@ -118,6 +118,18 @@ export function Sidebar({ isSidebarOpen, toggleSidebar, isMobile = false }) {
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-999"
           onClick={toggleSidebar}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            height: '100dvh',
+            zIndex: 999,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          }}
         />
       )}
       
@@ -128,6 +140,9 @@ export function Sidebar({ isSidebarOpen, toggleSidebar, isMobile = false }) {
           sidebar-container
           ${isMobile && isSidebarOpen ? 'open' : ''}
         `}
+        style={{
+          zIndex: isMobile ? 1000 : undefined
+        }}
       >
         {/* Top Header */}
         <div className="sidebar-header">
@@ -161,44 +176,79 @@ export function Sidebar({ isSidebarOpen, toggleSidebar, isMobile = false }) {
               {(isSidebarOpen || isMobile) && <span>{item.name}</span>}
             </Link>
           ))}
-        </nav>
 
-        {/* Bottom Profile Section */}
-        <div className="relative p-3 border-t border-gray-700" ref={dropdownRef}>
-          <button
-            onClick={() => {
-              if (!isSidebarOpen && !isMobile) toggleSidebar();
-              setShowProfileMenu((prev) => !prev);
-            }}
-            className={`sidebar-link ${!isSidebarOpen && !isMobile ? 'justify-center' : ''}`}
-          >
-            <UserCircle />
-            {(isSidebarOpen || isMobile) && (
-              <>
+          {/* Profile Section - Show in main nav on mobile, at bottom on desktop */}
+          {isMobile && (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => {
+                  setShowProfileMenu((prev) => !prev);
+                }}
+                className="sidebar-link"
+              >
+                <UserCircle />
                 <span>{t('Profile')}</span>
                 <ChevronDown className={`chevron-icon ${i18n.dir() === 'rtl' ? 'rtl-chevron' : ''}`} />
-              </>
-            )}
-          </button>
-
-          {showProfileMenu && (isSidebarOpen || isMobile) && (
-            <div className={`profile-dropdown ${i18n.dir() === 'rtl' ? 'rtl' : 'ltr'}`}>
-              <Link to={profilePath} onClick={() => {
-                setShowProfileMenu(false);
-                handleNavClick();
-              }}>
-                <Eye className="dropdown-icon" />
-                {t('View Profile')}
-              </Link>
-              <button onClick={handleLogout}>
-                <LogOut className="dropdown-icon" id='Logout-icon' />
-                <p className='Logout'>
-                  {t('Logout')}
-                </p>
               </button>
+
+              {showProfileMenu && (
+                <div className={`profile-dropdown ${i18n.dir() === 'rtl' ? 'rtl' : 'ltr'}`}>
+                  <Link to={profilePath} onClick={() => {
+                    setShowProfileMenu(false);
+                    handleNavClick();
+                  }}>
+                    <Eye className="dropdown-icon" />
+                    {t('View Profile')}
+                  </Link>
+                  <button onClick={handleLogout}>
+                    <LogOut className="dropdown-icon" id='Logout-icon' />
+                    <p className='Logout'>
+                      {t('Logout')}
+                    </p>
+                  </button>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </nav>
+
+        {/* Bottom Profile Section - Desktop only */}
+        {!isMobile && (
+          <div className="relative p-3 border-t border-gray-700" ref={dropdownRef}>
+            <button
+              onClick={() => {
+                if (!isSidebarOpen) toggleSidebar();
+                setShowProfileMenu((prev) => !prev);
+              }}
+              className={`sidebar-link ${!isSidebarOpen ? 'justify-center' : ''}`}
+            >
+              <UserCircle />
+              {isSidebarOpen && (
+                <>
+                  <span>{t('Profile')}</span>
+                  <ChevronDown className={`chevron-icon ${i18n.dir() === 'rtl' ? 'rtl-chevron' : ''}`} />
+                </>
+              )}
+            </button>
+
+            {showProfileMenu && isSidebarOpen && (
+              <div className={`profile-dropdown ${i18n.dir() === 'rtl' ? 'rtl' : 'ltr'}`}>
+                <Link to={profilePath} onClick={() => {
+                  setShowProfileMenu(false);
+                }}>
+                  <Eye className="dropdown-icon" />
+                  {t('View Profile')}
+                </Link>
+                <button onClick={handleLogout}>
+                  <LogOut className="dropdown-icon" id='Logout-icon' />
+                  <p className='Logout'>
+                    {t('Logout')}
+                  </p>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

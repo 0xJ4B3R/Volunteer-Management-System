@@ -40,14 +40,23 @@ const ManagerSidebar = ({ isOpen, onClose, isMobile, onLogout }: ManagerSidebarP
   };
 
   return (
-    <aside
-      className={cn(
-        "bg-white shadow-md z-20 w-64 flex-shrink-0 border-r border-gray-200 transition-all duration-300",
-        isOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full',
-        isMobile ? `absolute inset-y-0 h-[calc(100%-56px)] ${isRTL ? 'right-0' : 'left-0'}` : 'relative',
-        isRTL && 'border-l border-r-0'
+    <>
+      {/* Mobile overlay */}
+      {isMobile && isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={onClose}
+        />
       )}
-    >
+      
+      <aside
+        className={cn(
+          "bg-white shadow-md z-50 w-64 flex-shrink-0 border-r border-gray-200 transition-all duration-300",
+          isOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full',
+          isMobile ? `fixed inset-y-0 h-[calc(100%-69px)] ${isRTL ? 'right-0' : 'left-0'}` : 'relative',
+          isRTL && 'border-l border-r-0'
+        )}
+      >
       <div className="py-4 flex flex-col h-full">
         <div className={cn(
           "px-3 flex justify-between items-center lg:hidden",
@@ -180,6 +189,7 @@ const ManagerSidebar = ({ isOpen, onClose, isMobile, onLogout }: ManagerSidebarP
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

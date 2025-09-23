@@ -27,11 +27,13 @@
   },
   "pendingRequests": {
     "title": "בקשות מתנדבים ממתינות",
-    "description": "פגישה אחת עם בקשות ממתינות",
-    "description_plural": "{{count}} פגישות עם בקשות ממתינות",
+    "description": "{{count}} פגישות עם בקשות ממתינות",
+    "description_one": "פגישה אחת עם בקשות ממתינות",
+    "description_other": "{{count}} פגישות עם בקשות ממתינות",
     "noRequests": "אין בקשות מתנדבים ממתינות כעת.",
-    "pendingCount": "בקשה אחת ממתינה",
-    "pendingCount_plural": "{{count}} בקשות ממתינות",
+    "pendingCount": "{{count}} בקשות ממתינות",
+    "pendingCount_one": "בקשה אחת ממתינה",
+    "pendingCount_other": "{{count}} בקשות ממתינות",
     "assignedResident": "דייר משוייך:",
     "matchScore": "ציון התאמה:",
     "noneAssigned": "אין משוייך",
@@ -41,6 +43,7 @@
   },
   "daySessions": {
     "title": "פגישות ביום {{date}}",
+    "description": "מתוכננות {{count}} פגישות ביום זה",
     "description_one": "פגישה אחת מתוכננת ביום זה",
     "description_other": "מתוכננות {{count}} פגישות ביום זה",
     "noSessions": "אין פגישות מתוכננות ביום זה.",
@@ -92,12 +95,14 @@
       "nov": "נוב׳",
       "dec": "דצמ׳"
     },
-    "sessionCount": "פגישה אחת",
-    "sessionCount_plural": "{{count}} פגישות",
+    "sessionCount": "{{count}} פגישות",
+    "sessionCount_one": "פגישה אחת",
+    "sessionCount_other": "{{count}} פגישות",
     "moreSessions": "+{{count}} נוספות",
     "noSessions": "אין פגישות מתוכננות ביום זה.",
-    "filled": "מולא {{current}} מתוך {{capacity}}",
-    "filled_plural": "מולאו {{current}} מתוך {{capacity}}"
+    "filled": "מולאו {{current}} מתוך {{capacity}}",
+    "filled_one": "מולא {{current}} מתוך {{capacity}}",
+    "filled_other": "מולאו {{current}} מתוך {{capacity}}"
   },
   "session": {
     "status": {

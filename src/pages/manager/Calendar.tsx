@@ -323,6 +323,54 @@ const countVolunteersWithAttendanceRecords = async (appointmentId: string): Prom
   }
 };
 
+// Function to get colors for session categories
+const getSessionCategoryColors = (sessionCategory: string | null) => {
+  switch (sessionCategory) {
+    case 'music':
+      return {
+        bg: 'bg-purple-100',
+        border: 'border-purple-500',
+        hoverBg: 'hover:bg-purple-200',
+        hoverBorder: 'hover:border-purple-600'
+      };
+    case 'gardening':
+      return {
+        bg: 'bg-green-100',
+        border: 'border-green-500',
+        hoverBg: 'hover:bg-green-200',
+        hoverBorder: 'hover:border-green-600'
+      };
+    case 'beading':
+      return {
+        bg: 'bg-pink-100',
+        border: 'border-pink-500',
+        hoverBg: 'hover:bg-pink-200',
+        hoverBorder: 'hover:border-pink-600'
+      };
+    case 'art':
+      return {
+        bg: 'bg-orange-100',
+        border: 'border-orange-500',
+        hoverBg: 'hover:bg-orange-200',
+        hoverBorder: 'hover:border-orange-600'
+      };
+    case 'baking':
+      return {
+        bg: 'bg-yellow-100',
+        border: 'border-yellow-500',
+        hoverBg: 'hover:bg-yellow-200',
+        hoverBorder: 'hover:border-yellow-600'
+      };
+    default:
+      return {
+        bg: 'bg-gray-100',
+        border: 'border-gray-500',
+        hoverBg: 'hover:bg-gray-200',
+        hoverBorder: 'hover:border-gray-600'
+      };
+  }
+};
+
 const ManagerCalendar = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('manager-calendar');
@@ -2408,25 +2456,28 @@ const ManagerCalendar = () => {
                           {sessionsForDay
                             .sort((a, b) => a.startTime.localeCompare(b.startTime))
                             .slice(0, 3)
-                            .map(session => (
-                              <div
-                                key={session.id}
-                                className={cn(
-                                  "p-1.5 rounded-md text-xs border text-gray-900 transition-colors",
-                                  session.status === "full"
-                                    ? "bg-amber-100 border-amber-500 hover:bg-amber-200 hover:border-amber-600"
-                                    : session.status === "canceled"
+                            .map(session => {
+                              const categoryColors = getSessionCategoryColors(session.sessionCategory);
+                              return (
+                                <div
+                                  key={session.id}
+                                  className={cn(
+                                    "p-1.5 rounded-md text-xs border text-gray-900 transition-colors",
+                                    session.status === "canceled"
                                       ? "bg-red-100 border-red-500 hover:bg-red-200 hover:border-red-600"
-                                      : session.status === "open"
-                                        ? "bg-blue-100 border-blue-500 hover:bg-blue-200 hover:border-blue-600"
-                                        : "bg-white border-gray-300 hover:bg-gray-100"
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedSlot(session);
-                                  setIsEditDialogOpen(true);
-                                }}
-                              >
+                                      : cn(
+                                          categoryColors.bg,
+                                          categoryColors.border,
+                                          categoryColors.hoverBg,
+                                          categoryColors.hoverBorder
+                                        )
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedSlot(session);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium">
                                     {session.startTime}
@@ -2437,7 +2488,8 @@ const ManagerCalendar = () => {
                                   </div>
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                           {sessionsForDay.length > 3 && (
                             <div className="text-xs text-center mt-1 text-slate-500">
                               +{sessionsForDay.length - 3} {t('badges.more')}
@@ -2489,24 +2541,27 @@ const ManagerCalendar = () => {
                         >
                           {sessionsForDay
                             .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                            .map(session => (
-                              <div
-                                key={session.id}
-                                className={cn(
-                                  "p-2 rounded-md text-sm cursor-pointer transition-colors border text-gray-900",
-                                  session.status === "full"
-                                    ? "bg-amber-100 border-amber-500 hover:bg-amber-200 hover:border-amber-600"
-                                    : session.status === "canceled"
+                            .map(session => {
+                              const categoryColors = getSessionCategoryColors(session.sessionCategory);
+                              return (
+                                <div
+                                  key={session.id}
+                                  className={cn(
+                                    "p-2 rounded-md text-sm cursor-pointer transition-colors border text-gray-900",
+                                    session.status === "canceled"
                                       ? "bg-red-100 border-red-500 hover:bg-red-200 hover:border-red-600"
-                                      : session.status === "open"
-                                        ? "bg-blue-100 border-blue-500 hover:bg-blue-200 hover:border-blue-600"
-                                        : "bg-white border-gray-300 hover:bg-gray-100"
-                                )}
-                                onClick={() => {
-                                  setSelectedSlot(session);
-                                  setIsEditDialogOpen(true);
-                                }}
-                              >
+                                      : cn(
+                                          categoryColors.bg,
+                                          categoryColors.border,
+                                          categoryColors.hoverBg,
+                                          categoryColors.hoverBorder
+                                        )
+                                  )}
+                                  onClick={() => {
+                                    setSelectedSlot(session);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
                                 <div className="flex flex-col items-center text-center">
                                   <div className="font-medium mb-1">
                                     {session.startTime} - {session.endTime}
@@ -2537,7 +2592,8 @@ const ManagerCalendar = () => {
                                   )}
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                         </div>
                       </div>
                     );

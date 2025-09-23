@@ -1,14 +1,21 @@
 /* Centering and styling the loading screen */
 .loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100vh;
   background-color: #f6ead1;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #333;
   gap: 20px;
+  z-index: 9999;
 }
 
 /* Loader animation */
@@ -38,4 +45,37 @@
   66.67%{transform: translate(-37.5%) rotate(270deg)}
   83.33%{transform: translate(37.5%) rotate(270deg)}
   100%  {transform: translate(37.5%) rotate(360deg)}
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .loading-screen {
+    /* Ensure full coverage on mobile */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for better mobile support */
+    
+    /* Enhanced centering for mobile */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    
+    /* Prevent any potential scrolling issues */
+    overflow: hidden;
+    
+    /* Ensure it's above everything */
+    z-index: 9999;
+  }
+  
+  .spinner {
+    /* Slightly larger spinner for better visibility on mobile */
+    height: 20px;
+    aspect-ratio: 4;
+  }
 }

@@ -41,6 +41,7 @@ import { deleteDoc, doc, updateDoc, collection, query, where, getDocs, getDoc } 
 import { useAttendanceByAppointment, useAddAttendance, useUpdateAttendance } from "@/hooks/useAttendance";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { updateAppointmentStatusInHistory, incrementSessionStats, decrementSessionStats, updateVolunteerAttendanceStats, removeAppointmentFromHistory } from '@/services/engagement';
+import { Attendance } from '@/services/firestore';
 
 const ManagerAppointments = () => {
   const navigate = useNavigate();
@@ -106,6 +107,19 @@ const ManagerAppointments = () => {
   const [isUpdatingStatuses, setIsUpdatingStatuses] = useState(false);
   const lastStatusCheckRef = useRef<number>(0);
   const STATUS_CHECK_INTERVAL = 60000; // Check every minute
+
+  // Function to get attendance records by appointment ID
+  const getAttendanceByAppointment = async (appointmentId: string): Promise<Attendance[]> => {
+    const attendanceQuery = query(
+      collection(db, 'attendance'),
+      where('appointmentId', '==', appointmentId)
+    );
+    const snapshot = await getDocs(attendanceQuery);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Attendance[];
+  };
 
   // Add back the delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -1063,6 +1077,50 @@ const ManagerAppointments = () => {
             }
             for (const rId of appointment.residentIds) {
               await updateAppointmentStatusInHistory(rId, appointment.id, newStatus, 'resident');
+            }
+
+            // Process volunteer self-reported attendance when status changes to completed
+            if (newStatus === 'completed') {
+              try {
+                const attendanceRecords = await getAttendanceByAppointment(appointment.id);
+                const volunteerAttendanceRecords = attendanceRecords.filter(record => 
+                  record.confirmedBy === 'volunteer' && 
+                  record.volunteerId.type === 'volunteer'
+                );
+
+                if (volunteerAttendanceRecords.length > 0) {
+                  const [startHour, startMinute] = slot.startTime.split(':').map(Number);
+                  const [endHour, endMinute] = slot.endTime.split(':').map(Number);
+                  const duration = (endHour + endMinute / 60) - (startHour + startMinute / 60);
+
+                  // Process each volunteer's self-reported attendance
+                  for (const attendanceRecord of volunteerAttendanceRecords) {
+                    const volunteerId = attendanceRecord.volunteerId.id;
+                    const attendanceStatus = attendanceRecord.status;
+
+                    // Update volunteer stats
+                    if (attendanceStatus === 'present' || attendanceStatus === 'late') {
+                      await incrementSessionStats(volunteerId, duration, 'volunteer');
+                      await updateVolunteerAttendanceStats(volunteerId, attendanceStatus);
+                    } else if (attendanceStatus === 'absent') {
+                      await updateVolunteerAttendanceStats(volunteerId, attendanceStatus);
+                    }
+                  }
+
+                  // Update resident stats if any volunteer was present/late
+                  const hasPresentVolunteers = volunteerAttendanceRecords.some(record => 
+                    record.status === 'present' || record.status === 'late'
+                  );
+
+                  if (hasPresentVolunteers) {
+                    for (const rId of appointment.residentIds) {
+                      await incrementSessionStats(rId, duration, 'resident');
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('Error processing volunteer attendance records:', error);
+              }
             }
 
             // Removed automatic attendance creation and stats updates when status changes to completed

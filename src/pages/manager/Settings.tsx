@@ -30,6 +30,7 @@ import ManagerSidebar from "@/components/manager/ManagerSidebar";
 // Utilities and Helpers
 import { cn } from "@/lib/utils";
 import { validatePassword } from "@/utils/validation";
+import { createHash } from "@/utils/crypto";
 
 // Firebase
 import { db } from "@/lib/firebase";
@@ -79,31 +80,7 @@ const getPasswordError = (password: string): string | null => {
   return null;
 };
 
-// Password hashing function
-const createHash = async (password: string): Promise<string> => {
-  try {
-    if (crypto && crypto.subtle && crypto.subtle.digest) {
-      const msgUint8 = new TextEncoder().encode(password);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex;
-    }
-  } catch (error) {
-    // Fall through to JavaScript implementation
-  }
-
-  // Fallback SHA-256 implementation
-  const sha256 = async (message: string): Promise<string> => {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
-  };
-
-  return await sha256(password);
-};
+// Password hashing is now handled by the shared crypto utility
 
 const ManagerSettings = () => {
   const navigate = useNavigate();

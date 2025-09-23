@@ -697,6 +697,13 @@ const ManagerResidents = () => {
       } else {
         setNewResident({ ...newResident, phoneNumber: formatted });
       }
+    } else {
+      // Clear the phone number if empty
+      if (isEdit && selectedResident) {
+        setSelectedResident({ ...selectedResident, phoneNumber: null });
+      } else {
+        setNewResident({ ...newResident, phoneNumber: null });
+      }
     }
   };
 

@@ -1,94 +1,88 @@
-import { useEffect, useState } from "react";
-import { Clock3, MapPin, Search, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import { Clock3, MapPin, Trash2, Globe, CalendarDays, CheckCircle2, Hourglass } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { collection, getDocs, doc, updateDoc, arrayRemove, arrayUnion, query, where } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import LoadingScreen from "@/components/volunteer/InnerLS";
-import { Layout } from "@/components/volunteer/Layout"
 import "./styles/Appointments.css";
+import { Layout } from '@/components/volunteer/Layout';
 
-// Utility functions for session type colors
-const getSessionTypeColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "art": return "bg-[#3b82f6] text-white";
-    case "baking": return "bg-[#ec4899] text-white";
-    case "music": return "bg-[#f59e0b] text-white";
-    case "gardening": return "bg-[#6366f1] text-white";
-    case "beading": return "bg-[#14b8a6] text-white";
-    case "session": return "bg-[#6b7280] text-white";
-    default: return "bg-[#6b7280] text-white";
-  }
+// Import proper Firestore hooks and types
+import { useCalendarSlots } from "@/hooks/useFirestoreCalendar";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+
+// Helper function to convert time to minutes for sorting
+const timeToMinutes = (timeStr) => {
+  if (!timeStr) return 0;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
 };
 
-const getSessionTypeBorderColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "art": return "#2563eb";
-    case "baking": return "#db2777";
-    case "music": return "#d97706";
-    case "gardening": return "#4f46e5";
-    case "beading": return "#0d9488";
-    case "session": return "#4b5563";
-    default: return "#4b5563";
-  }
+// Format Firebase date string to "MONTH DATE" format
+const formatFirebaseDate = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const month = date.toLocaleString('en-US', { month: 'long' });
+  const day = date.getDate();
+  return `${month} ${day}`;
 };
 
-const getSessionTypeClass = (type) => {
-  return (type || '').toLowerCase().replace(/\s+/g, '');
+// Get day of week from date string
+const getDayFromDate = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const day = date.toLocaleString('en-US', { weekday: 'short' });
+  return day.substring(0, 3); // Get first 3 letters (Mon, Tue, etc.)
 };
 
 export default function Appointments() {
-  const { t, i18n } = useTranslation("appointments");
+  const navigate = useNavigate();
+  const { t, i18n } = useTranslation('appointments');
   const [tab, setTab] = useState("upcoming");
-  const [query, setQuery] = useState("");
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showLangOptions, setShowLangOptions] = useState(false);
-  const [userId, setUserId] = useState("");
-  const [username, setUsername] = useState("");
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [currentVolunteer, setCurrentVolunteer] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+  const [dataLoaded, setDataLoaded] = useState({
+    slots: false,
+    volunteers: false
+  });
+  const [pageReady, setPageReady] = useState(false);
+  const langToggleRef = useRef(null);
 
-  // Helper function to translate session types
-  const translateSessionType = (sessionType) => {
-    if (!sessionType) return t('sessionTypes.session', 'Session');
+  // Use proper Firestore hooks
+  const { slots, loading: slotsLoading } = useCalendarSlots();
+  const { volunteers, loading: volunteersLoading } = useVolunteers();
 
-    // Handle common session type variations
-    const type = sessionType.toLowerCase().trim();
+  // Track data loading states
+  useEffect(() => {
+    setDataLoaded(prev => ({ ...prev, slots: !slotsLoading }));
+  }, [slotsLoading]);
 
-    // Map variations to standard keys
-    const typeMapping = {
-      'general session': 'session',
-      'volunteer session': 'session',
-      'regular session': 'session',
-      'default': 'session',
-      'gardening': 'gardening',
-      'arts and crafts': 'artsAndCrafts',
-      'arts & crafts': 'artsAndCrafts',
-      'music': 'music',
-      'reading': 'reading',
-      'games': 'games',
-      'cooking': 'cooking',
-      'exercise': 'exercise',
-      'outdoor activities': 'outdoorActivities',
-      'social hour': 'socialHour',
-      'bingo': 'bingo',
-      'crafts': 'crafts',
-      'storytelling': 'storytelling',
-      'meditation': 'meditation',
-      'walking': 'walking',
-      'puzzles': 'puzzles',
-      'movie night': 'movieNight',
-      'book club': 'bookClub',
-      'painting': 'painting',
-      'dancing': 'dancing',
-      'art': 'art',
-      'baking': 'baking',
-      'beading': 'beading'
-    };
+  useEffect(() => {
+    setDataLoaded(prev => ({ ...prev, volunteers: !volunteersLoading }));
+  }, [volunteersLoading]);
 
-    const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, ''); // Clean up for translation key
-    return t(`appointments.sessionTypes.${mappedType}`, sessionType);
-  };
+  // Check if all data is loaded
+  useEffect(() => {
+    const allDataLoaded = dataLoaded.slots && dataLoaded.volunteers;
+    if (allDataLoaded) {
+      setLoading(false);
+      // Add a small delay to ensure smooth transition
+      setTimeout(() => {
+        setPageReady(true);
+      }, 100);
+    }
+  }, [dataLoaded]);
+
+  // Debug: Log when slots change
+  useEffect(() => {
+    console.log("Slots updated:", slots.map(s => ({ id: s.id, sessionCategory: s.sessionCategory, customLabel: s.customLabel })));
+  }, [slots]);
 
   // Function to show notifications
   const showNotification = (message, type = "error") => {
@@ -99,341 +93,452 @@ export default function Appointments() {
     }, 5000);
   };
 
-  // Helper function to parse session date and time
-  const parseSessionDateTime = (dateStr, startTime, endTime) => {
-    try {
-      let sessionDate;
-      
-      // Handle different date formats
-      if (typeof dateStr === 'string') {
-        // If it's a string like "2025-07-02"
-        if (dateStr.includes('-')) {
-          sessionDate = new Date(dateStr);
-        } else {
-          // If it's already formatted like "May 27"
-          sessionDate = new Date(dateStr);
-        }
-      } else {
-        // If it's already a Date object
-        sessionDate = new Date(dateStr);
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
       }
-
-      // Use endTime if available, otherwise startTime
-      const timeToUse = endTime || startTime;
-      
-      if (timeToUse) {
-        // Parse time (assuming format like "14:00" or "2:00 PM")
-        let hours = 0;
-        let minutes = 0;
-
-        if (timeToUse.includes('AM') || timeToUse.includes('PM')) {
-          // Handle 12-hour format
-          const timePart = timeToUse.replace(/\s*(AM|PM)/i, '');
-          const [hourStr, minuteStr = '0'] = timePart.split(':');
-          hours = parseInt(hourStr);
-          minutes = parseInt(minuteStr);
-
-          if (timeToUse.toUpperCase().includes('PM') && hours !== 12) {
-            hours += 12;
-          } else if (timeToUse.toUpperCase().includes('AM') && hours === 12) {
-            hours = 0;
-          }
-        } else {
-          // Handle 24-hour format
-          const [hourStr, minuteStr = '0'] = timeToUse.split(':');
-          hours = parseInt(hourStr);
-          minutes = parseInt(minuteStr);
-        }
-
-        sessionDate.setHours(hours, minutes, 0, 0);
-      }
-
-      return sessionDate;
-    } catch (error) {
-      console.error("Error parsing session date/time:", error);
-      return new Date();
-    }
+    });
   };
 
-  // Function to update session status in Firestore
-  const updateSessionStatus = async (appointmentId, oldRequest, newStatus) => {
-    try {
-      const slotRef = doc(db, "calendar_slots", appointmentId);
-      
-      // Create updated request with new status and timestamp
-      const updatedRequest = {
-        ...oldRequest,
-        status: newStatus,
-        ...(newStatus === 'rejected' && { rejectedAt: new Date() }),
-        ...(newStatus === 'completed' && { completedAt: new Date() })
-      };
-
-      // Remove old request and add updated one
-      await updateDoc(slotRef, {
-        volunteerRequests: arrayRemove(oldRequest)
-      });
-
-      await updateDoc(slotRef, {
-        volunteerRequests: arrayUnion(updatedRequest)
-      });
-
-      return true;
-    } catch (error) {
-      console.error("Error updating session status:", error);
-      return false;
-    }
-  };
-
-  // Set RTL/LTR based on language
   useEffect(() => {
-    document.documentElement.dir = i18n.language === "he" ? "rtl" : "ltr";
-  }, [i18n.language]);
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
 
-  // Get the username and volunteerId from localStorage
+  // Sync currentLanguage with i18n.language
   useEffect(() => {
-    // Try multiple storage locations and user object structures
-    let storedUsername = localStorage.getItem('username');
-    let storedUserId = localStorage.getItem('userId');
-    let storedVolunteerId = localStorage.getItem('volunteerId');
-    
-    // If not found in localStorage, try sessionStorage
-    if (!storedUsername) {
-      storedUsername = sessionStorage.getItem('username');
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
     }
-    
-    if (!storedUserId) {
-      storedUserId = sessionStorage.getItem('userId');
-    }
-    
-    if (!storedVolunteerId) {
-      storedVolunteerId = sessionStorage.getItem('volunteerId');
-    }
-    
-    // Try to get from user object in localStorage/sessionStorage
-    if (!storedUsername || !storedVolunteerId) {
-      try {
-        const userStr = localStorage.getItem('user') || sessionStorage.getUser('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          storedUsername = storedUsername || user.username || user.email || user.name;
-          storedUserId = storedUserId || user.id || user.uid || user.userId;
-          storedVolunteerId = storedVolunteerId || user.volunteerId;
-        }
-      } catch (error) {
-        // Error parsing user object
-      }
-    }
-    
-    if (storedUsername) {
-      setUsername(storedUsername);
-    }
-    
-    if (storedUserId) {
-      setUserId(storedUserId);
-    }
-  }, []);
+  }, [i18n.language, currentLanguage]);
 
-  // Fetch appointments from Firebase calendar_slots collection
+  // Handle click outside language toggle to close dropdown
   useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!userId) {
-        return;
-      }
-
-      try {
-        setLoading(true);
-        
-        // Get all calendar slots
-        const calendarRef = collection(db, "calendar_slots");
-        const snapshot = await getDocs(calendarRef);
-
-        let appointmentsData = [];
-        const now = new Date();
-        let statusUpdates = []; // Track sessions that need status updates
-
-        // Go through all calendar slots and find ones where this user has volunteer requests
-        for (const docSnapshot of snapshot.docs) {
-          const data = docSnapshot.data();
-          const volunteerRequests = data.volunteerRequests || [];
-          
-          // Find if this user has a volunteer request in this slot
-          const userRequest = volunteerRequests.find(req => req.userId === userId);
-          
-          if (userRequest) {
-            // Parse session end time
-            const sessionEndTime = parseSessionDateTime(
-              data.date?.toDate ? data.date.toDate() : data.date,
-              data.startTime,
-              data.endTime
-            );
-
-            let currentStatus = userRequest.status;
-            let needsUpdate = false;
-
-            // ONLY update status if the session date/time has already passed
-            if (sessionEndTime < now) {
-              if (currentStatus === 'pending') {
-                // Pending sessions that have passed should be rejected
-                currentStatus = 'rejected';
-                needsUpdate = true;
-              } else if (currentStatus === 'approved') {
-                // Approved sessions that have passed should be completed
-                currentStatus = 'completed';
-                needsUpdate = true;
-              }
-            }
-            // If session hasn't passed yet, keep original status unchanged
-
-            // If status needs updating, add to update queue
-            if (needsUpdate) {
-              statusUpdates.push({
-                appointmentId: docSnapshot.id,
-                oldRequest: userRequest,
-                newStatus: currentStatus
-              });
-            }
-
-            // Create appointment object from calendar slot data
-            const appointment = {
-              id: docSnapshot.id,
-              appointmentId: docSnapshot.id,
-              date: formatFirebaseDate(data.date?.toDate ? data.date.toDate() : data.date),
-              day: getDayFromDate(data.date?.toDate ? data.date.toDate() : data.date),
-              time: `${data.startTime || "N/A"} - ${data.endTime || "N/A"}`,
-              location: translateSessionType(data.sessionCategory || data.customLabel || "Session"),
-              sessionType: data.sessionCategory || data.customLabel || "Session",
-              note: data.notes || "",
-              category: data.isCustom ? "Custom" : "Regular",
-              status: currentStatus, // Use the updated status (only if session has passed)
-              maxCapacity: data.maxCapacity || 1,
-              volunteers: data.volunteers || [],
-              volunteerRequests: volunteerRequests,
-              isOpen: data.isOpen,
-              residentIds: data.residentIds || [],
-              rawData: {
-                ...data,
-                date: data.date?.toDate ? data.date.toDate() : data.date,
-                userRequestStatus: currentStatus,
-                sessionEndTime: sessionEndTime
-              }
-            };
-            
-            appointmentsData.push(appointment);
-          }
-        }
-
-        // Update statuses in Firestore ONLY for sessions that have passed
-        if (statusUpdates.length > 0) {
-          console.log(`Updating ${statusUpdates.length} expired session statuses...`);
-          
-          const updatePromises = statusUpdates.map(update => 
-            updateSessionStatus(update.appointmentId, update.oldRequest, update.newStatus)
-          );
-          
-          try {
-            await Promise.all(updatePromises);
-            console.log("Expired session status updates completed successfully");
-          } catch (error) {
-            console.error("Some status updates failed:", error);
-          }
-        }
-
-        // Sort by date (newest first) and limit to latest 30
-        appointmentsData = appointmentsData
-          .sort((a, b) => new Date(b.rawData.date) - new Date(a.rawData.date))
-          .slice(0, 30);
-
-        setAppointments(appointmentsData);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching appointments:", error);
-        setLoading(false);
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
       }
     };
 
-    fetchAppointments();
-  }, [userId]);
-
-  // Format Firebase date string to "MONTH DATE for example May 27" format
-  const formatFirebaseDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const month = date.toLocaleString('en-US', { month: 'long' });
-    const day = date.getDate();
-    return `${month} ${day}`;
-  };
-
-  // Get day of week from date string
-  const getDayFromDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const day = date.toLocaleString('en-US', { weekday: 'short' });
-    return day.substring(0, 3); // Get first 3 letters (Mon, Tue, etc.)
-  };
-
-  const now = new Date();
-
-  // Tab classification logic - sessions are classified based on BOTH status AND whether they've passed
-  const tabAppointments = appointments.filter((a) => {
-    const sessionEndTime = a.rawData.sessionEndTime || new Date();
-    
-    if (tab === "upcoming") {
-      // Show approved sessions that haven't passed yet
-      return a.status === "approved" && sessionEndTime > now;
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-    if (tab === "past") {
-      // Show completed or rejected sessions (including auto-updated expired ones)
-      return a.status === "completed" || a.status === "rejected";
-    }
-    if (tab === "pending") {
-      // Show pending sessions that haven't passed yet
-      return a.status === "pending" && sessionEndTime > now;
-    }
-    return false;
-  });
 
-  const filtered = tabAppointments
-    .filter((a) => {
-      const matchSearch =
-        (a.location?.toLowerCase().includes(query.toLowerCase()) || false) ||
-        (a.note?.toLowerCase().includes(query.toLowerCase()) || false);
-      return matchSearch;
-    })
-    .sort((a, b) => {
-      if (tab === "past") {
-        return new Date(b.rawData.date) - new Date(a.rawData.date); // Latest to oldest
-      }
-      return new Date(a.rawData.date) - new Date(b.rawData.date); // Soonest to latest for other tabs
-    });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
 
-  const handleCancel = async (id) => {
+  // Check authentication and get current user
+  useEffect(() => {
     try {
-      // Find the appointment to get the volunteer request data
-      const appointment = appointments.find(a => a.id === id);
-      if (!appointment) return;
-
-      // Find the user's volunteer request to remove
-      const userRequest = appointment.volunteerRequests.find(req => req.userId === userId);
-
-      if (userRequest) {
-        // Update Firestore: Remove the user's volunteer request from the calendar slot
-        const slotRef = doc(db, "calendar_slots", id);
-        await updateDoc(slotRef, {
-          volunteerRequests: arrayRemove(userRequest)
-        });
-
-        // Update local state
-        setAppointments(prev => prev.filter(a => a.id !== id));
-
-        if (selected && selected.id === id) setSelected(null);
-
-        // Show success notification
-        showNotification("Appointment canceled successfully!", "success");
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.username) {
+        navigate("/login");
+      } else if (user.role !== "volunteer") {
+        navigate("/manager");
       } else {
-        showNotification("Appointment not found or unable to cancel.", "error");
+        setCurrentUser(user);
       }
     } catch (error) {
-      showNotification("Error canceling appointment. Please try again.", "error");
+      console.error("Auth check error:", error);
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  // Find current volunteer record when user and volunteers data is available
+  useEffect(() => {
+    if (currentUser && volunteers.length > 0) {
+      const volunteer = volunteers.find(v =>
+        v.userId === currentUser.id ||
+        v.userId === currentUser.uid ||
+        v.fullName === currentUser.username // Fallback if linked by name
+      );
+      setCurrentVolunteer(volunteer);
+
+      if (!volunteer) {
+        console.warn("Could not find volunteer record for user:", currentUser);
+      }
+    }
+  }, [currentUser, volunteers]);
+
+  // Helper function to determine the best category to display
+  const getCategoryDisplay = (slot) => {
+    if (slot?.customLabel) return slot.customLabel;
+    if (slot?.sessionCategory) {
+      return t(`appointments.sessionCategories.${slot.sessionCategory}`) || `${slot.sessionCategory.charAt(0).toUpperCase() + slot.sessionCategory.slice(1)} Session`;
+    }
+    return slot?.isCustom ? t('appointments.sessionCategories.custom') : t('appointments.sessionCategories.general');
+  };
+
+  // Function to get colors for session categories (matching manager calendar)
+  const getSessionCategoryColors = (sessionCategory) => {
+    switch (sessionCategory) {
+      case 'music':
+        return {
+          bg: '#f3e8ff', // purple-100
+          border: '#8b5cf6', // purple-500
+          text: '#6b21a8' // purple-800
+        };
+      case 'gardening':
+        return {
+          bg: '#dcfce7', // green-100
+          border: '#22c55e', // green-500
+          text: '#166534' // green-800
+        };
+      case 'beading':
+        return {
+          bg: '#fce7f3', // pink-100
+          border: '#ec4899', // pink-500
+          text: '#be185d' // pink-800
+        };
+      case 'art':
+        return {
+          bg: '#fed7aa', // orange-100
+          border: '#f97316', // orange-500
+          text: '#c2410c' // orange-800
+        };
+      case 'baking':
+        return {
+          bg: '#fef3c7', // yellow-100
+          border: '#eab308', // yellow-500
+          text: '#a16207' // yellow-800
+        };
+      default:
+        return {
+          bg: '#f3f4f6', // gray-100
+          border: '#6b7280', // gray-500
+          text: '#374151' // gray-800
+        };
+    }
+  };
+
+  // Memoized appointments from volunteer's appointmentHistory
+  const userAppointments = useMemo(() => {
+    if (!currentVolunteer || !slots.length) {
+      return [];
+    }
+
+    console.log("Current volunteer:", currentVolunteer);
+    console.log("Volunteer appointmentHistory:", currentVolunteer.appointmentHistory);
+    console.log("Slots:", slots);
+    console.log("Slots with sessionCategory:", slots.map(s => ({ id: s.id, sessionCategory: s.sessionCategory, customLabel: s.customLabel })));
+
+    // Get appointments from volunteer's appointmentHistory (confirmed appointments)
+    const historyAppointments = (currentVolunteer.appointmentHistory || [])
+      .map(appointmentEntry => {
+        // Find the corresponding slot for additional details - try multiple lookup methods
+        let slot = slots.find(s => s.id === appointmentEntry.appointmentId);
+        if (!slot) {
+          slot = slots.find(s => s.appointmentId === appointmentEntry.appointmentId);
+        }
+        if (!slot) {
+          slot = slots.find(s => s.id === appointmentEntry.appointmentId);
+        }
+
+        console.log(`History appointment ${appointmentEntry.appointmentId}:`, {
+          appointmentId: appointmentEntry.appointmentId,
+          slotFound: !!slot,
+          slotId: slot?.id,
+          slotAppointmentId: slot?.appointmentId,
+          sessionCategory: slot?.sessionCategory,
+          customLabel: slot?.customLabel,
+          categoryDisplay: getCategoryDisplay(slot),
+          originalStatus: appointmentEntry.status,
+          appointmentDate: appointmentEntry.date,
+          isPast: new Date(appointmentEntry.date) < new Date()
+        });
+
+        // Determine the correct status based on appointment state and date
+        const appointmentDate = new Date(appointmentEntry.date);
+        const now = new Date();
+        const isPast = appointmentDate < now;
+        const actualStatus = appointmentEntry.status || "upcoming";
+        
+        // For history appointments, determine status based on actual state and date
+        let displayStatus = actualStatus;
+        
+        // Handle different status scenarios
+        if (isPast) {
+          // For past appointments, override certain statuses
+          if (actualStatus === "upcoming" || actualStatus === "inProgress") {
+            // Past appointments that were upcoming or in progress should be completed
+            displayStatus = "completed";
+          } else if (actualStatus === "canceled") {
+            displayStatus = "canceled";
+          }
+          // Keep other statuses as they are (completed, etc.)
+        } else {
+          // For future appointments, keep the actual status
+          displayStatus = actualStatus;
+        }
+
+        console.log(`Status determination for ${appointmentEntry.appointmentId}:`, {
+          originalStatus: actualStatus,
+          isPast: isPast,
+          finalStatus: displayStatus,
+          appointmentDate: appointmentEntry.date
+        });
+
+        return {
+          id: appointmentEntry.appointmentId,
+          appointmentId: appointmentEntry.appointmentId,
+          date: formatFirebaseDate(appointmentEntry.date),
+          day: getDayFromDate(appointmentEntry.date),
+          time: `${appointmentEntry.startTime} - ${appointmentEntry.endTime}`,
+          location: getCategoryDisplay(slot),
+          sessionType: getCategoryDisplay(slot),
+          note: slot?.notes || "",
+          category: slot?.isCustom ? "Custom" : "Regular",
+          status: displayStatus,
+          appointmentStatus: actualStatus,
+          attendanceStatus: appointmentEntry.attendanceStatus,
+          maxCapacity: slot?.maxCapacity || 1,
+          volunteerRequests: slot?.volunteerRequests || [],
+          isOpen: slot?.isOpen ?? true,
+          residentIds: appointmentEntry.residentIds || [],
+          rawData: {
+            date: appointmentEntry.date,
+            startTime: appointmentEntry.startTime,
+            endTime: appointmentEntry.endTime,
+            status: actualStatus,
+            calendarSlotId: appointmentEntry.appointmentId
+          }
+        };
+      });
+
+    // Get slots with pending volunteer requests (not yet in appointmentHistory)
+    const pendingRequestSlots = slots
+      .filter(slot => {
+        // Check if current volunteer has a request for this slot
+        const hasVolunteerRequest = slot.volunteerRequests?.some(vr =>
+          vr.volunteerId === currentVolunteer.id
+        );
+
+        // Only include if there's no corresponding appointment in history yet
+        // Check multiple possible ID matches to prevent duplicates
+        const hasAppointmentInHistory = currentVolunteer.appointmentHistory?.some(appointment =>
+          appointment.appointmentId === slot.id ||
+          appointment.appointmentId === slot.appointmentId ||
+          (slot.appointmentId && appointment.appointmentId === slot.appointmentId)
+        );
+
+        return hasVolunteerRequest && !hasAppointmentInHistory;
+      })
+      .map(slot => {
+        const volunteerRequest = slot.volunteerRequests?.find(vr =>
+          vr.volunteerId === currentVolunteer.id
+        );
+
+        console.log(`Pending request slot ${slot.id}:`, {
+          slotId: slot.id,
+          appointmentId: slot.appointmentId,
+          sessionCategory: slot.sessionCategory,
+          customLabel: slot.customLabel,
+          categoryDisplay: getCategoryDisplay(slot)
+        });
+
+        // For pending requests, use the volunteer request status
+        const requestStatus = volunteerRequest?.status || "pending";
+        
+        return {
+          id: slot.id, // Use slot ID for pending requests
+          appointmentId: slot.appointmentId || slot.id,
+          date: formatFirebaseDate(slot.date),
+          day: getDayFromDate(slot.date),
+          time: `${slot.startTime} - ${slot.endTime}`,
+          location: getCategoryDisplay(slot),
+          sessionType: getCategoryDisplay(slot),
+          note: slot.notes || "",
+          category: slot.isCustom ? "Custom" : "Regular",
+          status: requestStatus,
+          appointmentStatus: "pending",
+          attendanceStatus: null,
+          maxCapacity: slot.maxCapacity,
+          volunteerRequests: slot.volunteerRequests || [],
+          isOpen: slot.isOpen,
+          residentIds: slot.residentIds || [],
+          rawData: {
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            status: requestStatus,
+            calendarSlotId: slot.id
+          }
+        };
+      });
+
+    // Combine both arrays and remove duplicates
+    const allAppointments = [...historyAppointments, ...pendingRequestSlots]
+      .filter(Boolean); // Remove null entries
+
+    // Remove duplicates based on appointmentId and date/time
+    const uniqueAppointments = allAppointments.reduce((acc, current) => {
+      const existingIndex = acc.findIndex(appointment => 
+        appointment.appointmentId === current.appointmentId &&
+        appointment.rawData.date === current.rawData.date &&
+        appointment.rawData.startTime === current.rawData.startTime
+      );
+      
+      if (existingIndex === -1) {
+        acc.push(current);
+      } else {
+        console.log(`Duplicate appointment found: ${current.appointmentId} on ${current.rawData.date} at ${current.rawData.startTime}`);
+        // If duplicate found, prefer the one from history (more complete data)
+        if (currentVolunteer.appointmentHistory?.some(appointment =>
+          appointment.appointmentId === current.appointmentId
+        )) {
+          console.log(`Replacing with history appointment for ${current.appointmentId}`);
+          acc[existingIndex] = current;
+        }
+      }
+      
+      return acc;
+    }, []);
+
+    // Sort by date, then by time
+    return uniqueAppointments.sort((a, b) => {
+      const dateA = new Date(a.rawData.date);
+      const dateB = new Date(b.rawData.date);
+
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+
+      // If same date, sort by start time
+      const timeA = timeToMinutes(a.rawData.startTime);
+      const timeB = timeToMinutes(b.rawData.startTime);
+      return timeA - timeB;
+    });
+  }, [currentVolunteer, slots, t, i18n.language]);
+
+
+  // Filter appointments by tab
+  const tabAppointments = useMemo(() => {
+    return userAppointments.filter((a) => {
+      const dateObj = new Date(a.rawData.date);
+      const now = new Date();
+
+      if (tab === "upcoming") {
+        // Only show appointments from appointmentHistory (confirmed appointments)
+        // that are not completed and are in the future
+        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment =>
+          appointment.appointmentId === a.appointmentId
+        );
+        // Check for AppointmentStatus values
+        const isNotCompleted = a.appointmentStatus !== "completed" && a.appointmentStatus !== "canceled";
+        const isFuture = dateObj >= now;
+        return isFromHistory && isNotCompleted && isFuture;
+      }
+      if (tab === "past") {
+        // Show completed appointments from appointmentHistory
+        const isFromHistory = currentVolunteer.appointmentHistory?.some(appointment =>
+          appointment.appointmentId === a.appointmentId
+        );
+        // Check for AppointmentStatus values
+        return isFromHistory && (a.appointmentStatus === "completed" || a.appointmentStatus === "canceled" || dateObj < now);
+      }
+      if (tab === "pending") {
+        // Show appointments where volunteer request status is pending (VolunteerRequestStatus)
+        return a.status === "pending";
+      }
+      return false;
+    });
+  }, [userAppointments, tab, currentVolunteer]);
+
+
+  const handleCancel = async (appointmentId) => {
+    console.log("=== CANCEL DEBUG ===");
+    console.log("appointmentId:", appointmentId);
+    console.log("currentVolunteer:", currentVolunteer);
+
+    if (!currentVolunteer) {
+      showNotification("Volunteer data not available", "error");
+      return;
+    }
+
+    try {
+      // Find the appointment to get slot data
+      const appointment = userAppointments.find(a => a.id === appointmentId);
+      console.log("Found appointment:", appointment);
+
+      if (!appointment) {
+        showNotification("Appointment not found", "error");
+        return;
+      }
+
+      // Find the corresponding slot
+      const slot = slots.find(s =>
+        s.id === appointment.rawData.calendarSlotId ||
+        s.appointmentId === appointmentId ||
+        s.id === appointmentId // For pending requests, the slot ID is used as appointment ID
+      );
+      console.log("Found slot:", slot);
+
+      if (!slot) {
+        showNotification("Slot not found", "error");
+        return;
+      }
+
+      // Remove the volunteer request from the slot
+      const slotRef = doc(db, "calendar_slots", slot.id);
+
+      // Find the volunteer request to remove
+      console.log("Looking for volunteer request with volunteerId:", currentVolunteer.id);
+      console.log("Slot volunteerRequests:", slot.volunteerRequests);
+
+      const volunteerRequestToRemove = slot.volunteerRequests?.find(vr =>
+        vr.volunteerId === currentVolunteer.id
+      );
+
+      console.log("volunteerRequestToRemove:", volunteerRequestToRemove);
+
+      if (volunteerRequestToRemove) {
+        console.log("Attempting to remove request from slot:", slot.id);
+
+        // Filter out the volunteer request
+        const updatedVolunteerRequests = slot.volunteerRequests.filter(vr =>
+          vr.volunteerId !== currentVolunteer.id
+        );
+
+        console.log("Original requests:", slot.volunteerRequests.length);
+        console.log("Updated requests:", updatedVolunteerRequests.length);
+
+        await updateDoc(slotRef, {
+          volunteerRequests: updatedVolunteerRequests
+        });
+
+        showNotification("Request canceled successfully!", "success");
+      } else {
+        showNotification("No pending request found to cancel", "error");
+      }
+
+      if (selected && selected.id === appointmentId) setSelected(null);
+
+    } catch (error) {
+      console.error("Error canceling appointment:", error);
+      showNotification("Error canceling request. Please try again.", "error");
     }
   };
 
@@ -465,40 +570,27 @@ export default function Appointments() {
     return `${t(`appointments.months.${month}`)} ${day}`;
   };
 
-  // Get status tag with appropriate styling
-  const getStatusTag = (appointment) => {
-    const status = appointment.status;
-
-    const getStatusClass = (status) => {
-      switch (status) {
-        case "approved": return "status-approved";
-        case "pending": return "status-pending";
-        case "rejected": return "status-rejected";
-        case "completed": return "status-completed";
-        default: return "status-default";
-      }
-    };
-
-    return (
-      <div className={`tag ${getSessionTypeClass(appointment.sessionType)} ${getStatusClass(status)}`}>
-        {translateSessionType(appointment.sessionType)}
-      </div>
-    );
-  };
 
   return (
     <Layout>
-      <div className="profile-page">
+      <div 
+        className="profile-page"
+        style={{
+          opacity: pageReady ? 1 : 0,
+          transition: 'opacity 0.3s ease-in-out'
+        }}
+      >
         {/* Notification Toast */}
         {notification.show && (
           <div
             className={`notification-toast ${notification.type}`}
             style={{
               position: 'fixed',
-              top: '20px',
-              right: '20px',
+              top: window.innerWidth <= 768 ? '4rem' : '20px',
+              right: window.innerWidth <= 768 ? '0.5rem' : '20px',
+              left: window.innerWidth <= 768 ? '0.5rem' : 'auto',
               zIndex: 9999,
-              padding: '1rem 1.5rem',
+              padding: window.innerWidth <= 768 ? '0.75rem 1rem' : '1rem 1.5rem',
               borderRadius: '0.5rem',
               color: 'white',
               fontSize: '0.875rem',
@@ -508,7 +600,8 @@ export default function Appointments() {
                 notification.type === 'success' ? '#10b981' : '#3b82f6',
               transform: 'translateX(0)',
               transition: 'all 0.3s ease',
-              maxWidth: '300px',
+              maxWidth: window.innerWidth <= 768 ? 'none' : '300px',
+              width: window.innerWidth <= 768 ? 'auto' : 'auto',
               wordWrap: 'break-word'
             }}
           >
@@ -540,18 +633,6 @@ export default function Appointments() {
           <LoadingScreen />
         ) : (
           <>
-            <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
-              <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-                <Globe size={35} />
-              </button>
-              {showLangOptions && (
-                <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-                  <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>English</button>
-                  <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>עברית</button>
-                </div>
-              )}
-            </div>
-
             <div className="profile-header">
               <h1 className="profile-title">{t("appointments.title")}</h1>
               <p className="profile-subtitle">{t("appointments.subtitle")}</p>
@@ -568,47 +649,77 @@ export default function Appointments() {
             </div>
 
             <div className="profile-overview">
-              <div className="controls-row">
-                <div className="search-bar">
-                  <Search size={18} />
-                  <input placeholder={t("appointments.search")} value={query} onChange={(e) => setQuery(e.target.value)} />
-                </div>
-              </div>
-
-              <div className="appointments-list">
-                {filtered.length === 0 ? (
+              <div className="appointments-list" key={`appointments-${slots.length}-${slots.map(s => s.sessionCategory).join(',')}`}>
+                {tabAppointments.length === 0 ? (
                   <div className="note">{t("appointments.noAppointments")}</div>
                 ) : (
-                  filtered.map((a) => (
-                    <div
-                      className={`appointment-card ${getSessionTypeClass(a.sessionType)}`}
-                      key={a.id}
-                      onClick={() => setSelected(a)}
-                      style={{
-                        borderLeftColor: getSessionTypeBorderColor(a.sessionType)
-                      }}
-                    >
-                      <div className="appointment-left">
-                        <div className="appointment-date">{formatDate(a.date)}</div>
-                        <div className="appointment-day">{t(`appointments.days.${a.day}`)}</div>
-                      </div>
-                      <div className="appointment-middle">
-                        <div className="info"><Clock3 size={16} /> {formatTime(a.time)}</div>
-                        <div className="info"><MapPin size={16} /> {t("appointments.modal.category")}: {a.location}</div>
-                        {a.note && <div className="note">{t("appointments.note")}: {a.note}</div>}
-                      </div>
-                      <div className="appointment-right">
-                        {getStatusTag(a)}
-                        {a.status === "pending" && (
-                          <div className="actions">
-                            <button className="btn danger" onClick={(e) => { e.stopPropagation(); handleCancel(a.id); }}>
-                              <Trash2 size={14} /> {t("appointments.actions.cancel")}
-                            </button>
+                  tabAppointments.map((a) => {
+                    // Get the slot to determine session category - try multiple lookup methods
+                    let slot = slots.find(s => s.id === a.rawData.calendarSlotId);
+                    if (!slot) {
+                      // Try finding by appointmentId
+                      slot = slots.find(s => s.appointmentId === a.appointmentId);
+                    }
+                    if (!slot) {
+                      // Try finding by id directly
+                      slot = slots.find(s => s.id === a.appointmentId);
+                    }
+                    
+                    const categoryColors = getSessionCategoryColors(slot?.sessionCategory);
+                    
+                    console.log(`Appointment ${a.id}:`, {
+                      appointmentId: a.appointmentId,
+                      calendarSlotId: a.rawData.calendarSlotId,
+                      slotFound: !!slot,
+                      slotId: slot?.id,
+                      slotAppointmentId: slot?.appointmentId,
+                      sessionCategory: slot?.sessionCategory,
+                      customLabel: slot?.customLabel,
+                      colors: categoryColors,
+                      allSlotIds: slots.map(s => ({ id: s.id, appointmentId: s.appointmentId }))
+                    });
+                    
+                    return (
+                      <div
+                        className="appointment-card session"
+                        key={`${a.id}-${slot?.sessionCategory || 'default'}-${slot?.customLabel || 'default'}`}
+                        onClick={() => setSelected(a)}
+                        style={{
+                          borderLeftColor: categoryColors.border,
+                          backgroundColor: categoryColors.bg
+                        }}
+                      >
+                        <div className="appointment-header">
+                          <div className="appointment-date-section">
+                            <div className="appointment-date">{formatDate(a.date)}</div>
+                            <div className="appointment-day">{t(`appointments.days.${a.day}`)}</div>
                           </div>
-                        )}
+                          {a.status === "pending" && (
+                            <div className="appointment-actions">
+                              <button className="btn-cancel" onClick={(e) => { e.stopPropagation(); handleCancel(a.id); }}>
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="appointment-content">
+                          <div className="appointment-time">
+                            <Clock3 size={16} />
+                            <span>{formatTime(a.time)}</span>
+                          </div>
+                          <div className="appointment-category">
+                            <MapPin size={16} />
+                            <span>{a.location}</span>
+                          </div>
+                          {a.note && (
+                            <div className="appointment-note">
+                              <span>{a.note}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -635,141 +746,81 @@ export default function Appointments() {
                   className="modal-content appointments-modal"
                   onClick={(e) => e.stopPropagation()}
                   style={{
-                    maxWidth: '28rem', // max-w-md equivalent
+                    maxWidth: '28rem',
                     width: '100%',
-                    borderRadius: '0.75rem', // rounded-xl
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-xl
+                    borderRadius: '1rem',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                     backgroundColor: 'white',
-                    padding: '1.5rem', // p-6
-                    position: 'relative'
+                    padding: '0',
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}
                 >
                   {/* Modal Header */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <h2
-                      style={{
-                        fontSize: '1.125rem', // text-lg
-                        fontWeight: 'bold',
-                        marginBottom: '1rem',
-                        textAlign: i18n.language === 'he' ? 'right' : 'left',
-                        direction: 'auto'
-                      }}
-                    >
+                  <div className="modal-header">
+                    <h2 className="modal-title">
                       {t("appointments.modal.title")}
                     </h2>
-
-                    {/* Session Type Badge */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <span
-                        style={{
-                          backgroundColor: getSessionTypeColor(selected.sessionType),
-                          color: 'white',
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '0.375rem',
-                          display: 'inline-block'
-                        }}
-                      >
-                        {translateSessionType(selected.sessionType)}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: '#6b7280', // text-gray-500
-                        fontSize: '0.875rem', // text-sm
-                        marginBottom: '1rem'
-                      }}
-                    >
-                      <span style={{ marginRight: '0.5rem', fontWeight: '500' }}>
-                        {t("appointments.modal.date")}:
-                      </span>
-                      <span>
-                        {formatDate(selected.date)} ({t(`appointments.days.${selected.day}`)})
-                      </span>
+                    <div className="modal-date">
+                      {formatDate(selected.date)} ({t(`appointments.days.${selected.day}`)})
                     </div>
                   </div>
 
                   {/* Modal Body */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>
+                  <div className="modal-body">
+                    <div className="modal-info-grid">
+                      <div className="modal-info-item">
+                        <div className="modal-info-label">
                           {t("appointments.modal.time")}:
-                        </span>
-                        <span
-                          style={{
-                            backgroundColor: '#f3f4f6',
-                            borderRadius: '0.25rem',
-                            padding: '0.125rem 0.5rem',
-                            color: '#1f2937',
-                            fontSize: '0.875rem'
-                          }}
-                        >
+                        </div>
+                        <div className="modal-info-value time-badge">
                           {formatTime(selected.time)}
-                        </span>
+                        </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontWeight: '500', color: '#374151' }}>
+                      <div className="modal-info-item">
+                        <div className="modal-info-label">
                           {t("appointments.modal.category")}:
-                        </span>
-                        <span style={{ color: '#6b7280' }}>{selected.location}</span>
+                        </div>
+                        <div className="modal-info-value category-badge">
+                          {selected.location}
+                        </div>
                       </div>
 
                       {selected.note && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <span style={{ fontWeight: '500', color: '#374151' }}>
-                            {t("appointments.modal.note")}:
-                          </span>
-                          <span
-                            style={{
-                              color: '#6b7280',
-                              fontStyle: 'italic',
-                              padding: '0.5rem',
-                              backgroundColor: '#f9fafb',
-                              borderRadius: '0.375rem',
-                              fontSize: '0.875rem'
-                            }}
-                          >
+                        <div className="modal-info-item full-width">
+                          <div className="modal-info-label">
+                            {t("appointments.modal.note")}
+                          </div>
+                          <div className="modal-note">
                             {selected.note}
-                          </span>
+                          </div>
                         </div>
                       )}
 
                       {/* Show status if available */}
                       {selected.status && (
-                        <div
-                          style={{
-                            marginTop: "1rem",
-                            padding: "0.75rem",
-                            borderRadius: "0.5rem",
-                            backgroundColor:
-                              selected.status === "approved" ? "#d1fae5" :
-                                selected.status === "pending" ? "#fef3c7" :
-                                  selected.status === "completed" ? "#e0e7ff" :
-                                    selected.status === "rejected" ? "#fee2e2" : "#f3f4f6",
-                            border: `1px solid ${selected.status === "approved" ? "#10b981" :
-                              selected.status === "pending" ? "#f59e0b" :
-                                selected.status === "completed" ? "#6366f1" :
-                                  selected.status === "rejected" ? "#ef4444" : "#d1d5db"
-                              }`
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <span style={{
-                              fontWeight: 500,
-                              color:
-                                selected.status === "approved" ? "#065f46" :
-                                  selected.status === "pending" ? "#92400e" :
-                                    selected.status === "completed" ? "#3730a3" :
-                                      selected.status === "rejected" ? "#991b1b" : "#374151"
-                            }}>
-                              {t("appointments.statusLabel")} {t(`appointments.status.${selected.status}`)}
-                            </span>
+                        <div className="modal-info-item full-width">
+                          <div className="modal-info-label">
+                            {["pending", "approved", "rejected"].includes(selected.status)
+                              ? t("appointments.requestStatusLabel")
+                              : t("appointments.statusLabel")
+                            }
+                          </div>
+                          <div className={`modal-status-badge status-${selected.status}`}>
+                            {t(`appointments.status.${selected.status}`)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show attendance status if available */}
+                      {selected.attendanceStatus && (
+                        <div className="modal-info-item full-width">
+                          <div className="modal-info-label">
+                            {t("appointments.attendanceLabel")}
+                          </div>
+                          <div className={`modal-status-badge attendance-${selected.attendanceStatus}`}>
+                            {t(`appointments.attendance.${selected.attendanceStatus}`)}
                           </div>
                         </div>
                       )}
@@ -777,23 +828,10 @@ export default function Appointments() {
                   </div>
 
                   {/* Modal Footer */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className="modal-footer">
                     <button
+                      className="modal-close-btn"
                       onClick={() => setSelected(null)}
-                      style={{
-                        backgroundColor: '#416a42',
-                        color: 'white',
-                        width: '100%',
-                        padding: '0.625rem',
-                        borderRadius: '0.375rem',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '500',
-                        fontSize: '0.875rem',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseOver={(e) => e.target.style.backgroundColor = '#5c885d'}
-                      onMouseOut={(e) => e.target.style.backgroundColor = '#416a42'}
                     >
                       {t("appointments.modal.close")}
                     </button>
@@ -804,6 +842,33 @@ export default function Appointments() {
           </>
         )}
       </div>
+      <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
+        <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+          <Globe className="lang-icon" />
+        </button>
+        {showLangOptions && (
+          <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+            <button onClick={async () => {
+              localStorage.setItem('language', 'en');
+              await i18n.changeLanguage('en');
+              setCurrentLanguage('en');
+              applyLanguageDirection('en');
+              setShowLangOptions(false);
+            }}>
+              English
+            </button>
+            <button onClick={async () => {
+              localStorage.setItem('language', 'he');
+              await i18n.changeLanguage('he');
+              setCurrentLanguage('he');
+              applyLanguageDirection('he');
+              setShowLangOptions(false);
+            }}>
+              עברית
+            </button>
+          </div>
+        )}
+      </div>
     </Layout>
   );
-}
+} 

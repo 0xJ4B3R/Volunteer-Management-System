@@ -199,7 +199,7 @@ export interface MatchingRule {
 }
 
 // REPORTS
-export type ReportSubject = 'volunteer' | 'resident' | 'external_group';
+export type ReportSubject = 'volunteer' | 'resident' | 'external_group' | 'group_affiliation';
 export type ReportScope = 'individual' | 'all';
 export type ReportType =
   | 'volunteer_individual'
@@ -207,7 +207,8 @@ export type ReportType =
   | 'resident_individual'
   | 'resident_all'
   | 'external_group_individual'
-  | 'external_group_all';
+  | 'external_group_all'
+  | 'group_affiliation_individual';
 
 export interface AppointmentEntry {
   date: string;

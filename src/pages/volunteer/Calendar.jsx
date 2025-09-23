@@ -1,51 +1,101 @@
-import { Calendar, CalendarDays, Filter, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, CalendarDays, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, arrayUnion, Timestamp, query, where } from 'firebase/firestore';
-import { Layout } from "@/components/volunteer/Layout"
-import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
-import { matchVolunteersToResidents } from "@/utils/matchingAlgorithm";
-import { useMatchingRules } from "@/hooks/useMatchingRules";
+import { Layout } from '@/components/volunteer/Layout';
 import LoadingScreen from "@/components/volunteer/InnerLS";
 import "./styles/Calendar.css";
-import app from "@/lib/firebase";
 
-// Utility: Get color for session type
-const getSessionTypeColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "art": return "bg-[#3b82f6] text-white";
-    case "baking": return "bg-[#ec4899] text-white";
-    case "music": return "bg-[#f59e0b] text-white";
-    case "reading": return "bg-[#10b981] text-white";
-    case "crafts": return "bg-[#8b5cf6] text-white";
-    case "exercise": return "bg-[#ef4444] text-white";
-    case "gardening": return "bg-[#6366f1] text-white";
-    case "beading": return "bg-[#14b8a6] text-white";
-    case "session": return "bg-[#6b7280] text-white";
-    default: return "bg-[#6b7280] text-white";
+// Import proper Firestore hooks and types
+import { useCalendarSlots, useUpdateCalendarSlot } from "@/hooks/useFirestoreCalendar";
+import { useVolunteers } from "@/hooks/useFirestoreVolunteers";
+import { useResidents } from "@/hooks/useFirestoreResidents";
+import { useMatchingRules } from "@/hooks/useMatchingRules";
+import { matchVolunteersToResidents } from "@/utils/matchingAlgorithm";
+import { Timestamp, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+// Function to get colors for session categories (matching manager calendar)
+const getSessionCategoryColors = (sessionCategory) => {
+  switch (sessionCategory) {
+    case 'music':
+      return {
+        bg: 'bg-purple-100',
+        border: 'border-purple-500',
+        text: 'text-purple-800',
+        hoverBg: 'hover:bg-purple-200',
+        hoverBorder: 'hover:border-purple-600'
+      };
+    case 'gardening':
+      return {
+        bg: 'bg-green-100',
+        border: 'border-green-500',
+        text: 'text-green-800',
+        hoverBg: 'hover:bg-green-200',
+        hoverBorder: 'hover:border-green-600'
+      };
+    case 'beading':
+      return {
+        bg: 'bg-pink-100',
+        border: 'border-pink-500',
+        text: 'text-pink-800',
+        hoverBg: 'hover:bg-pink-200',
+        hoverBorder: 'hover:border-pink-600'
+      };
+    case 'art':
+      return {
+        bg: 'bg-orange-100',
+        border: 'border-orange-500',
+        text: 'text-orange-800',
+        hoverBg: 'hover:bg-orange-200',
+        hoverBorder: 'hover:border-orange-600'
+      };
+    case 'baking':
+      return {
+        bg: 'bg-yellow-100',
+        border: 'border-yellow-500',
+        text: 'text-yellow-800',
+        hoverBg: 'hover:bg-yellow-200',
+        hoverBorder: 'hover:border-yellow-600'
+      };
+    default:
+      return {
+        bg: 'bg-gray-100',
+        border: 'border-gray-500',
+        text: 'text-gray-800',
+        hoverBg: 'hover:bg-gray-200',
+        hoverBorder: 'hover:border-gray-600'
+      };
   }
 };
 
-// Utility: Get border color for session type
-const getSessionTypeBorderColor = (type) => {
-  switch ((type || '').toLowerCase()) {
-    case "art": return "#2563eb";
-    case "baking": return "#db2777";
-    case "music": return "#d97706";
-    case "reading": return "#059669";
-    case "crafts": return "#7c3aed";
-    case "exercise": return "#dc2626";
-    case "gardening": return "#4f46e5";
-    case "beading": return "#0d9488";
-    case "session": return "#4b5563";
-    default: return "#4b5563";
+// Utility: Get default color for sessions (fallback)
+const getSessionColor = () => {
+  return "bg-[#6b7280] text-white";
+};
+
+// Utility: Get default border color for sessions (fallback)
+const getSessionBorderColor = () => {
+  return "#4b5563";
+};
+
+// Helper function to get category display text
+const getCategoryDisplay = (slot, t) => {
+  if (!slot) return t('sessionCategories.general');
+  
+  // Priority: customLabel > sessionCategory > fallback
+  if (slot.customLabel && slot.customLabel.trim()) {
+    return slot.customLabel;
   }
+  
+  if (slot.sessionCategory && slot.sessionCategory.trim()) {
+    return t(`sessionCategories.${slot.sessionCategory}`) || `${slot.sessionCategory.charAt(0).toUpperCase() + slot.sessionCategory.slice(1)} Session`;
+  }
+  
+  return slot.isCustom ? t('sessionCategories.custom') : t('sessionCategories.general');
 };
 
 // Utility: Only allow sign up for today or future events
@@ -127,54 +177,135 @@ const positionSlotsByTime = (slotsForDay) => {
   return positionedSlots;
 };
 
-// Function to group slots by time and create stacked groups
-const groupSlotsByTime = (slotsForDay) => {
+// Render slots in chronological order (top to bottom)
+const renderSlotsInOrder = (slotsForDay) => {
   const sortedSlots = sortSlotsByTime(slotsForDay);
-  const groups = {};
-
-  sortedSlots.forEach(slot => {
-    const key = slot.startTime;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(slot);
-  });
-
-  return Object.entries(groups)
-    .sort(([timeA], [timeB]) => {
-      const aMinutes = timeToMinutes(timeA);
-      const bMinutes = timeToMinutes(timeB);
-      return aMinutes - bMinutes;
-    })
-    .map(([_, slots]) => slots);
+  return sortedSlots.map((slot, index) => ({
+    ...slot,
+    orderIndex: index
+  }));
 };
 
 // Utility: Check user approval status for a slot
-const getUserApprovalStatus = (slot, currentUser) => {
-  if (!currentUser || !slot?.volunteerRequests || !Array.isArray(slot.volunteerRequests)) {
-    return null;
+const getUserApprovalStatus = (slot, currentUser, pendingRequests = new Set(), volunteers = []) => {
+  if (!currentUser) return null;
+
+  // Check if we have a local pending request first
+  if (pendingRequests.has(slot.id)) {
+    return "pending";
   }
 
-  // Find request by userId (which should match currentUser.id)
-  const userRequest = slot.volunteerRequests.find(req => req.userId === currentUser.id);
+  if (!slot.volunteerRequests) return null;
+
+  // Find the volunteer record that corresponds to this user
+  const volunteer = volunteers.find(v =>
+    v.userId === currentUser.id ||
+    v.userId === currentUser.uid ||
+    v.id === currentUser.id ||
+    v.id === currentUser.uid
+  );
+
+  if (!volunteer) return null;
+
+  const userRequest = slot.volunteerRequests.find(vr =>
+    vr.volunteerId === volunteer.id
+  );
+
   return userRequest ? userRequest.status : null;
 };
 
-const db = getFirestore(app);
+// Utility: Get user request object for a slot
+const getUserRequest = (slot, currentUser, pendingRequests = new Set(), volunteers = []) => {
+  if (!currentUser) return null;
+
+  // Check if we have a local pending request first
+  if (pendingRequests.has(slot.id)) {
+    return { status: "pending" };
+  }
+
+  if (!slot.volunteerRequests) return null;
+
+  // Find the volunteer record that corresponds to this user
+  const volunteer = volunteers.find(v =>
+    v.userId === currentUser.id ||
+    v.userId === currentUser.uid ||
+    v.id === currentUser.id ||
+    v.id === currentUser.uid
+  );
+
+  if (!volunteer) return null;
+
+  const userRequest = slot.volunteerRequests.find(vr =>
+    vr.volunteerId === volunteer.id
+  );
+
+  return userRequest || null;
+};
 
 const VolunteerCalendar = () => {
   const navigate = useNavigate();
 
-  const { t, i18n } = useTranslation("calendar");
+  const { t, i18n } = useTranslation('calendar');
   const [showLangOptions, setShowLangOptions] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const langToggleRef = useRef(null);
+
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
 
   useEffect(() => {
-    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
-  }, [i18n.language]);
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
 
-  // Helper function to translate session types
-  const translateSessionType = (sessionType) => {
-    const type = (sessionType || '').toLowerCase();
-    return t(`sessionTypes.${type}`, sessionType); // Fallback to original if translation not found
-  };
+  // Sync currentLanguage with i18n.language
+  useEffect(() => {
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
+    }
+  }, [i18n.language, currentLanguage]);
+
+  // Handle click outside language toggle to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
+      }
+    };
+
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
 
   // Current date state for navigation
   const [currentDate, setCurrentDate] = useState(() => {
@@ -183,506 +314,106 @@ const VolunteerCalendar = () => {
     return today;
   });
 
-  const [calendarSlots, setCalendarSlots] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState("week");
+  // Use proper Firestore hooks
+  const { slots: calendarSlots, loading: calendarSlotsLoading, error } = useCalendarSlots();
+  const { updateCalendarSlot } = useUpdateCalendarSlot();
+  const { volunteers, loading: volunteersLoading } = useVolunteers();
+  const { residents, loading: residentsLoading } = useResidents();
+  const { rules: matchingRules, loading: matchingRulesLoading } = useMatchingRules();
+
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("month");
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
-  const [selectedSessionType, setSelectedSessionType] = useState("all");
   const [signupLoading, setSignupLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [volunteerDocId, setVolunteerDocId] = useState(null);
-  
-  // Function to find the volunteer document ID based on userId
-  const findVolunteerDocId = async (userId) => {
-    try {
-      const volunteersQuery = query(
-        collection(db, "volunteers"),
-        where("userId", "==", userId)
-      );
-      const querySnapshot = await getDocs(volunteersQuery);
-      
-      if (!querySnapshot.empty) {
-        return querySnapshot.docs[0].id;
-      }
-      
-      // If no match found by userId, try other methods as fallback
-      const allVolunteersSnapshot = await getDocs(collection(db, "volunteers"));
-      const volunteerDoc = allVolunteersSnapshot.docs.find(doc => {
-        const data = doc.data();
-        return data.userId === userId || 
-               data.username === currentUser?.username || 
-               data.email === currentUser?.email;
-      });
-      
-      return volunteerDoc ? volunteerDoc.id : null;
-    } catch (error) {
-      console.error("Error finding volunteer document:", error);
-      return null;
+  const [pendingRequests, setPendingRequests] = useState(new Set()); // Track locally submitted requests
+  const [dataLoaded, setDataLoaded] = useState({
+    calendarSlots: false,
+    volunteers: false,
+    residents: false,
+    matchingRules: false
+  });
+  const [pageReady, setPageReady] = useState(false);
+
+  // Track data loading states
+  useEffect(() => {
+    setDataLoaded(prev => ({ ...prev, calendarSlots: !calendarSlotsLoading }));
+  }, [calendarSlotsLoading]);
+
+  useEffect(() => {
+    setDataLoaded(prev => ({ ...prev, volunteers: !volunteersLoading }));
+  }, [volunteersLoading]);
+
+  useEffect(() => {
+    setDataLoaded(prev => ({ ...prev, residents: !residentsLoading }));
+  }, [residentsLoading]);
+
+  useEffect(() => {
+    setDataLoaded(prev => ({ ...prev, matchingRules: !matchingRulesLoading }));
+  }, [matchingRulesLoading]);
+
+  // Check if all data is loaded
+  useEffect(() => {
+    const allDataLoaded = dataLoaded.calendarSlots && dataLoaded.volunteers && dataLoaded.residents && dataLoaded.matchingRules;
+    if (allDataLoaded) {
+      setLoading(false);
+      // Add a small delay to ensure smooth transition
+      setTimeout(() => {
+        setPageReady(true);
+      }, 100);
     }
-  };
-
-  // Function to calculate match score and find best resident match with real data
-  const calculateMatchDetails = async (currentUser, slot) => {
-    if (!currentUser || !rules.length || loadingRules || !volunteerDocId) {
-      return {
-        matchScore: 50,
-        assignedResidentId: slot.assignedResidentId || "default-resident-id",
-        actualVolunteerId: volunteerDocId || "default-volunteer-id",
-        currentUserId: currentUser?.id
-      };
-    }
-
-    try {
-      // Get the volunteer document data
-      let volunteerData = currentUser;
-      if (volunteerDocId) {
-        try {
-          const volunteerDoc = await getDoc(doc(db, "volunteers", volunteerDocId));
-          if (volunteerDoc.exists()) {
-            volunteerData = { ...volunteerDoc.data(), id: volunteerDoc.id };
-          }
-        } catch (error) {
-          console.error("Error fetching volunteer document:", error);
-        }
-      }
-
-      // Convert volunteer data to the format expected by matching algorithm
-      const volunteer = {
-        id: volunteerDocId,
-        fullName: volunteerData.fullName || volunteerData.username || "Unknown Volunteer",
-        createdAt: volunteerData.createdAt || Timestamp.now(),
-        skills: volunteerData.skills || [],
-        hobbies: volunteerData.hobbies || [],
-        languages: volunteerData.languages || [],
-        availability: volunteerData.availability || [],
-        gender: volunteerData.gender || null,
-        birthDate: volunteerData.birthDate || null,
-      };
-
-      // Get residents from Firestore to find the best match
-      let residents = [];
-      let targetResidentId = slot.assignedResidentId;
-
-      try {
-        const residentsSnapshot = await getDocs(collection(db, "residents"));
-        residents = residentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt || Timestamp.now()
-        }));
-      } catch (error) {
-        console.error("Error fetching residents:", error);
-      }
-
-      // If slot has a specific assigned resident, use that
-      if (targetResidentId && residents.length > 0) {
-        const targetResident = residents.find(r => r.id === targetResidentId);
-        if (targetResident) {
-          const convertedRules = rules.map(rule => ({ 
-            ...rule, 
-            updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
-          }));
-
-          const matchResults = matchVolunteersToResidents([volunteer], [targetResident], convertedRules);
-          
-          if (matchResults.length > 0) {
-            return {
-              matchScore: Math.round(matchResults[0].score),
-              assignedResidentId: targetResidentId,
-              actualVolunteerId: volunteerDocId,
-              currentUserId: currentUser.id
-            };
-          }
-        }
-      }
-
-      // If no specific resident assigned, find the best match from all residents
-      if (residents.length > 0) {
-        const convertedRules = rules.map(rule => ({ 
-          ...rule, 
-          updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
-        }));
-
-        const matchResults = matchVolunteersToResidents([volunteer], residents, convertedRules);
-        
-        if (matchResults.length > 0) {
-          // Find the best match (highest score)
-          const bestMatch = matchResults.reduce((best, current) => 
-            current.score > best.score ? current : best
-          );
-
-          return {
-            matchScore: Math.round(bestMatch.score),
-            assignedResidentId: bestMatch.residentId,
-            actualVolunteerId: volunteerDocId,
-            currentUserId: currentUser.id
-          };
-        }
-      }
-
-      // Fallback with default values but ensure they're not null
-      const fallbackResidentId = slot.assignedResidentId || 
-                                 (residents.length > 0 ? residents[0].id : "default-resident-id");
-      
-      return {
-        matchScore: 75,
-        assignedResidentId: fallbackResidentId,
-        actualVolunteerId: volunteerDocId,
-        currentUserId: currentUser.id
-      };
-
-    } catch (error) {
-      console.error("Error calculating match details:", error);
-      return {
-        matchScore: 60,
-        assignedResidentId: slot.assignedResidentId || "default-resident-id",
-        actualVolunteerId: volunteerDocId || "default-volunteer-id",
-        currentUserId: currentUser.id
-      };
-    }
-  };
-
-  const { rules, loading: loadingRules } = useMatchingRules();
-
-  // Sync approved volunteers to volunteer requests
-  const syncApprovedVolunteersToRequests = async () => {
-    if (!currentUser) return;
-
-    try {
-      const querySnapshot = await getDocs(collection(db, "calendar_slots"));
-      
-      for (const docSnapshot of querySnapshot.docs) {
-        const data = docSnapshot.data();
-        const approvedVolunteers = data.approvedVolunteers || [];
-        const volunteerRequests = data.volunteerRequests || [];
-        
-        // Check if there are approved volunteers that don't have corresponding volunteer requests
-        let needsUpdate = false;
-        const updatedRequests = [...volunteerRequests];
-        
-        for (const approvedVolunteer of approvedVolunteers) {
-          // Check if this approved volunteer already has a volunteer request
-          const existingRequest = volunteerRequests.find(req => 
-            req.volunteerId === approvedVolunteer.id || 
-            req.userId === approvedVolunteer.id
-          );
-          
-          if (!existingRequest) {
-            // This approved volunteer doesn't have a volunteer request, so we need to create one
-            needsUpdate = true;
-            
-            // Calculate match details for this volunteer if possible
-            let matchScore = 75; // Default score
-            let assignedResidentId = data.residentIds?.[0] || data.assignedResidentId || "default-resident-id";
-            let volunteerUserId = null; // Will be set from volunteer document
-            
-            try {
-              // Try to get better match data if we have the matching algorithm available
-              if (rules.length > 0 && !loadingRules) {
-                // Get volunteer data from the volunteers collection
-                const volunteerDoc = await getDoc(doc(db, "volunteers", approvedVolunteer.id));
-                if (volunteerDoc.exists()) {
-                  const volunteerData = volunteerDoc.data();
-                  
-                  // Extract the userId from the volunteer document
-                  volunteerUserId = volunteerData.userId;
-                  
-                  // Get residents for matching
-                  const residentsSnapshot = await getDocs(collection(db, "residents"));
-                  const residents = residentsSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    createdAt: doc.data().createdAt || Timestamp.now()
-                  }));
-                  
-                  if (residents.length > 0) {
-                    const volunteer = {
-                      id: approvedVolunteer.id,
-                      fullName: volunteerData.fullName || "Unknown Volunteer",
-                      createdAt: volunteerData.createdAt || Timestamp.now(),
-                      skills: volunteerData.skills || [],
-                      hobbies: volunteerData.hobbies || [],
-                      languages: volunteerData.languages || [],
-                      availability: volunteerData.availability || [],
-                      gender: volunteerData.gender || null,
-                      birthDate: volunteerData.birthDate || null,
-                    };
-                    
-                    // If there's a specific resident assigned to this slot
-                    if (assignedResidentId && assignedResidentId !== "default-resident-id") {
-                      const targetResident = residents.find(r => r.id === assignedResidentId);
-                      if (targetResident) {
-                        const convertedRules = rules.map(rule => ({ 
-                          ...rule, 
-                          updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
-                        }));
-                        
-                        const matchResults = matchVolunteersToResidents([volunteer], [targetResident], convertedRules);
-                        if (matchResults.length > 0) {
-                          matchScore = Math.round(matchResults[0].score);
-                        }
-                      }
-                    } else {
-                      // Find best match from all residents
-                      const convertedRules = rules.map(rule => ({ 
-                        ...rule, 
-                        updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) 
-                      }));
-                      
-                      const matchResults = matchVolunteersToResidents([volunteer], residents, convertedRules);
-                      if (matchResults.length > 0) {
-                        const bestMatch = matchResults.reduce((best, current) => 
-                          current.score > best.score ? current : best
-                        );
-                        matchScore = Math.round(bestMatch.score);
-                        assignedResidentId = bestMatch.residentId;
-                      }
-                    }
-                  }
-                } else {
-                  console.warn(`Volunteer document not found for ID: ${approvedVolunteer.id}`);
-                }
-              } else {
-                // If we don't have matching rules, still try to get the userId
-                const volunteerDoc = await getDoc(doc(db, "volunteers", approvedVolunteer.id));
-                if (volunteerDoc.exists()) {
-                  const volunteerData = volunteerDoc.data();
-                  volunteerUserId = volunteerData.userId;
-                } else {
-                  console.warn(`Volunteer document not found for ID: ${approvedVolunteer.id}`);
-                }
-              }
-            } catch (error) {
-              console.error("Error calculating match details for approved volunteer:", error);
-              // Continue with default values
-            }
-            
-            // If we couldn't get the userId from the volunteer document, skip this volunteer
-            if (!volunteerUserId) {
-              console.error(`Could not find userId for volunteer ${approvedVolunteer.id}. Available data:`, approvedVolunteer);
-              console.error(`Volunteer document structure might be different than expected.`);
-              continue;
-            }
-            
-            // Create the volunteer request with approved status
-            const newVolunteerRequest = {
-              status: "approved",
-              volunteerId: approvedVolunteer.id, // The volunteer document ID (e.g., K8V3Sq3wTYgs2JTn7vyS)
-              userId: volunteerUserId, // The user's session ID (e.g., hpaD9TokamimKSYF458U)
-              requestedAt: approvedVolunteer.createdAt || Timestamp.now(),
-              approvedAt: approvedVolunteer.createdAt || Timestamp.now(),
-              assignedBy: 'manager', // Indicate this was assigned by manager
-              assignedResidentId: assignedResidentId,
-              matchScore: matchScore,
-              rejectedAt: null,
-              rejectedReason: null
-            };
-            
-            updatedRequests.push(newVolunteerRequest);
-          } else if (existingRequest.status !== "approved") {
-            // If there's an existing request but it's not approved, update it to approved
-            needsUpdate = true;
-            const requestIndex = updatedRequests.findIndex(req => 
-              req.volunteerId === approvedVolunteer.id || 
-              req.userId === approvedVolunteer.id
-            );
-            
-            if (requestIndex !== -1) {
-              updatedRequests[requestIndex] = {
-                ...updatedRequests[requestIndex],
-                status: "approved",
-                approvedAt: approvedVolunteer.createdAt || Timestamp.now(),
-                assignedBy: 'manager',
-                rejectedAt: null,
-                rejectedReason: null
-              };
-            }
-          }
-        }
-        
-        // NEW LOGIC: Check for volunteers in volunteerRequests who are approved but not in approvedVolunteers
-        // These should be rejected as "Removed by manager"
-        for (const volunteerRequest of volunteerRequests) {
-          if (volunteerRequest.status === "approved") {
-            // Check if this approved volunteer is still in the approvedVolunteers array
-            const stillApproved = approvedVolunteers.some(approvedVol => 
-              approvedVol.id === volunteerRequest.volunteerId
-            );
-            
-            if (!stillApproved) {
-              // This volunteer was approved but is no longer in approvedVolunteers
-              // Manager must have removed them, so reject the request
-              needsUpdate = true;
-              const requestIndex = updatedRequests.findIndex(req => 
-                req.volunteerId === volunteerRequest.volunteerId && req.userId === volunteerRequest.userId
-              );
-              
-              if (requestIndex !== -1) {
-                updatedRequests[requestIndex] = {
-                  ...updatedRequests[requestIndex],
-                  status: "rejected",
-                  rejectedAt: Timestamp.now(),
-                  rejectedReason: "Removed by manager",
-                  approvedAt: null // Clear the approved timestamp
-                };
-              }
-            }
-          }
-        }
-        
-        // Update the document if changes were made
-        if (needsUpdate) {
-          await updateDoc(doc(db, "calendar_slots", docSnapshot.id), {
-            volunteerRequests: updatedRequests
-          });
-        }
-      }
-      
-      console.log("Finished syncing approved volunteers to volunteer requests");
-      
-    } catch (error) {
-      console.error("Error syncing approved volunteers:", error);
-    }
-  };
+  }, [dataLoaded]);
 
   // Check authentication
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
-        
-        if (!user.username) {
-          navigate("/login");
-          return;
-        }
-        
-        if (user.role !== "volunteer") {
-          navigate("/manager");
-          return;
-        }
-        
-        setCurrentUser(user);
-        
-        // Find the volunteer document ID
-        const docId = await findVolunteerDocId(user.id);
-        setVolunteerDocId(docId);
-        
-      } catch (error) {
-        console.error("Auth check error:", error);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.username) {
         navigate("/login");
+      } else if (user.role !== "volunteer") {
+        navigate("/manager");
+      } else {
+        setCurrentUser(user);
       }
-    };
-
-    checkAuth();
+    } catch (error) {
+      console.error("Auth check error:", error);
+    }
   }, [navigate]);
 
-  // Sync approved volunteers when component mounts and data changes
+  // Clean up pending requests when real-time data updates
   useEffect(() => {
-    if (currentUser && volunteerDocId && !loadingRules && calendarSlots.length > 0) {
-      syncApprovedVolunteersToRequests();
-    }
-  }, [currentUser, volunteerDocId, loadingRules, calendarSlots]);
+    if (calendarSlots.length > 0 && currentUser && volunteers.length > 0) {
+      const updatedPendingRequests = new Set();
 
-  // Manual sync function that can be called when needed
-  const manualSyncAndRefresh = async () => {
-    console.log("Starting manual sync of approved volunteers...");
-    await syncApprovedVolunteersToRequests();
-    
-    // Refresh calendar data after sync
-    const querySnapshot = await getDocs(collection(db, "calendar_slots"));
-    const updatedSlots = querySnapshot.docs.map(doc => {
-      const data = doc.data();
+      // Find the volunteer record that corresponds to this user
+      const volunteer = volunteers.find(v =>
+        v.userId === currentUser.id ||
+        v.userId === currentUser.uid ||
+        v.id === currentUser.id ||
+        v.id === currentUser.uid
+      );
 
-      let dateObj = null;
-      if (data.date) {
-        if (data.date.toDate) {
-          dateObj = data.date.toDate();
-        } else {
-          dateObj = new Date(data.date);
-        }
-      }
+      if (volunteer) {
+        pendingRequests.forEach(slotId => {
+          const slot = calendarSlots.find(s => s.id === slotId);
+          if (slot) {
+            const hasRealRequest = slot.volunteerRequests?.some(vr =>
+              vr.volunteerId === volunteer.id
+            );
 
-      const sessionType = data.sessionCategory || data.type || "Session";
-      const isOpen = true;
-
-      return {
-        id: doc.id,
-        appointmentId: data.appointmentId || null,
-        customLabel: data.sessionCategory || 'Session',
-        type: sessionType,
-        isCustom: data.isCustom || false,
-        startTime: data.startTime || '9:00 AM',
-        endTime: data.endTime || '10:00 AM',
-        available: isOpen,
-        isOpen: isOpen,
-        status: data.status || "open",
-        date: dateObj,
-        volunteers: data.volunteers || [],
-        volunteerRequests: data.volunteerRequests || [],
-        maxVolunteers: data.maxCapacity || 1,
-        assignedResidentId: data.assignedResidentId || null
-      };
-    });
-
-    setCalendarSlots(updatedSlots);
-    console.log("Manual sync completed and calendar refreshed");
-  };
-
-  // Fetch slots from Firestore
-  useEffect(() => {
-    setIsLoading(true);
-
-    const fetchSlots = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "calendar_slots"));
-
-        const slots = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-
-          let dateObj = null;
-          if (data.date) {
-            if (data.date.toDate) {
-              dateObj = data.date.toDate();
-            } else {
-              dateObj = new Date(data.date);
+            // Keep in pending if no real request found yet
+            if (!hasRealRequest) {
+              updatedPendingRequests.add(slotId);
             }
           }
-
-          // Set default type to "Session" if no sessionCategory or type is provided
-          const sessionType = data.sessionCategory || data.type || "Session";
-          
-          // Always set isOpen to true
-          const isOpen = true;
-
-          return {
-            id: doc.id,
-            appointmentId: data.appointmentId || null,
-            customLabel: data.sessionCategory || 'Session',
-            type: sessionType,
-            isCustom: data.isCustom || false,
-            startTime: data.startTime || '9:00 AM',
-            endTime: data.endTime || '10:00 AM',
-            available: isOpen,
-            isOpen: isOpen,
-            status: data.status || "open",
-            date: dateObj,
-            volunteers: data.volunteers || [],
-            volunteerRequests: data.volunteerRequests || [],
-            maxVolunteers: data.maxCapacity || 1,
-            assignedResidentId: data.assignedResidentId || null
-          };
         });
 
-        setCalendarSlots(slots);
-      } catch (err) {
-        console.error("Error fetching slots:", err);
-      } finally {
-        setIsLoading(false);
+        if (updatedPendingRequests.size !== pendingRequests.size) {
+          setPendingRequests(updatedPendingRequests);
+        }
       }
-    };
-
-    fetchSlots();
-  }, []);
+    }
+  }, [calendarSlots, currentUser, pendingRequests, volunteers]);
 
   // Navigation functions
   const navigatePrevious = () => {
@@ -713,120 +444,112 @@ const VolunteerCalendar = () => {
 
   // Function to handle user signup for a session
   const handleSignUp = async (slot) => {
-    if (!currentUser || !currentUser.id) {
+    if (!currentUser || !currentUser.username) {
       navigate("/");
       return;
     }
 
-    if (!volunteerDocId) {
-      console.error("Volunteer document ID not found");
+    if (!slot.isOpen || !isEventAvailable(new Date(slot.date))) {
+      console.warn("Cannot sign up: slot is not open or not available");
       return;
     }
 
-    if (!isEventAvailable(slot.date)) {
-      return;
-    }
-
-    // Check if user is already approved or rejected
-    const userStatus = getUserApprovalStatus(slot, currentUser);
-    if (userStatus === "approved") {
-      return;
-    }
-    if (userStatus === "rejected") {
-      return;
+    // Check if user is already signed up
+    const userStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
+    if (userStatus) {
+      console.warn("User already has a request with status:", userStatus);
+      return; // User already has a request
     }
 
     setSignupLoading(true);
 
     try {
-      const slotRef = doc(db, "calendar_slots", slot.id);
-      const slotDoc = await getDoc(slotRef);
+      console.log("Attempting to sign up user:", currentUser.username, "for slot:", slot.id);
+      console.log("Current user object:", currentUser);
+      console.log("User ID fields - id:", currentUser.id, "uid:", currentUser.uid, "username:", currentUser.username);
 
-      if (!slotDoc.exists()) {
-        throw new Error("Session not found");
+      // Find the volunteer record that corresponds to this user
+      const volunteer = volunteers.find(v =>
+        v.userId === currentUser.id ||
+        v.userId === currentUser.uid ||
+        v.id === currentUser.id ||
+        v.id === currentUser.uid
+      );
+
+      if (!volunteer) {
+        console.error("Could not find volunteer record for user:", currentUser);
+        throw new Error("Volunteer record not found. Please contact support.");
       }
 
-      const slotData = slotDoc.data();
-      const volunteerRequests = slotData.volunteerRequests || [];
+      console.log("Found volunteer record:", volunteer);
 
-      // Check if user already has a request (check by userId)
-      if (volunteerRequests.some(req => req.userId === currentUser.id)) {
-        setSignupLoading(false);
-        return;
-      }
+      // Check if slot has no residents assigned and run matching algorithm
+      let matchScore = null;
+      let assignedResidentId = null;
 
-      // Count approved requests instead of volunteers
-      const approvedVolunteersCount = volunteerRequests.filter(req => req.status === "approved").length;
+      if (slot.residentIds && slot.residentIds.length === 0 && residents.length > 0 && matchingRules.length > 0) {
+        console.log("No residents assigned to slot, running matching algorithm...");
 
-      if (approvedVolunteersCount >= (slotData.maxCapacity || 1)) {
-        setSignupLoading(false);
-        return;
-      }
+        // Convert UI types to backend types for matching algorithm (following MatchingRules.tsx pattern)
+        const convertedVolunteer = { ...volunteer, createdAt: Timestamp.fromDate(new Date(volunteer.createdAt)) };
+        const convertedResidents = residents.map(r => ({ ...r, createdAt: Timestamp.fromDate(new Date(r.createdAt)) }));
+        const convertedRules = matchingRules.map(rule => ({ ...rule, updatedAt: Timestamp.fromDate(new Date(rule.updatedAt)) }));
 
-      // Calculate match details using the matching algorithm with real data
-      const { matchScore, assignedResidentId } = await calculateMatchDetails(currentUser, slot);
+        // Run matching algorithm one volunteer against each resident (matching MatchingRules.tsx pattern)
+        const matchResults = convertedResidents.map(resident => {
+          const matchResult = matchVolunteersToResidents([convertedVolunteer], [resident], convertedRules)[0];
+          return {
+            volunteerId: convertedVolunteer.id,
+            volunteerName: convertedVolunteer.fullName,
+            residentId: resident.id,
+            residentName: resident.fullName,
+            score: matchResult?.score ?? 0,
+            factors: matchResult?.factors ?? [],
+          };
+        });
 
-      // Create new volunteer request object with all required fields including match data
-      const newVolunteerRequest = {
-        status: "pending",
-        volunteerId: volunteerDocId, // The actual volunteer document ID from volunteers collection
-        userId: currentUser.id, // Current user's session ID for badge matching
-        requestedAt: Timestamp.now(),
-        approvedAt: null,
-        assignedBy: 'ai',
-        assignedResidentId: assignedResidentId,
-        matchScore: matchScore,
-        rejectedAt: null,
-        rejectedReason: null
-      };
+        if (matchResults.length > 0) {
+          // Find the best match by sorting scores in descending order
+          const bestMatch = matchResults.sort((a, b) => b.score - a.score)[0];
 
-      // Add to volunteerRequests array
-      await updateDoc(slotRef, {
-        volunteerRequests: arrayUnion(newVolunteerRequest)
-      });
-
-      // Refresh calendar data
-      const querySnapshot = await getDocs(collection(db, "calendar_slots"));
-      const updatedSlots = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-
-        let dateObj = null;
-        if (data.date) {
-          if (data.date.toDate) {
-            dateObj = data.date.toDate();
-          } else {
-            dateObj = new Date(data.date);
+          if (bestMatch) {
+            matchScore = bestMatch.score;
+            assignedResidentId = bestMatch.residentId;
+            console.log("Best resident match found:", {
+              residentId: assignedResidentId,
+              residentName: bestMatch.residentName,
+              score: matchScore
+            });
           }
         }
+      }
 
-        const sessionType = data.sessionCategory || data.type || "Session";
+      // Use direct Firebase update with arrayUnion (matching TestVolunteerRequests pattern)
+      const slotRef = doc(db, "calendar_slots", slot.id);
 
-        // Always set isOpen to true
-        const isOpen = true;
-
-        return {
-          id: doc.id,
-          appointmentId: data.appointmentId || null,
-          customLabel: data.sessionCategory || 'Session',
-          type: sessionType,
-          isCustom: data.isCustom || false,
-          startTime: data.startTime || '9:00 AM',
-          endTime: data.endTime || '10:00 AM',
-          available: isOpen,
-          isOpen: isOpen,
-          status: data.status || "open",
-          date: dateObj,
-          volunteers: data.volunteers || [],
-          volunteerRequests: data.volunteerRequests || [],
-          maxVolunteers: data.maxVolunteers || 1,
-          assignedResidentId: data.assignedResidentId || null
-        };
+      await updateDoc(slotRef, {
+        volunteerRequests: arrayUnion({
+          volunteerId: volunteer.id,
+          status: "pending",
+          requestedAt: Timestamp.now(),
+          approvedAt: null,
+          rejectedAt: null,
+          rejectedReason: null,
+          matchScore: matchScore,
+          assignedResidentId: assignedResidentId,
+          assignedBy: "ai"
+        })
       });
 
-      setCalendarSlots(updatedSlots);
+      // Add to local pending requests for immediate UI feedback
+      setPendingRequests(prev => new Set([...prev, slot.id]));
+
+      console.log("Successfully submitted request for session");
+      // Note: Success feedback will be visible when the component re-renders with updated data
 
     } catch (error) {
       console.error("Error signing up for session:", error);
+      alert(t("Failed to submit request") + ": " + error.message);
     } finally {
       setSignupLoading(false);
     }
@@ -862,7 +585,11 @@ const VolunteerCalendar = () => {
 
   // Filter slots based on selected date and showOnlyAvailable setting
   const getFilteredSlots = () => {
-    let filtered = calendarSlots.filter(slot => slot.date instanceof Date && !isNaN(slot.date));
+    let filtered = calendarSlots.filter(slot => {
+      // Convert date string to Date object for comparison
+      const slotDate = new Date(slot.date);
+      return !isNaN(slotDate.getTime());
+    });
 
     if (viewMode === "week") {
       const weekDates = getWeekDates();
@@ -877,38 +604,18 @@ const VolunteerCalendar = () => {
     else if (viewMode === "month") {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      filtered = filtered.filter(slot =>
-        slot.date.getFullYear() === year &&
-        slot.date.getMonth() === month
-      );
+      filtered = filtered.filter(slot => {
+        const slotDate = new Date(slot.date);
+        return slotDate.getFullYear() === year && slotDate.getMonth() === month;
+      });
     }
 
     // Check the isOpen property correctly
     if (showOnlyAvailable) {
-      // Since isOpen is always true now, this filter won't have any effect
-      // but keeping it for potential future use
       filtered = filtered.filter(slot => slot.isOpen === true);
     }
 
-    // Handle session type filtering including default "Session" type
-    if (selectedSessionType !== "all") {
-      filtered = filtered.filter(slot => {
-        const slotType = slot.customLabel || slot.type || "Session";
-        return slotType.toLowerCase() === selectedSessionType.toLowerCase();
-      });
-    }
-
     return filtered;
-  };
-
-  // Get unique session types for filter
-  const getSessionTypes = () => {
-    const types = new Set();
-    calendarSlots.forEach(slot => {
-      const sessionType = slot.customLabel || slot.type || "Session";
-      types.add(sessionType);
-    });
-    return Array.from(types).filter(Boolean).sort();
   };
 
   // Format date for display
@@ -929,13 +636,222 @@ const VolunteerCalendar = () => {
     }
   };
 
-  if (isLoading) {
+  // Render session slot with improved stacking
+  const renderSessionSlot = (slot, stackIdx = 0, totalInStack = 1) => {
+    const categoryColors = getSessionCategoryColors(slot.sessionCategory);
+    const categoryDisplay = getCategoryDisplay(slot, t);
+    const hasUserRequest = slot.volunteerRequests?.some(vr =>
+      vr.volunteerId === currentUser?.uid ||
+      vr.volunteerId === currentUser?.id ||
+      vr.volunteerId === currentUser?.username
+    );
+    const hasPendingRequests = slot.volunteerRequests?.some(vr => vr.status === "pending");
+    const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
+    const userRequest = getUserRequest(slot, currentUser, pendingRequests, volunteers);
+
+    return (
+      <Dialog key={slot.id}>
+        <DialogTrigger asChild>
+          <div
+            className={`time-slot ${categoryColors.bg} ${categoryColors.text} ${categoryColors.hoverBg} ${!slot.isOpen ? " unavailable-slot" : ""}`}
+            style={{
+              position: stackIdx > 0 ? "absolute" : "relative",
+              top: stackIdx > 0 ? `${stackIdx * 12}px` : "0",
+              left: stackIdx > 0 ? `${stackIdx * 12}px` : "0",
+              zIndex: 10 + stackIdx,
+              width: stackIdx > 0 ? `calc(100% - ${stackIdx * 12}px)` : "100%",
+              boxShadow: stackIdx === totalInStack - 1 ? "0 4px 12px rgba(60,60,60,0.15)" : "0 2px 6px rgba(60,60,60,0.08)",
+              borderLeft: "4px solid",
+              borderLeftColor: slot.sessionCategory ? 
+                (slot.sessionCategory === 'music' ? '#8b5cf6' :
+                 slot.sessionCategory === 'gardening' ? '#10b981' :
+                 slot.sessionCategory === 'beading' ? '#ec4899' :
+                 slot.sessionCategory === 'art' ? '#f97316' :
+                 slot.sessionCategory === 'baking' ? '#eab308' : '#6b7280') : 
+                getSessionBorderColor(),
+              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              cursor: "pointer"
+            }}
+            onMouseEnter={(e) => {
+              if (stackIdx < totalInStack - 1) {
+                e.target.style.transform = "scale(1.02)";
+                e.target.style.boxShadow = "0 6px 20px rgba(60,60,60,0.2)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (stackIdx < totalInStack - 1) {
+                e.target.style.transform = "scale(1)";
+                e.target.style.boxShadow = stackIdx === totalInStack - 1 ? "0 4px 12px rgba(60,60,60,0.15)" : "0 2px 6px rgba(60,60,60,0.08)";
+              }
+            }}
+          >
+            {/* Show approval status badges */}
+            {userApprovalStatus === "approved" && (
+              <div className="approved-badge" style={{
+                position: "absolute",
+                top: "4px",
+                right: "4px",
+                backgroundColor: "#10b981",
+                color: "white",
+                fontSize: "10px",
+                padding: "2px 6px",
+                borderRadius: "12px",
+                fontWeight: "bold",
+                zIndex: 20
+              }}>
+                {t("SessionStatus.approved")}
+              </div>
+            )}
+
+            {userApprovalStatus === "pending" && (
+              <div className="pending-badge" style={{
+                position: "absolute",
+                top: "4px",
+                right: "4px",
+                backgroundColor: "#f59e0b",
+                color: "white",
+                fontSize: "10px",
+                padding: "2px 6px",
+                borderRadius: "12px",
+                fontWeight: "bold",
+                zIndex: 20
+              }}>
+                {t("SessionStatus.pending")}
+              </div>
+            )}
+
+            {userApprovalStatus === "rejected" && (
+              <div className="rejected-badge" style={{
+                position: "absolute",
+                top: "4px",
+                right: "4px",
+                backgroundColor: "#ef4444",
+                color: "white",
+                fontSize: "10px",
+                padding: "2px 6px",
+                borderRadius: "12px",
+                fontWeight: "bold",
+                zIndex: 20
+              }}>
+                {t("SessionStatus.rejected")}
+              </div>
+            )}
+
+            <div className="time-slot-header">
+              <span className="start-time">{slot.startTime}</span>
+            </div>
+            <div className="session-type-badge">
+              {categoryDisplay}
+            </div>
+            <div className="time-range">
+              {slot.startTime} - {slot.endTime}
+            </div>
+            <div className="volunteers-count">
+              <Users className="h-3 w-3" />
+              <span>
+                {slot.approvedVolunteers?.length || 0}/{slot.maxCapacity || 1}
+              </span>
+            </div>
+          </div>
+        </DialogTrigger>
+        <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6 text-center" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+          <DialogHeader className="space-y-4">
+            <DialogTitle className="text-lg font-bold text-center">
+              {t("signUpForSession")}
+            </DialogTitle>
+            <DialogDescription className="flex items-center justify-center text-gray-500 text-sm">
+              <span className="mr-2 font-medium">{t("date")}:</span>
+              <span>{new Date(slot.date).toDateString()}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-center gap-2">
+              <span className="font-medium text-gray-700">{t("time")}:</span>
+              <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
+                {slot.startTime} - {slot.endTime}
+              </span>
+            </div>
+
+            {/* Show current status if user has signed up */}
+            {userApprovalStatus && (
+              <div className="p-3 rounded-lg" style={{
+                backgroundColor: userApprovalStatus === "approved" ? "#d1fae5" : userApprovalStatus === "rejected" ? "#fee2e2" : "#fef3c7",
+                border: `1px solid ${userApprovalStatus === "approved" ? "#10b981" : userApprovalStatus === "rejected" ? "#ef4444" : "#f59e0b"}`
+              }}>
+                <div className="flex flex-col gap-2 items-center text-center">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium" style={{
+                      color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e"
+                    }}>
+                      {t("SessionStatus.label")}: {
+                        userApprovalStatus === "approved"
+                          ? t("SessionStatus.approved") + " ✅"
+                          : userApprovalStatus === "rejected"
+                            ? t("SessionStatus.rejected") + " ❌"
+                            : t("SessionStatus.pendingApproval") + " ⏳"
+                      }
+                    </span>
+                  </div>
+                  {userApprovalStatus === "rejected" && userRequest?.rejectedReason && (
+                    <div className="text-sm" style={{ color: "#991b1b" }}>
+                      <span className="font-medium">{t("rejectionReason")}:</span> {userRequest.rejectedReason}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-center mt-2">
+            <button
+              type="button"
+              disabled={
+                !slot.isOpen ||
+                !isEventAvailable(new Date(slot.date)) ||
+                signupLoading ||
+                userApprovalStatus
+              }
+              style={
+                (!slot.isOpen || !isEventAvailable(new Date(slot.date)) || signupLoading || userApprovalStatus)
+                  ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
+                  : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
+              }
+              onClick={() => handleSignUp(slot)}
+            >
+              {signupLoading
+                ? t("Submitting Request...")
+                : userApprovalStatus === "approved"
+                  ? t("Already Approved")
+                  : userApprovalStatus === "rejected"
+                    ? t("Request Rejected")
+                    : userApprovalStatus === "pending"
+                      ? t("Request Pending")
+                      : (!slot.isOpen || !isEventAvailable(new Date(slot.date)))
+                        ? t("Not Available")
+                        : t("Request to Join")}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (error) {
+    console.error("Calendar error:", error);
   }
 
   return (
     <Layout>
-      <div className="volunteer-calendar-container">
+      <div 
+        className="volunteer-calendar-container"
+        style={{
+          opacity: pageReady ? 1 : 0,
+          transition: 'opacity 0.3s ease-in-out'
+        }}
+      >
         <div className="main-content-container">
           <main className="calendar-main-content">
             {/* Calendar Header */}
@@ -988,60 +904,47 @@ const VolunteerCalendar = () => {
                 <div className="view-mode-tabs">
                   <button
                     className={`tab-trigger flex items-center ${i18n.language === "he" ? "flex-row-reverse" : "flex-row"
-                      } gap-1 ${viewMode === "week" ? "active" : ""}`}
-                    onClick={() => setViewMode("week")}
-                  >
-                    <Calendar className="h-4 w-4" />
-                    <span>{t("Week")}</span>
-                  </button>
-                  <button
-                    className={`tab-trigger flex items-center ${i18n.language === "he" ? "flex-row-reverse" : "flex-row"
                       } gap-1 ${viewMode === "month" ? "active" : ""}`}
                     onClick={() => setViewMode("month")}
                   >
-                    <CalendarDays className="h-4 w-4" />
-                    <span>{t("Month")}</span>
+                    {i18n.language === "he" ? (
+                      <>
+                        <span>{t("Month")}</span>
+                        <CalendarDays className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        <CalendarDays className="h-4 w-4" />
+                        <span>{t("Month")}</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className={`tab-trigger flex items-center ${i18n.language === "he" ? "flex-row-reverse" : "flex-row"
+                      } gap-1 ${viewMode === "week" ? "active" : ""}`}
+                    onClick={() => setViewMode("week")}
+                  >
+                    {i18n.language === "he" ? (
+                      <>
+                        <span>{t("Week")}</span>
+                        <Calendar className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        <Calendar className="h-4 w-4" />
+                        <span>{t("Week")}</span>
+                      </>
+                    )}
                   </button>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="filter-button">
-                      <Filter className="h-4 w-4 mr-1" />
-                      {t("Filter")}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <div className="filter-dropdown-content">
-                      <Select
-                        value={selectedSessionType}
-                        onValueChange={setSelectedSessionType}
-                      >
-                        <SelectTrigger
-                          className={`session-type-select flex items-center justify-between ${i18n.language === "he" ? "flex-row-reverse text-right" : "flex-row text-left"
-                            }`}
-                          dir="auto"
-                        >
-                          <SelectValue placeholder={t("Select session type")} />
-                        </SelectTrigger>
-                        <SelectContent dir={i18n.language === "he" ? "rtl" : "ltr"}>
-                          <SelectItem value="all">{t("All Session Types")}</SelectItem>
-                          {getSessionTypes().map((type) => (
-                            <SelectItem key={type} value={type.toLowerCase()}>
-                              {translateSessionType(type)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+
               </div>
             </div>
 
             {/* Calendar Content */}
             <div className="calendar-content-container">
               {viewMode === "week" && (
-                <div>
+                <div className="week-view-container">
                   {/* Week Header */}
                   <div className="week-header">
                     {getWeekDates().map((date, index) => (
@@ -1068,144 +971,86 @@ const VolunteerCalendar = () => {
                   <div className="week-grid">
                     {getWeekDates().map((date, index) => {
                       const slotsForDay = getFilteredSlots().filter(slot => {
-                        return slot.date && slot.date.toDateString() === date.toDateString();
+                        const slotDate = new Date(slot.date);
+                        return slotDate.toDateString() === date.toDateString();
                       });
 
                       if (slotsForDay.length === 0) {
                         return (
                           <div key={index} className="week-day-column">
                             <div className="empty-state" style={{ boxShadow: "none", padding: "1rem" }}>
-                              <div className="empty-description">{t("No sessions")}</div>
+                              <div className="empty-description">{t("noSessions")}</div>
                             </div>
                           </div>
                         );
                       }
 
-                      const positionedSlots = positionSlotsByTime(slotsForDay);
+                      const orderedSlots = renderSlotsInOrder(slotsForDay);
 
                       return (
                         <div key={index} className="week-day-column">
                           <div className="day-time-container" style={{ position: "relative", minHeight: "600px" }}>
-                            {positionedSlots.map((slot) => {
-                              const userApprovalStatus = getUserApprovalStatus(slot, currentUser);
-                              const borderColor = getSessionTypeBorderColor(slot.type);
+                            {orderedSlots.map((slot) => {
+                              const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
+                              const userRequest = getUserRequest(slot, currentUser, pendingRequests, volunteers);
+                              const categoryColors = getSessionCategoryColors(slot.sessionCategory);
+                              const categoryDisplay = getCategoryDisplay(slot, t);
 
                               return (
                                 <Dialog key={slot.id}>
                                   <DialogTrigger asChild>
                                     <div
-                                      className={`time-slot ${getSessionTypeColor(slot.type)}`}
+                                      className={`time-slot ${categoryColors.bg} ${categoryColors.text} ${categoryColors.hoverBg}${!slot.isOpen ? " unavailable-slot" : ""}`}
                                       style={{
-                                        position: "absolute",
-                                        top: `${slot.topPosition + (slot.stackIndex * 12)}px`,
-                                        left: `${slot.stackIndex * 8}px`,
-                                        zIndex: 10 + slot.stackIndex,
-                                        width: `calc(100% - ${slot.stackIndex * 8}px)`,
-                                        boxShadow: slot.stackIndex === slot.totalInStack - 1 ? "0 4px 12px rgba(60,60,60,0.08)" : "0 2px 6px rgba(60,60,60,0.04)",
+                                        position: "relative",
+                                        marginBottom: "0.75rem",
+                                        boxShadow: "0 2px 6px rgba(60,60,60,0.04)",
                                         borderLeft: "4px solid",
-                                        borderLeftColor: borderColor,
-                                        marginBottom: "20px",
+                                        borderLeftColor: slot.sessionCategory ? 
+                                          (slot.sessionCategory === 'music' ? '#8b5cf6' :
+                                           slot.sessionCategory === 'gardening' ? '#10b981' :
+                                           slot.sessionCategory === 'beading' ? '#ec4899' :
+                                           slot.sessionCategory === 'art' ? '#f97316' :
+                                           slot.sessionCategory === 'baking' ? '#eab308' : '#6b7280') : 
+                                          getSessionBorderColor(),
                                         minHeight: "70px"
                                       }}
                                     >
-                                      {/* Show approval status badges */}
-                                      {(() => {
-                                        if (userApprovalStatus === "approved") {
-                                          return (
-                                            <div className="approved-badge" style={{
-                                              position: "absolute",
-                                              top: "4px",
-                                              right: "4px",
-                                              backgroundColor: "#10b981",
-                                              color: "white",
-                                              fontSize: "10px",
-                                              padding: "2px 6px",
-                                              borderRadius: "12px",
-                                              fontWeight: "bold",
-                                              zIndex: 20
-                                            }}>
-                                              {t("SessionStatus.approved")}
-                                            </div>
-                                          );
-                                        }
-                                        if (userApprovalStatus === "pending") {
-                                          return (
-                                            <div className="pending-badge" style={{
-                                              position: "absolute",
-                                              top: "4px",
-                                              right: "4px",
-                                              backgroundColor: "#f59e0b",
-                                              color: "white",
-                                              fontSize: "10px",
-                                              padding: "2px 6px",
-                                              borderRadius: "12px",
-                                              fontWeight: "bold",
-                                              zIndex: 20
-                                            }}>
-                                              {t("SessionStatus.pending")}
-                                            </div>
-                                          );
-                                        }
-                                        if (userApprovalStatus === "rejected") {
-                                          return (
-                                            <div className="rejected-badge" style={{
-                                              position: "absolute",
-                                              top: "4px",
-                                              right: "4px",
-                                              backgroundColor: "#ef4444",
-                                              color: "white",
-                                              fontSize: "10px",
-                                              padding: "2px 6px",
-                                              borderRadius: "12px",
-                                              fontWeight: "bold",
-                                              zIndex: 20
-                                            }}>
-                                              {t("SessionStatus.rejected")}
-                                            </div>
-                                          );
-                                        }
-                                        return null;
-                                      })()}
 
-                                      <div className="time-slot-header">
-                                        <span className="start-time">{slot.startTime}</span>
-                                        <span className="session-type-badge">{translateSessionType(slot.type)}</span>
-                                      </div>
                                       <div className="time-range">
                                         {slot.startTime} - {slot.endTime}
+                                      </div>
+                                      <div className="session-type-badge">
+                                        {categoryDisplay}
                                       </div>
                                       <div className="volunteers-count">
                                         <Users className="h-3 w-3" />
                                         <span>
-                                          {(slot.volunteerRequests?.filter(req => req.status === "approved").length || 0)}/{slot.maxVolunteers || 1}
+                                          {slot.approvedVolunteers?.length || 0}/{slot.maxCapacity || 1}
                                         </span>
                                       </div>
                                     </div>
                                   </DialogTrigger>
-                                  <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
-                                    <DialogHeader>
-                                      <DialogTitle
-                                        className="text-lg font-bold mb-4"
-                                        dir="auto"
-                                        style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
-                                      >
-                                        {t("Sign Up for:")} <span className="capitalize">{translateSessionType(slot.type)}</span>
+                                  <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6 text-center" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+                                    <DialogHeader className="space-y-4">
+                                      <DialogTitle className="text-lg font-bold text-center">
+                                        {t("signUpForSession")}
                                       </DialogTitle>
-                                      <div className="flex items-center text-gray-500 text-sm mb-4">
-                                        <span className="mr-2 font-medium">{t("Date:")}</span>
+                                      <DialogDescription className="flex items-center justify-center text-gray-500 text-sm">
+                                        <span className="mr-2 font-medium">{t("date")}:</span>
                                         <span>
-                                          {slot.date.toLocaleDateString(i18n.language, {
+                                          {new Date(slot.date).toLocaleDateString(i18n.language, {
                                             weekday: 'short',
                                             day: 'numeric',
                                             month: 'short',
                                             year: 'numeric'
                                           })}
                                         </span>
-                                      </div>
+                                      </DialogDescription>
                                     </DialogHeader>
-                                    <div className="mb-6">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-gray-700">{t("Time:")}</span>
+                                    <div className="space-y-4">
+                                      <div className="flex items-center justify-center gap-2">
+                                        <span className="font-medium text-gray-700">{t("time")}:</span>
                                         <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
                                           {slot.startTime} - {slot.endTime}
                                         </span>
@@ -1213,38 +1058,44 @@ const VolunteerCalendar = () => {
 
                                       {/* Show current status if user has signed up */}
                                       {userApprovalStatus && (
-                                        <div className="mt-4 p-3 rounded-lg" style={{
+                                        <div className="p-3 rounded-lg" style={{
                                           backgroundColor: userApprovalStatus === "approved" ? "#d1fae5" : userApprovalStatus === "rejected" ? "#fee2e2" : "#fef3c7",
                                           border: `1px solid ${userApprovalStatus === "approved" ? "#10b981" : userApprovalStatus === "rejected" ? "#ef4444" : "#f59e0b"}`
                                         }}>
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-medium" style={{
-                                              color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e"
-                                            }}>
-                                              {t(
-                                                userApprovalStatus === "approved"
-                                                  ? "SessionStatus.approvedStatus"
-                                                  : userApprovalStatus === "rejected"
-                                                    ? "SessionStatus.rejectedStatus"
-                                                    : "SessionStatus.pendingApproval"
-                                              )}
-                                            </span>
+                                          <div className="flex flex-col gap-2 items-center text-center">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium" style={{
+                                                color: userApprovalStatus === "approved" ? "#065f46" : userApprovalStatus === "rejected" ? "#991b1b" : "#92400e"
+                                              }}>
+                                                {t("SessionStatus.label")}: {
+                                                  userApprovalStatus === "approved"
+                                                    ? t("SessionStatus.approved") + " ✅"
+                                                    : userApprovalStatus === "rejected"
+                                                      ? t("SessionStatus.rejected") + " ❌"
+                                                      : t("SessionStatus.pendingApproval") + " ⏳"
+                                                }
+                                              </span>
+                                            </div>
+                                            {userApprovalStatus === "rejected" && userRequest?.rejectedReason && (
+                                              <div className="text-sm" style={{ color: "#991b1b" }}>
+                                                <span className="font-medium">{t("rejectionReason")}:</span> {userRequest.rejectedReason}
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
                                       )}
                                     </div>
-                                    <div className="flex justify-end">
+                                    <div className="flex justify-center mt-2">
                                       <button
                                         type="button"
                                         disabled={
-                                          !isEventAvailable(slot.date) ||
+                                          !slot.isOpen ||
+                                          !isEventAvailable(new Date(slot.date)) ||
                                           signupLoading ||
-                                          userApprovalStatus === "approved" ||
-                                          userApprovalStatus === "pending" ||
-                                          userApprovalStatus === "rejected"
+                                          userApprovalStatus
                                         }
                                         style={
-                                          (!isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
+                                          (!slot.isOpen || !isEventAvailable(new Date(slot.date)) || signupLoading || userApprovalStatus)
                                             ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                                             : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
                                         }
@@ -1258,7 +1109,7 @@ const VolunteerCalendar = () => {
                                               ? t("Request Rejected")
                                               : userApprovalStatus === "pending"
                                                 ? t("Request Pending")
-                                                : (!isEventAvailable(slot.date))
+                                                : (!slot.isOpen || !isEventAvailable(new Date(slot.date)))
                                                   ? t("Not Available")
                                                   : t("Request to Join")}
                                       </button>
@@ -1282,7 +1133,8 @@ const VolunteerCalendar = () => {
                       {t(`months.${currentDate.getMonth()}`)} {currentDate.getFullYear()}
                     </span>
                   </div>
-                  <div className="month-grid">
+                  <div className="month-view-container">
+                    <div className="month-grid">
                     {/* Weekday headers */}
                     {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((key) => (
                       <div key={key} className="month-weekday">
@@ -1293,11 +1145,13 @@ const VolunteerCalendar = () => {
                     {getMonthGrid(currentDate).map((date, idx) => {
                       const isToday = date && date.toDateString() === new Date().toDateString();
                       const slotsUnsorted = date
-                        ? getFilteredSlots().filter(slot => slot.date && slot.date.toDateString() === date.toDateString())
+                        ? getFilteredSlots().filter(slot => {
+                          const slotDate = new Date(slot.date);
+                          return slotDate.toDateString() === date.toDateString();
+                        })
                         : [];
 
                       const slots = sortSlotsByTime(slotsUnsorted);
-                      const grouped = groupSlotsByTime(slots);
 
                       return (
                         <div
@@ -1306,96 +1160,55 @@ const VolunteerCalendar = () => {
                         >
                           {date && <div className="month-day-number">{date.getDate()}</div>}
                           {slots.map((slot, slotIdx) => {
-                            const userApprovalStatus = getUserApprovalStatus(slot, currentUser);
-                            const borderColor = getSessionTypeBorderColor(slot.type);
+                            const userApprovalStatus = getUserApprovalStatus(slot, currentUser, pendingRequests, volunteers);
+                            const userRequest = getUserRequest(slot, currentUser, pendingRequests, volunteers);
+                            const categoryColors = getSessionCategoryColors(slot.sessionCategory);
+                            const categoryDisplay = getCategoryDisplay(slot, t);
 
                             return (
                               <Dialog key={slot.id}>
                                 <DialogTrigger asChild>
                                   <div
-                                    className={`month-slot ${getSessionTypeColor(slot.type)}`}
+                                    className={`month-slot ${categoryColors.bg} ${categoryColors.text} ${categoryColors.hoverBg}${!slot.isOpen ? " unavailable" : ""}`}
                                     style={{
                                       borderLeft: "4px solid",
-                                      borderLeftColor: borderColor,
+                                      borderLeftColor: slot.sessionCategory ? 
+                                        (slot.sessionCategory === 'music' ? '#8b5cf6' :
+                                         slot.sessionCategory === 'gardening' ? '#10b981' :
+                                         slot.sessionCategory === 'beading' ? '#ec4899' :
+                                         slot.sessionCategory === 'art' ? '#f97316' :
+                                         slot.sessionCategory === 'baking' ? '#eab308' : '#6b7280') : 
+                                        getSessionBorderColor(),
                                       order: slotIdx,
-                                      position: "relative"
+                                      position: "relative",
+                                      marginBottom: "6px"
                                     }}
-                                    title={`${translateSessionType(slot.type)} ${slot.startTime} - ${slot.endTime}`}
+                                    title={`${categoryDisplay} ${slot.startTime} - ${slot.endTime}`}
                                   >
-                                    <span className="month-slot-type">{translateSessionType(slot.type)}</span>
+                                    <span className="month-slot-type">{categoryDisplay}</span>
                                     <span className="month-slot-time">{slot.startTime}</span>
-
-                                    {/* Show approval status indicator */}
-                                    {userApprovalStatus === "approved" && (
-                                      <span style={{
-                                        display: "inline-block",
-                                        width: "8px",
-                                        height: "8px",
-                                        borderRadius: "50%",
-                                        backgroundColor: "#10b981",
-                                        marginLeft: "4px"
-                                      }}></span>
-                                    )}
-
-                                    {userApprovalStatus === "pending" && (
-                                      <span style={{
-                                        display: "inline-block",
-                                        width: "8px",
-                                        height: "8px",
-                                        borderRadius: "50%",
-                                        backgroundColor: "#f59e0b",
-                                        marginLeft: "4px"
-                                      }}></span>
-                                    )}
-
-                                    {userApprovalStatus === "rejected" && (
-                                      <span style={{
-                                        display: "inline-block",
-                                        width: "8px",
-                                        height: "8px",
-                                        borderRadius: "50%",
-                                        backgroundColor: "#ef4444",
-                                        marginLeft: "4px"
-                                      }}></span>
-                                    )}
-
-                                    {/* Small indicator dot if you've requested this slot but no status yet */}
-                                    {!userApprovalStatus && slot.volunteerRequests?.some(req => req.userId === currentUser?.id) && (
-                                      <span style={{
-                                        display: "inline-block",
-                                        width: "6px",
-                                        height: "6px",
-                                        borderRadius: "50%",
-                                        backgroundColor: "#2563eb",
-                                        marginLeft: "4px"
-                                      }}></span>
-                                    )}
                                   </div>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6">
-                                  <DialogHeader>
-                                    <DialogTitle
-                                      className="text-lg font-bold mb-2"
-                                      dir="auto"
-                                      style={{ textAlign: i18n.language === "he" ? "right" : "left" }}
-                                    >
-                                      {t("Sign Up for:")} <span className="capitalize">{translateSessionType(slot.type)}</span>
+                                <DialogContent className="max-w-md rounded-xl shadow-xl bg-white p-6 text-center" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
+                                  <DialogHeader className="space-y-4">
+                                    <DialogTitle className="text-lg font-bold text-center">
+                                      {t("signUpForSession")}
                                     </DialogTitle>
-                                    <div className="flex items-center text-gray-500 text-sm mb-4">
-                                      <span className="mr-2 font-medium">{t("Date:")}</span>
+                                    <DialogDescription className="flex items-center justify-center text-gray-500 text-sm">
+                                      <span className="mr-2 font-medium">{t("date")}:</span>
                                       <span>
-                                        {slot.date.toLocaleDateString(i18n.language, {
+                                        {new Date(slot.date).toLocaleDateString(i18n.language, {
                                           weekday: "short",
                                           day: "numeric",
                                           month: "short",
                                           year: "numeric"
                                         })}
                                       </span>
-                                    </div>
+                                    </DialogDescription>
                                   </DialogHeader>
-                                  <div className="space-y-3 mb-6">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-gray-700">{t("Time:")}</span>
+                                  <div className="space-y-4">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="font-medium text-gray-700">{t("time")}:</span>
                                       <span className="bg-gray-100 rounded px-2 py-0.5 text-gray-800 text-sm">
                                         {slot.startTime} - {slot.endTime}
                                       </span>
@@ -1404,7 +1217,7 @@ const VolunteerCalendar = () => {
                                     {/* Show current status if user has signed up */}
                                     {userApprovalStatus && (
                                       <div
-                                        className="mt-4 p-3 rounded-lg"
+                                        className="p-3 rounded-lg"
                                         style={{
                                           backgroundColor:
                                             userApprovalStatus === "approved"
@@ -1413,48 +1226,55 @@ const VolunteerCalendar = () => {
                                                 ? "#fee2e2"
                                                 : "#fef3c7",
                                           border: `1px solid ${userApprovalStatus === "approved"
-                                              ? "#10b981"
-                                              : userApprovalStatus === "rejected"
-                                                ? "#ef4444"
-                                                : "#f59e0b"
+                                            ? "#10b981"
+                                            : userApprovalStatus === "rejected"
+                                              ? "#ef4444"
+                                              : "#f59e0b"
                                             }`
                                         }}
                                       >
-                                        <div className="flex items-center gap-2">
-                                          <span
-                                            className="font-medium"
-                                            style={{
-                                              color:
+                                        <div className="flex flex-col gap-2 items-center text-center">
+                                          <div className="flex items-center gap-2">
+                                            <span
+                                              className="font-medium"
+                                              style={{
+                                                color:
+                                                  userApprovalStatus === "approved"
+                                                    ? "#065f46"
+                                                    : userApprovalStatus === "rejected"
+                                                      ? "#991b1b"
+                                                      : "#92400e"
+                                              }}
+                                            >
+                                              {t("SessionStatus.label")}: {
                                                 userApprovalStatus === "approved"
-                                                  ? "#065f46"
+                                                  ? t("SessionStatus.approved") + " ✅"
                                                   : userApprovalStatus === "rejected"
-                                                    ? "#991b1b"
-                                                    : "#92400e"
-                                            }}
-                                          >
-                                            {t("SessionStatus.label")}{" "}
-                                            {userApprovalStatus === "approved"
-                                              ? t("SessionStatus.approved")
-                                              : userApprovalStatus === "rejected"
-                                                ? t("SessionStatus.rejected")
-                                                : t("SessionStatus.pendingApproval")}
-                                          </span>
+                                                    ? t("SessionStatus.rejected") + " ❌"
+                                                    : t("SessionStatus.pendingApproval") + " ⏳"
+                                              }
+                                            </span>
+                                          </div>
+                                          {userApprovalStatus === "rejected" && userRequest?.rejectedReason && (
+                                            <div className="text-sm" style={{ color: "#991b1b" }}>
+                                              <span className="font-medium">{t("rejectionReason")}:</span> {userRequest.rejectedReason}
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex justify-end">
+                                  <div className="flex justify-center mt-2">
                                     <button
                                       type="button"
                                       disabled={
-                                        !isEventAvailable(slot.date) ||
+                                        !slot.isOpen ||
+                                        !isEventAvailable(new Date(slot.date)) ||
                                         signupLoading ||
-                                        userApprovalStatus === "approved" ||
-                                        userApprovalStatus === "pending" ||
-                                        userApprovalStatus === "rejected"
+                                        userApprovalStatus
                                       }
                                       style={
-                                        (!isEventAvailable(slot.date) || signupLoading || userApprovalStatus)
+                                        (!slot.isOpen || !isEventAvailable(new Date(slot.date)) || signupLoading || userApprovalStatus)
                                           ? { background: "#e5e7eb", color: "#9ca3af", width: "100%", padding: "10px", borderRadius: "6px", cursor: "not-allowed" }
                                           : { background: "#416a42", color: "#fff", width: "100%", padding: "10px", borderRadius: "6px", cursor: "pointer" }
                                       }
@@ -1468,7 +1288,7 @@ const VolunteerCalendar = () => {
                                             ? t("Request Rejected")
                                             : userApprovalStatus === "pending"
                                               ? t("Request Pending")
-                                              : (!isEventAvailable(slot.date))
+                                              : (!slot.isOpen || !isEventAvailable(new Date(slot.date)))
                                                 ? t("Not Available")
                                                 : t("Request to Join")}
                                     </button>
@@ -1480,22 +1300,35 @@ const VolunteerCalendar = () => {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
               )}
             </div>
           </main>
         </div>
-        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
+        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
           <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-            <Globe size={35} />
+            <Globe className="lang-icon" />
           </button>
           {showLangOptions && (
             <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-              <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
+              <button onClick={async () => {
+                localStorage.setItem('language', 'en');
+                await i18n.changeLanguage('en');
+                setCurrentLanguage('en');
+                applyLanguageDirection('en');
+                setShowLangOptions(false);
+              }}>
                 English
               </button>
-              <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
+              <button onClick={async () => {
+                localStorage.setItem('language', 'he');
+                await i18n.changeLanguage('he');
+                setCurrentLanguage('he');
+                applyLanguageDirection('he');
+                setShowLangOptions(false);
+              }}>
                 עברית
               </button>
             </div>
@@ -1506,4 +1339,4 @@ const VolunteerCalendar = () => {
   );
 };
 
-export default VolunteerCalendar;
+export default VolunteerCalendar; 

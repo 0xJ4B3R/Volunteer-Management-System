@@ -1,29 +1,58 @@
 {
   "attendance": {
-    "title": "Attendance Management",
-    "subtitle": "Confirm your session attendance",
-    
+    "title": "Attendance",
+    "subtitle": "Manage your session attendance and view history",
     "tabs": {
       "today": "Today",
       "history": "History"
     },
-    
-    "language": {
-      "english": "English",
-      "hebrew": "עברית"
-    },
-    
-    "sessionTypes": {
-      "session": "Session",
-      "art": "Art",
-      "baking": "Baking",
-      "gardening": "Gardening",
-      "music": "Music",
-      "beading": "Beading"
-    },
-    
-    "statuses": {
-      "not_confirmed": "Not Confirmed",
+    "todaysSessions": "Today's Sessions",
+    "pleaseConfirm": "Please confirm your attendance for this session.",
+    "time": "Time",
+    "date": "Date",
+    "sessionType": "Session Type",
+    "description": "Description",
+    "status": "Status",
+    "onTime": "On Time",
+    "graceActive": "Grace Period Active",
+    "late": "Late Confirmation",
+    "ended": "Session Ended",
+    "minuteLeft": "minute left in grace period",
+    "minutesLeft": "{{count}} minutes left in grace period",
+    "sessionTiming": "Session Timing",
+    "sessionEnded": "Session Ended",
+    "cannotConfirm": "This session has already ended. Attendance confirmation is no longer available.",
+    "autoMarkedAbsent": "This session has ended and you have been automatically marked as absent.",
+    "confirmTitle": "Please confirm your attendance",
+    "confirmMessage": "Your attendance needs to be confirmed for this session.",
+    "confirm": "Confirm Attendance",
+    "confirmLate": "Confirm (Late)",
+    "confirmGrace": "Confirm (Grace Period)",
+    "confirming": "Confirming...",
+    "unableToAttend": "Unable to Attend",
+    "cancelling": "Cancelling...",
+    "noSessions": "No Sessions Today",
+    "noSessionsDesc": "You don't have any approved sessions scheduled for today.",
+    "noSessionsTitle": "No sessions found",
+    "noSessionsMessage": "Visit the calendar to view upcoming sessions or reach out to your coordinator for more opportunities.",
+    "thisMonth": "This Month's Summary",
+    "sessions": "Sessions",
+    "hours": "Hours",
+    "attendanceRate": "Attendance Rate",
+    "noHistory": "No attendance history found.",
+    "hoursCompleted": "{{hours}} hours completed",
+    "minutesCompleted": "{{minutes}} minutes completed",
+    "notes": "Notes",
+    "sessionLabel": "Session",
+    "timeUnavailable": "Time not available",
+    "defaultSessionTitle": "Volunteer Session",
+    "loadMoreHistory": "Load More History",
+    "showingRecords": "Showing {{count}} of {{total}} records",
+    "allHistoryLoaded": "All history loaded ({{count}} records)",
+    "loading": "Loading...",
+    "sessionNumber": "Session {{number}}",
+  "statuses": {
+    "not_confirmed": "Attendance Not Marked",
       "confirmed": "Confirmed",
       "cancelled": "Cancelled",
       "auto-absent": "Auto Absent",
@@ -32,100 +61,64 @@
       "absent": "Absent",
       "late": "Late",
       "completed": "Completed",
-      "unknown": "Unknown"
+      "missed": "Missed",
+      "ended": "Ended",
+      "in-progress": "In Progress",
+      "upcoming": "Upcoming",
+      "approved": "Approved",
+      "pending": "Pending",
+      "rejected": "Rejected"
     },
-    
-    "fields": {
-      "time": "Time",
-      "date": "Date",
-      "status": "Status",
-      "sessionType": "Session Type",
-      "description": "Description",
-      "notes": "Notes"
+    "historyItem": {
+      "title": "{{title}}",
+      "status": {
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent"
+      }
     },
-    
-    "messages": {
-      "todaysSessions": "Today's Sessions",
-      "sessionNumber": "Session {{number}}",
-      "pleaseConfirm": "Please confirm your attendance for this session",
-      "today": "Today",
-      "defaultDescription": "Volunteer session with residents",
-      "timeNotAvailable": "Time not available",
-      "noSessions": "No Sessions Today",
-      "noSessionsDesc": "You don't have any sessions scheduled for today",
-      "noSessionsTitle": "No Sessions Available",
-      "noSessionsMessage": "Check back later or contact your coordinator if you expect to see sessions here",
-      "sessionTiming": "Session Timing",
-      "sessionEnded": "Session Ended",
-      "autoMarkedAbsent": "This session has been automatically marked as absent",
-      "confirmTitle": "Confirm Attendance",
-      "confirmMessage": "Your attendance needs to be confirmed for this session"
+    "sessionTypes": {
+      "volunteerSession": "Volunteer session with residents",
+      "generalSession": "General Session"
     },
-    
     "timeStatus": {
       "sessionEnded": "Session has ended",
-      "graceExpired": "Grace period has expired - you will be marked late",
-      "graceActive": "Grace period active - {{minutes}} minutes remaining",
-      "sessionStarts": "Session starts in {{minutes}} minutes",
-      "onTime": "On Time",
-      "graceActive": "Grace Active",
-      "late": "Late",
-      "ended": "Ended"
+      "sessionInProgress": "Session is currently in progress",
+      "unknownStatus": "Unknown status",
+      "timeUnavailable": "Time not available"
     },
-    
-    "buttons": {
-      "confirm": "Confirm Attendance",
-      "confirmLate": "Confirm Late",
-      "confirmGrace": "Confirm (Grace Period)",
-      "unableToAttend": "Unable to Attend",
-      "loading": "Loading...",
-      "loadMore": "Load More"
-    },
-    
-    "countdown": {
-      "minuteLeft": "minute left",
-      "minutesLeft": "{{count}} minutes left"
-    },
-    
-    "notifications": {
-      "sessionEnded": "Session has ended - cannot confirm attendance",
-      "confirmedPresent": "Attendance confirmed - you are on time!",
-      "confirmedGrace": "Attendance confirmed during grace period",
-      "confirmedLate": "Attendance confirmed - marked as late",
-      "confirmed": "Attendance confirmed successfully",
-      "alreadyRecorded": "Attendance already recorded for this session",
-      "markedAbsent": "You have been marked as absent for this session",
-      "confirmError": "Error confirming attendance. Please try again",
-      "cancelError": "Error cancelling attendance. Please try again"
-    },
-    
-    "notes": {
-      "beforeStart": "Confirmed before session start",
-      "graceConfirmed": "Confirmed during grace period",
-      "lateConfirmed": "Confirmed after grace period - marked late",
-      "confirmed": "Attendance confirmed by volunteer",
-      "cancelledByVolunteer": "Cancelled by volunteer",
-      "autoAbsent": "Automatically marked absent - session ended without confirmation"
-    },
-    
-    "cancelReasons": {
-      "volunteerCanceled": "Canceled by volunteer"
-    },
-    
-    "stats": {
-      "sessions": "Sessions",
-      "hours": "Hours",
-      "attendanceRate": "Attendance Rate"
-    },
-    
-    "history": {
-      "thisMonth": "This Month",
-      "monthlyHistory": "This Month's Sessions",
-      "allTimeHistory": "All Time History",
-      "noMonthlyHistory": "No sessions completed this month",
-      "hoursCompleted": "{{hours}} hours completed",
-      "showingRecords": "Showing {{showing}} of {{total}} records",
-      "allLoaded": "All {{count}} records loaded"
-    }
+  "notifications": {
+    "volunteerInfoNotAvailable": "Volunteer information not available. Please refresh the page.",
+    "sessionAlreadyEnded": "Cannot confirm attendance - the session has already ended.",
+    "attendanceAlreadyRecorded": "Attendance already recorded for this session.",
+    "attendanceConfirmed": "Attendance confirmed successfully!",
+    "attendanceConfirmedLate": "Attendance confirmed (marked as late)!",
+    "errorConfirmingAttendance": "Error confirming attendance. Please try again.",
+    "markedAsUnableToAttend": "Marked as unable to attend.",
+    "errorCancellingAttendance": "Error cancelling attendance. Please try again."
+  },
+  "sessionCategories": {
+    "music": "Music Session",
+    "gardening": "Gardening Session",
+    "beading": "Beading Session",
+    "art": "Art Session",
+    "baking": "Baking Session",
+    "custom": "Custom Session",
+    "general": "General Session"
+  },
+  "sessionType": "Session Type",
+  "session": "Session",
+  "date": "Date",
+  "sessionCompleted": "Session Completed",
+  "sessionCompletedDesc": "This session has been completed successfully.",
+  "pastSessions": "Past Sessions",
+  "noPastSessions": "No Past Sessions",
+  "noPastSessionsDesc": "You don't have any completed sessions in your history.",
+  "noPastSessionsTitle": "No past sessions found",
+  "noPastSessionsMessage": "Your completed sessions will appear here once you start attending.",
+  "attendanceConfirmed": "Attendance Confirmed",
+  "youAttended": "Great job! Your attendance has been recorded.",
+  "attendanceCancelled": "Attendance Cancelled", 
+  "youCancelled": "You have cancelled your attendance for this session."
   }
 }

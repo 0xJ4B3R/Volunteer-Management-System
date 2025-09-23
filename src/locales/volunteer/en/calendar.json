@@ -2,20 +2,20 @@
     "Filter": "Filter",
     "Week": "Week",
     "Month": "Month",
-    "Available slots only": "Available slots only",
+    "Available slots only": "Available Slots Only",
     "All Session Types": "All Session Types",
-    "Sign Up for:": "Sign Up for:",
+    "Sign Up for:": "Request To Join:",
     "Date": "Date",
     "Time": "Time",
-    "No sessions": "No sessions",
-    "Loading calendar data...": "Loading calendar data...",
+    "noSessions": "No Sessions",
+    "Loading calendar data...": "Loading Calendar Data...",
     "Submitting Request…": "Submitting Request…",
     "Already Approved": "Already Approved",
     "Request Rejected": "Request Rejected",
     "Request Pending": "Request Pending",
     "Not Available": "Not Available",
     "Request to Join": "Request to Join",
-    "Select session type": "Select session type",
+    "Select session type": "Select Session Type",
     "Today": "Today",
     "months": {
         "0": "January",
@@ -64,24 +64,29 @@
       "sat": "Sat"
     },
     "SessionStatus": {
-      "label": "Status:",
+      "label": "Status",
       "approved": "Approved",
       "pending": "Pending",
       "rejected": "Rejected",
       "none": "Not Requested",
-      "pendingApproval": "Pending Approval ⏳",
-      "approvedStatus": "Approved ✅",
-      "rejectedStatus": "Rejected ❌"
+      "pendingApproval": "Pending Approval",
+      "approvedStatus": "Approved",
+      "rejectedStatus": "Rejected"
     },
-    "sessionTypes": {
-      "art": "Art",
-      "baking": "Baking", 
-      "music": "Music",
-      "reading": "Reading",
-      "crafts": "Crafts",
-      "exercise": "Exercise",
-      "gardening": "Gardening",
-      "beading": "Beading",
-      "session": "Session"
-  }
+    "rejectionReason": "Rejection Reason",
+    "signUpForSession": "Request To Join Session",
+    "date": "Date",
+    "time": "Time",
+    "Submitting Request...": "Submitting Request...",
+    "Request submitted successfully!": "Request Submitted Successfully!",
+    "Failed to submit request": "Failed to Submit Request",
+    "sessionCategories": {
+        "music": "Music Session",
+        "gardening": "Gardening Session",
+        "beading": "Beading Session",
+        "art": "Art Session",
+        "baking": "Baking Session",
+        "custom": "Custom Session",
+        "general": "General Session"
+    }
 }

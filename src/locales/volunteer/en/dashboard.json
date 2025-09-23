@@ -1,40 +1,66 @@
 {
   "dashboard": {
-    "title": "Volunteer Dashboard",
+    "title": "Volunteer Portal",
+    "defaultName": "Volunteer",
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
       "evening": "Good evening"
     },
     "checkIn": {
-      "title": "Check In",
-      "subtitle": "Log your session now"
+      "title": "Log Your Session",
+      "subtitle": "Record your attendance now",
+      "logging": "Logging...",
+      "pleaseWait": "Please Wait..."
+    },
+    "smartLogging": {
+      "noAppointments": "No appointments scheduled for today.",
+      "noActiveSessions": "No appointments are currently active. Sessions can only be logged from 1 hour before start time until the session ends.",
+      "alreadyLogged": "All valid sessions for today have already been logged.",
+      "success": "Successfully logged {{count}} session(s){{statusText}}!",
+      "error": "Error logging session. Please try again.",
+      "volunteerNotFound": "Volunteer information not available. Please refresh the page.",
+      "lateStatus": " (some marked as late)"
     },
     "upcoming": {
       "title": "Upcoming Sessions",
       "viewAll": "View All",
-      "none": "No upcoming sessions found"
+      "none": "No upcoming sessions",
+      "loading": "Loading Upcoming Sessions...",
+      "loadingSubtitle": "Please wait while we fetch your schedule.",
+      "noSessionsMessage": "Great job staying on top of your schedule! New opportunities will appear here when they become available."
     },
     "activity": {
       "title": "Recent Activity",
-      "present": "You attended a session. {{notes}}",
-      "late": "You were late to a session. {{notes}}",
-      "absent": "You missed a session. {{notes}}",
-      "generic": "Status: {{status}}. {{notes}}",
+      "present": "You attended a session{{notes}}",
+      "late": "You were late to a session{{notes}}",
+      "absent": "You missed a session{{notes}}",
+      "generic": "Status: {{status}}{{notes}}",
       "cancelledByVolunteer": "You missed the session. Cancelled by volunteer",
-      "sessionApproved": "✅ {{session}} Session Approved\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
-      "sessionRejected": "❌ {{session}} Session Rejected\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}{{reason}}",
-      "sessionRequested": "⏳ {{session}} Session Requested\n📅 {{date}} • ⏰ {{timeRange}} • 🕐 {{period}}",
-      "levelUp": "Congratulations! You've reached {{level}} level!🎉"
+      "loading": "Loading recent activity...",
+      "loadingSubtitle": "Please wait while we fetch your activity history.",
+      "noActivity": "No recent activity",
+      "noActivityMessage": "Your volunteering activities will appear here. Start making a difference today!",
+      "unknownStatus": "Unknown"
     },
     "stats": {
-      "totalHours": "Total Hours since account creation",
+      "totalHours": "Total Hours Since Joining",
       "hoursLabel": "Hours",
       "level": "Current Level",
-      "sessionsCompleted": "Sessions Completed since account creation" 
+      "sessionsCompleted": "Total Sessions Since Joining",
+      "sessionsLabel": "sessions",
+      "sessionLabelSingular": "session"
+    },
+    "session": {
+      "defaultTitle": "Volunteer Session",
+      "defaultLocation": "Session Location",
+      "timeTBD": "Time TBD"
     },
     "nextLevel": "Next: {{level}}",
     "hoursToGo": " {{count}} hours to go",
+    "hoursToMilestone": "{{count}} hours to next milestone ({{level}})",
+    "maxLevelAchieved": "🎉 Maximum level achieved!",
+    "levelUp": "Congratulations! You've reached {{level}} level!🎉",
     "levels": {
       "Beginner": "Beginner",
       "Helper": "Helper",
@@ -51,12 +77,7 @@
       "yesterday": "1 day ago",
       "daysAgo": "{{count}} days ago",
       "weekAgo": "1 week ago",
-      "weeksAgo": "{{count}} weeks ago",
-      "justNow": "Just now",
-      "minutesAgo": "{{count}} minute ago",
-      "minutesAgo_other": "{{count}} minutes ago",
-      "hoursAgo": "{{count}} hour ago",
-      "hoursAgo_other": "{{count}} hours ago"
+      "weeksAgo": "{{count}} weeks ago"
     },
     "months": {
       "0": "January",
@@ -95,21 +116,9 @@
       "5": "Fri",
       "6": "Sat"
     },
-    "sessions": {
-      "art": "Art",
-      "baking": "Baking", 
-      "music": "Music",
-      "reading": "Reading",
-      "crafts": "Crafts",
-      "exercise": "Exercise",
-      "gardening": "Gardening",
-      "beading": "Beading",
-      "session": "Session"
-    },
-    "periods": {
-      "morning": "Morning",
-      "afternoon": "Afternoon", 
-      "evening": "Evening"
+    "languages": {
+      "english": "English",
+      "hebrew": "עברית"
     }
   }
 }

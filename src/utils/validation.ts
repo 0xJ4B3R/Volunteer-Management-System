@@ -88,6 +88,11 @@ export const validateUsername = (username: string): boolean => {
 
 // Phone number validation helpers
 export const validatePhoneNumber = (phoneNumber: string): boolean => {
+  // If phone number is empty or just whitespace, it's valid (optional field)
+  if (!phoneNumber || phoneNumber.trim() === '') {
+    return true;
+  }
+  
   try {
     phoneNumberSchema.parse(phoneNumber);
     return true;
@@ -130,6 +135,11 @@ export const getPhoneNumberType = (phoneNumber: string): 'mobile' | 'landline' |
 };
 
 export const getPhoneNumberError = (phoneNumber: string): string | null => {
+  // If phone number is empty or just whitespace, it's valid (optional field)
+  if (!phoneNumber || phoneNumber.trim() === '') {
+    return null;
+  }
+  
   try {
     phoneNumberSchema.parse(phoneNumber);
     return null;

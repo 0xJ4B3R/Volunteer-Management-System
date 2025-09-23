@@ -27,11 +27,13 @@
   },
   "pendingRequests": {
     "title": "Pending Volunteer Requests",
-    "description": "{{count}} session with pending requests",
-    "description_plural": "{{count}} sessions with pending requests",
+    "description": "{{count}} sessions with pending requests",
+    "description_one": "{{count}} session with pending requests",
+    "description_other": "{{count}} sessions with pending requests",
     "noRequests": "No pending volunteer requests at this time.",
-    "pendingCount": "{{count}} pending request",
-    "pendingCount_plural": "{{count}} pending requests",
+    "pendingCount": "{{count}} pending requests",
+    "pendingCount_one": "{{count}} pending request",
+    "pendingCount_other": "{{count}} pending requests",
     "assignedResident": "Assigned Resident:",
     "matchScore": "Match Score:",
     "noneAssigned": "None assigned",
@@ -41,6 +43,7 @@
   },
   "daySessions": {
     "title": "Sessions for {{date}}",
+    "description": "{{count}} sessions scheduled",
     "description_one": "{{count}} session scheduled",
     "description_other": "{{count}} sessions scheduled",
     "noSessions": "No sessions scheduled for this day.",
@@ -92,12 +95,14 @@
       "nov": "Nov",
       "dec": "Dec"
     },
+    "sessionCount": "{{count}} sessions",
     "sessionCount_one": "{{count}} session",
     "sessionCount_other": "{{count}} sessions",
     "moreSessions": "+{{count}} more",
     "noSessions": "No sessions scheduled for this day.",
     "filled": "{{current}}/{{capacity}} filled",
-    "filled_plural": "{{current}}/{{capacity}} filled"
+    "filled_one": "{{current}}/{{capacity}} filled",
+    "filled_other": "{{current}}/{{capacity}} filled"
   },
   "session": {
     "status": {

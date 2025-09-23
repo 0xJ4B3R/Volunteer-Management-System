@@ -14,7 +14,8 @@
     "allReports": "כל הדוחות",
     "volunteerReports": "דוחות מתנדבים",
     "residentReports": "דוחות דיירים",
-    "externalGroupReports": "דוחות קבוצות חיצוניות"
+    "externalGroupReports": "דוחות קבוצות חיצוניות",
+    "groupAffiliationReports": "דוחות השתייכויות קבוצתיות"
   },
   "filters": {
     "status": "סטטוס",
@@ -69,7 +70,8 @@
     "participants": {
       "volunteer": "מתנדב",
       "resident": "דייר",
-      "externalGroup": "קבוצה חיצונית"
+      "externalGroup": "קבוצה חיצונית",
+      "groupAffiliation": "השתייכות קבוצתית"
     },
     "scope": {
       "all": "הכל",

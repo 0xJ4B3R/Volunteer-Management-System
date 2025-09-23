@@ -2,15 +2,18 @@
   "appointments": {
     "title": "Your Appointments",
     "subtitle": "Manage and view your scheduled sessions",
-    "search": "Search appointments...",
+    "search": "Search Appointments...",
     "filter": "Filter",
     "statusLabel": "Status:",
     "status": {
-      "approved": "Approved ✅",
-      "pending":  "Pending ⏳",
-      "rejected": "Rejected ❌",
-      "completed": "Completed ✔️",
-      "Closed": "Closed"
+      "approved": "Approved",
+      "pending":  "Pending",
+      "rejected": "Rejected",
+      "completed": "Completed",
+      "upcoming": "Upcoming",
+      "inProgress": "In Progress",
+      "canceled": "Canceled",
+      "closed": "Closed"
     },
     "tabs": {
       "past": "Past",
@@ -18,7 +21,7 @@
       "pending": "Pending"
     },
     "note": "Note",
-    "noAppointments": "You don't have any appointments to show.",
+    "noAppointments": "You don’t have any appointments to show.",
     "actions": {
       "cancel": "Cancel Request"
     },
@@ -38,6 +41,15 @@
       "Art": "Art",
       "Talk": "Conversation",
       "Other": "Other"
+    },
+    "sessionCategories": {
+      "music": "Music Session",
+      "gardening": "Gardening Session",
+      "beading": "Beading Session", 
+      "art": "Art Session",
+      "baking": "Baking Session",
+      "custom": "Custom Session",
+      "general": "General Session"
     },
     "filters": {
       "popular": "Popular",
@@ -71,14 +83,12 @@
       "AM": "AM",
       "PM": "PM"
     },
-    "sessionTypes": {
-      "session": "Session",
-      "gardening": "Gardening",
-      "music": "Music", 
-      "crafts": "Crafts",
-      "art": "Art",
-      "baking": "Baking",
-      "beading": "Beading"
+    "requestStatusLabel": "Request Status:",
+    "attendanceLabel": "Attendance:",
+    "attendance": {
+      "present": "Present",
+      "late": "Late",
+      "absent": "Absent"
     },
     "room": "Room"
   }

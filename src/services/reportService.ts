@@ -266,6 +266,66 @@ const calculateSubjectSummary = (appointments: AppointmentEntry[], subjectType: 
   return summary;
 };
 
+// Helper function to create report object
+const createReportObject = (
+  type: ReportType,
+  startDate: string,
+  endDate: string,
+  userId: string,
+  subjectId: string | null,
+  subjects: SubjectReport[]
+): Report => {
+  // Calculate unique sessions (appointments that occurred at the same date/time are the same session)
+  const uniqueSessions = new Set<string>();
+  subjects.forEach(subject => {
+    subject.appointments.forEach(appointment => {
+      // Only count sessions that are not missing or canceled
+      if (appointment.status !== 'missing' && appointment.status !== 'canceled') {
+        const sessionKey = `${appointment.date}_${appointment.startTime}_${appointment.endTime}`;
+        uniqueSessions.add(sessionKey);
+      }
+    });
+  });
+  
+  // Calculate total appointments excluding missing and canceled
+  const totalAppointments = subjects.reduce((sum, sub) => {
+    const validAppointments = sub.appointments.filter(apt => apt.status !== 'missing' && apt.status !== 'canceled');
+    return sum + validAppointments.length;
+  }, 0);
+
+  const lastUnderscoreIndex = type.lastIndexOf('_');
+  const subject = type.substring(0, lastUnderscoreIndex) as ReportSubject;
+
+  return {
+    id: generateId(),
+    type,
+    filters: {
+      startDate,
+      endDate,
+      subjectId: subjectId || null
+    },
+    data: {
+      summary: {
+        totalSubjects: subjects.length,
+        totalSessions: uniqueSessions.size,
+        totalAppointments: totalAppointments,
+        totalHours: subjects.reduce((sum, sub) => sum + (sub.summary?.totalHours || 0), 0),
+        ...(subject !== 'resident' && {
+          present: subjects.reduce((sum, sub) => sum + (sub.summary?.present || 0), 0),
+          late: subjects.reduce((sum, sub) => sum + (sub.summary?.late || 0), 0),
+          absent: subjects.reduce((sum, sub) => sum + (sub.summary?.absent || 0), 0),
+          missing: subjects.reduce((sum, sub) => sum + (sub.summary?.missing || 0), 0)
+        })
+      },
+      subjects
+    },
+    generatedBy: userId,
+    generatedAt: Timestamp.now(),
+    description: '', // This will be set by the caller
+    exported: false
+  };
+};
+
 // Main report generation function
 export const generateReport = async (
   type: ReportType,
@@ -292,6 +352,52 @@ export const generateReport = async (
       case 'external_group':
         subjectsQuery = query(collection(db, 'external_groups'));
         break;
+      case 'group_affiliation':
+        // For group affiliation reports, we need to check if the specific group has volunteers with appointments
+        // This is different from other report types - we only process the specific group requested
+        
+        // Group affiliation reports are always individual - filter to specific group
+        if (subjectId) {
+          // Check if the specific group affiliation has any volunteers
+          const groupVolunteersQuery = query(
+            collection(db, 'volunteers'),
+            where('groupAffiliation', '==', subjectId)
+          );
+          const groupVolunteersSnapshot = await getDocs(groupVolunteersQuery);
+          
+          if (groupVolunteersSnapshot.empty) {
+            throw new Error(`No volunteers found for group affiliation: ${subjectId}`);
+          }
+          
+          // Collect all appointments for volunteers in this specific group within the date range
+          const allAppointments: AppointmentEntry[] = [];
+          
+          for (const volunteerDoc of groupVolunteersSnapshot.docs) {
+            const appointments = await fetchAppointmentsForSubject(
+              volunteerDoc.id,
+              'volunteer',
+              startDate,
+              endDate
+            );
+            allAppointments.push(...appointments);
+          }
+          
+          // If no appointments found for this group in the date range, throw an error
+          if (allAppointments.length === 0) {
+            throw new Error(`No appointments found for group affiliation "${subjectId}" in the selected date range (${startDate} to ${endDate})`);
+          }
+          
+          const subjectReport = {
+            name: subjectId,
+            summary: calculateSubjectSummary(allAppointments, 'volunteer'),
+            appointments: allAppointments
+          };
+          
+          return createReportObject(type, startDate, endDate, userId, subjectId, [subjectReport]);
+        }
+        
+        // If no subjectId provided, throw an error
+        throw new Error('Group affiliation reports require a specific group to be selected');
       default:
         throw new Error(`Invalid subject type: ${subject}`);
     }
@@ -358,34 +464,7 @@ export const generateReport = async (
 
 
     // Create report object
-    const report: Report = {
-      id: generateId(),
-      type,
-      filters: {
-        startDate,
-        endDate,
-        subjectId: scope === 'individual' ? subjectId : null
-      },
-      data: {
-        summary: {
-          totalSubjects: subjects.length,
-          totalSessions: uniqueSessions.size, // Use unique sessions count instead of total appointments
-          totalAppointments: totalAppointments,
-          totalHours: subjects.reduce((sum, sub) => sum + (sub.summary?.totalHours || 0), 0),
-          ...(subject !== 'resident' && {
-            present: subjects.reduce((sum, sub) => sum + (sub.summary?.present || 0), 0),
-            late: subjects.reduce((sum, sub) => sum + (sub.summary?.late || 0), 0),
-            absent: subjects.reduce((sum, sub) => sum + (sub.summary?.absent || 0), 0),
-            missing: subjects.reduce((sum, sub) => sum + (sub.summary?.missing || 0), 0)
-          })
-        },
-        subjects
-      },
-      generatedBy: userId,
-      generatedAt: Timestamp.now(),
-      description: '', // This will be set by the caller
-      exported: false
-    };
+    const report = createReportObject(type, startDate, endDate, userId, scope === 'individual' ? subjectId : null, subjects);
 
     // Save report to Firestore
     const reportRef = doc(collection(db, 'reports'), report.id);

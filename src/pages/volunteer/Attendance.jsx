@@ -1,101 +1,45 @@
-import { useState, useEffect } from 'react';
-import { Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, FileText, XCircle, History, CalendarDays, ChevronRight } from 'lucide-react';
-import { collection, getDocs, query, where, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  Globe, Clock, Users, Check, X, AlertCircle, TrendingUp, Award,
+  FileText, CheckCircle2, XCircle, History, CalendarDays,
+  CalendarClock, ChevronRight
+} from 'lucide-react';
+import {
+  collection, getDocs, query, where, orderBy, limit, doc,
+  updateDoc, addDoc, Timestamp
+} from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Layout } from "@/components/volunteer/Layout"
+import { useToast } from "@/components/ui/use-toast";
+import { db } from '@/lib/firebase';
+import { Layout } from '@/components/volunteer/Layout';
 import LoadingScreen from '@/components/volunteer/InnerLS';
 import './styles/Attendance.css';
 
-const Attendance = () => {
-  const [activeTab, setActiveTab] = useState('Today');
-  const [selectedSessions, setSelectedSessions] = useState({});
-  const [todaySessions, setTodaySessions] = useState([]);
-  const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState('');
-  const [userId, setUserId] = useState('');
-  const { t, i18n } = useTranslation("attendance");
-  const [showLangOptions, setShowLangOptions] = useState(false);
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+// Import proper Firestore collection references
+import {
+  calendar_slotsRef,
+  attendanceRef,
+  volunteersRef,
+  docToObject
+} from '@/services/firestore';
 
-  // Pagination state for history
-  const [historyPage, setHistoryPage] = useState(0);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [hasMoreHistory, setHasMoreHistory] = useState(true);
-  const [allUserRecords, setAllUserRecords] = useState([]);
-  const [totalHistoryCount, setTotalHistoryCount] = useState(0);
+// Constants
+const RECORDS_PER_PAGE = 5;
 
-  // Monthly stats state
-  const [monthlyStats, setMonthlyStats] = useState({
-    thisMonthHours: 0,
-    thisMonthSessions: 0,
-    thisMonthHistory: []
-  });
+// Helper Functions
+const parseTimeString = (timeStr) => {
+  if (!timeStr) return new Date(0); // Return epoch for null/undefined times
 
-  const RECORDS_PER_PAGE = 25;
-
-  // Helper function to translate session types and categories
-  const translateSessionType = (sessionType, sessionCategory) => {
-    if (!sessionType && !sessionCategory) return t('attendance.sessionTypes.session');
-
-    // Priority: sessionCategory > customLabel > sessionType
-    const typeToTranslate = sessionCategory || sessionType;
-    
-    if (!typeToTranslate) return t('attendance.sessionTypes.session');
-
-    // Handle common session type/category variations
-    const type = typeToTranslate.toLowerCase().trim();
-
-    // Map variations to standard keys for translation
-    const typeMapping = {
-      'general session': 'session',
-      'volunteer session': 'session',
-      'regular session': 'session',
-      'default': 'session',
-      'art': 'art',
-      'baking': 'baking',
-      'gardening': 'gardening',
-      'music': 'music',
-      'beading': 'beading',
-      'reading': 'reading',
-      'reading session': 'reading',
-    };
-
-    const mappedType = typeMapping[type] || type.replace(/\s+/g, '').replace(/[^a-zA-Z]/g, '');
-    return t(`attendance.sessionTypes.${mappedType}`, typeToTranslate);
-  };
-
-  // Function to show notifications
-  const showNotification = (message, type = "error") => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => {
-      setNotification({ show: false, message: "", type: "" });
-    }, 5000);
-  };
-
-  // Get username from localStorage
-  useEffect(() => {
-    const storedUsername = localStorage.getItem('username');
-    const storedUserId = localStorage.getItem('userId');
-    if (storedUsername) {
-      setUsername(storedUsername);
-    }
-    if (storedUserId) {
-      setUserId(storedUserId);
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.dir = i18n.language === 'he' ? 'rtl' : 'ltr';
-  }, [i18n.language]);
-
-  // Helper function to parse time string and get current time status
-  const parseTimeString = (timeStr) => {
-    if (!timeStr) return null;
-
+  try {
     const [time, period] = timeStr.trim().split(' ');
     let [hours, minutes] = time.split(':').map(Number);
+
+    // Handle invalid time format
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.warn('Invalid time format:', timeStr);
+      return new Date(0);
+    }
 
     if (period?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
     if (period?.toLowerCase() === 'am' && hours === 12) hours = 0;
@@ -104,261 +48,283 @@ const Attendance = () => {
     const timeDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes || 0);
 
     return timeDate;
-  };
+  } catch (error) {
+    console.warn('Error parsing time string:', timeStr, error);
+    return new Date(0);
+  }
+};
 
-  // Helper function to check if session is within time window
-  const isSessionInTimeWindow = (startTime, endTime, windowMinutes = 30) => {
-    const now = new Date();
-    const sessionStart = parseTimeString(startTime);
-    const sessionEnd = parseTimeString(endTime);
-    
-    if (!sessionStart || !sessionEnd) return false;
+const getHoursFromTimeRange = (startTime, endTime) => {
+  if (!startTime || !endTime) {
+    console.log('Missing time data:', { startTime, endTime });
+    return 0;
+  }
 
-    // Calculate time differences in minutes
-    const minutesToStart = (sessionStart - now) / (1000 * 60);
-    const minutesSinceStart = (now - sessionStart) / (1000 * 60);
-    const minutesToEnd = (sessionEnd - now) / (1000 * 60);
+  const parseTime = (timeStr) => {
+    if (!timeStr) return 0;
 
-    // Show session if:
-    // 1. Starts within the next window minutes
-    // 2. Started within the last 15 minutes (grace period)
-    // 3. Is currently ongoing
-    return (minutesToStart <= windowMinutes && minutesToStart >= -15) || 
-           (minutesToEnd > 0 && minutesSinceStart >= 0);
-  };
+    // Handle different time formats
+    let time = timeStr.trim();
+    let period = '';
 
-  // Updated function to determine attendance status with 15-minute grace period
-  const getAttendanceStatus = (startTime, endTime) => {
-    const now = new Date();
-    const sessionStart = parseTimeString(startTime);
-    const sessionEnd = parseTimeString(endTime);
-
-    if (!sessionStart || !sessionEnd) return 'present';
-
-    const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000);
-
-    if (now > sessionEnd) {
-      return 'auto-absent';
-    } else if (now > gracePeriodEnd) {
-      return 'late';
-    } else if (now > sessionStart) {
-      return 'grace-period';
-    } else {
-      return 'present';
+    // Check if it has AM/PM
+    if (time.includes('AM') || time.includes('PM')) {
+      const parts = time.split(' ');
+      time = parts[0];
+      period = parts[1];
     }
-  };
 
-  // Helper function to calculate hours from time range
-  const getHoursFromTimeRange = (startTime, endTime) => {
-    if (!startTime || !endTime) return 0;
+    // Parse hours and minutes
+    const [hours, minutes] = time.split(':').map(Number);
 
-    const parseTime = (timeStr) => {
-      const [time, period] = timeStr.split(' ');
-      let [hours, minutes] = time.split(':').map(Number);
-
-      if (period?.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-      if (period?.toLowerCase() === 'am' && hours === 12) hours = 0;
-
-      return hours + (minutes || 0) / 60;
-    };
-
-    try {
-      const start = parseTime(startTime);
-      const end = parseTime(endTime);
-      return Math.max(0, end - start);
-    } catch (error) {
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.log('Invalid time format:', timeStr);
       return 0;
     }
+
+    let totalHours = hours;
+
+    // Handle AM/PM conversion
+    if (period) {
+      if (period.toLowerCase() === 'pm' && hours !== 12) {
+        totalHours = hours + 12;
+      } else if (period.toLowerCase() === 'am' && hours === 12) {
+        totalHours = 0;
+      }
+    }
+
+    return totalHours + (minutes || 0) / 60;
   };
 
-  // Updated function to fetch monthly stats from calendar_slots
-  const fetchMonthlyStats = async () => {
-    if (!userId && !username) return { 
-      thisMonthHours: 0, 
-      thisMonthSessions: 0,
-      thisMonthHistory: [] 
-    };
+  try {
+    console.log('Calculating hours for:', { startTime, endTime });
+    const start = parseTime(startTime);
+    const end = parseTime(endTime);
+    const hours = Math.max(0, end - start);
+    console.log('Calculated hours:', hours);
+    return hours;
+  } catch (error) {
+    console.error('Error parsing time range:', error, { startTime, endTime });
+    return 0;
+  }
+};
 
+// Helper function to parse time string and combine with date
+const parseTimeAndCombineWithDate = (dateStr, timeStr) => {
+  try {
+    // Parse date string (format: "YYYY-MM-DD")
+    const [year, month, day] = dateStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+    if (!timeStr) return date;
+
+    // Parse time string (could be "2:00 PM", "14:00", etc.)
+    let hours = 0;
+    let minutes = 0;
+
+    // Handle AM/PM format
+    if (timeStr.includes('AM') || timeStr.includes('PM')) {
+      const timePart = timeStr.replace(/\s*(AM|PM)/i, '');
+      const [hourStr, minuteStr = '0'] = timePart.split(':');
+      hours = parseInt(hourStr);
+      minutes = parseInt(minuteStr);
+
+      // Convert to 24-hour format
+      if (timeStr.toUpperCase().includes('PM') && hours !== 12) {
+        hours += 12;
+      } else if (timeStr.toUpperCase().includes('AM') && hours === 12) {
+        hours = 0;
+      }
+    } else {
+      // Handle 24-hour format
+      const [hourStr, minuteStr = '0'] = timeStr.split(':');
+      hours = parseInt(hourStr);
+      minutes = parseInt(minuteStr);
+    }
+
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  } catch (error) {
+    return new Date();
+  }
+};
+
+// Helper function to check if current time is within valid logging window
+const isWithinSessionWindow = (sessionStartTime, sessionEndTime) => {
+  const now = new Date();
+  const startTime = parseTimeAndCombineWithDate(now.toISOString().split('T')[0], sessionStartTime);
+  const endTime = parseTimeAndCombineWithDate(now.toISOString().split('T')[0], sessionEndTime);
+  
+  // Can log: 1 hour before start up to session end time
+  const oneHourBeforeStart = new Date(startTime.getTime() - 60 * 60 * 1000);
+  
+  return now >= oneHourBeforeStart && now <= endTime;
+};
+
+const getAttendanceStatus = (startTime, endTime) => {
+  const now = new Date();
+  const sessionStart = parseTimeString(startTime);
+  const sessionEnd = parseTimeString(endTime);
+
+  if (!sessionStart || !sessionEnd) return 'present';
+
+  if (now > sessionEnd) {
+    return 'ended';
+  } else if (now > sessionStart) {
+    return 'in-progress';
+  } else {
+    return 'upcoming';
+  }
+};
+
+// Helper function to determine attendance status based on timing (for logging)
+const getAttendanceLoggingStatus = (sessionStartTime, sessionEndTime) => {
+  const now = new Date();
+  const startTime = parseTimeAndCombineWithDate(now.toISOString().split('T')[0], sessionStartTime);
+  const endTime = parseTimeAndCombineWithDate(now.toISOString().split('T')[0], sessionEndTime);
+  
+  // Calculate total session duration
+  const sessionDuration = endTime.getTime() - startTime.getTime();
+  const twentyFivePercentOfSession = sessionDuration * 0.25;
+  const twentyFivePercentAfterStart = new Date(startTime.getTime() + twentyFivePercentOfSession);
+  
+  // If more than 25% of session time has passed after start, mark as late
+  if (now > twentyFivePercentAfterStart) {
+    return 'late';
+  }
+  
+  return 'present';
+};
+
+// Custom Hooks
+const useAuth = () => {
+  const [username, setUsername] = useState('');
+  const [userId, setUserId] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
     try {
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-      const currentYear = now.getFullYear();
-      
-      // Create month string in YYYY-MM format for comparison
-      const currentMonthStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "{}");
+      if (!user.username) {
+        navigate("/login");
+      } else if (user.role !== "volunteer") {
+        navigate("/manager");
+      } else {
+        setUsername(user.username);
+        setUserId(user.id || user.uid);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      navigate("/login");
+    }
+  }, [navigate]);
 
-      console.log('Fetching monthly stats for:', currentMonthStr, 'UserId:', userId, 'Username:', username);
+  return { username, userId };
+};
 
-      const calendarRef = collection(db, 'calendar_slots');
-      const calendarSnapshot = await getDocs(calendarRef);
-      
-      let thisMonthHours = 0;
-      let thisMonthSessions = 0;
-      let thisMonthHistory = [];
 
-      calendarSnapshot.docs.forEach(doc => {
-        const slot = { id: doc.id, ...doc.data() };
-        
-        // Check if the slot is from this month
-        if (slot.date && slot.date.startsWith(currentMonthStr)) {
-          console.log('Found slot for current month:', slot.date, slot.appointmentId);
-          
-          // Find the user's volunteer request - be more flexible with matching
-          const userVolunteerRequest = slot.volunteerRequests?.find(request => 
-            (request.userId === userId || request.volunteerId === userId || 
-             request.userId === username || request.volunteerId === username) && 
-            (request.status === 'approved' || request.status === 'completed')
-          );
+const usePastSessions = (username, userId) => {
+  const [pastSessions, setPastSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [volunteer, setVolunteer] = useState(null);
 
-          if (userVolunteerRequest) {
-            console.log('Found user volunteer request:', userVolunteerRequest);
-            
-            // Parse the date to check if it's in the past (completed sessions)
-            const slotDate = new Date(slot.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            // Include sessions that have already happened OR sessions that are marked as completed
-            if (slotDate <= today || userVolunteerRequest.status === 'completed') {
-              thisMonthSessions++;
-              
-              // Calculate hours from start and end time
-              const sessionHours = getHoursFromTimeRange(slot.startTime, slot.endTime);
-              thisMonthHours += sessionHours;
-              
-              // Create history entry
-              const historyEntry = {
-                id: slot.id,
-                appointmentId: slot.appointmentId || slot.id,
-                date: slot.date,
-                title: translateSessionType(
-                  slot.customLabel || slot.sessionCategory || slot.type || 'Session',
-                  slot.sessionCategory
-                ),
-                time: `${slot.startTime} - ${slot.endTime}`,
-                hours: sessionHours,
-                status: userVolunteerRequest.status === 'completed' ? 'present' : 'unknown',
-                sessionType: slot.customLabel || slot.sessionCategory || slot.type || 'Session',
-                sessionCategory: slot.sessionCategory,
-                notes: slot.notes || '',
-                volunteerRequestStatus: userVolunteerRequest.status,
-                approvedAt: userVolunteerRequest.approvedAt,
-                completedAt: userVolunteerRequest.completedAt || null,
-                source: 'calendar_slots'
-              };
-              
-              thisMonthHistory.push(historyEntry);
-              console.log('Added history entry:', historyEntry);
-            }
-          }
-        }
-      });
-
-      console.log('Total monthly sessions found:', thisMonthSessions);
-      console.log('Monthly history entries:', thisMonthHistory);
-
-      // Now check for attendance records to get the actual status
-      if (thisMonthHistory.length > 0 || thisMonthSessions > 0) {
-        const attendanceRef = collection(db, 'attendance');
-        const attendanceSnapshot = await getDocs(attendanceRef);
-        
-        const attendanceRecords = {};
-        attendanceSnapshot.docs.forEach(doc => {
-          const record = doc.data();
-          if (record.volunteerId === userId || record.volunteerId === username || record.confirmedBy === username) {
-            attendanceRecords[record.appointmentId] = record;
-          }
-        });
-
-        console.log('Attendance records found:', Object.keys(attendanceRecords));
-
-        // Update history entries with attendance data
-        thisMonthHistory = thisMonthHistory.map(entry => {
-          const attendanceRecord = attendanceRecords[entry.appointmentId];
-          if (attendanceRecord) {
-            console.log('Found attendance record for', entry.appointmentId, attendanceRecord);
-            return {
-              ...entry,
-              status: attendanceRecord.status,
-              notes: attendanceRecord.notes || entry.notes,
-              attendanceConfirmedAt: attendanceRecord.confirmedAt
-            };
-          }
-          return entry;
-        });
-
-        // Also check if there are attendance records for this month that don't have calendar slots
-        Object.values(attendanceRecords).forEach(record => {
-          if (record.confirmedAt) {
-            const confirmDate = record.confirmedAt.toDate ? record.confirmedAt.toDate() : new Date(record.confirmedAt);
-            const confirmMonth = confirmDate.getMonth() + 1;
-            const confirmYear = confirmDate.getFullYear();
-            const confirmMonthStr = `${confirmYear}-${confirmMonth.toString().padStart(2, '0')}`;
-            
-            if (confirmMonthStr === currentMonthStr) {
-              // Check if this attendance record is already in our history
-              const existingEntry = thisMonthHistory.find(entry => entry.appointmentId === record.appointmentId);
-              if (!existingEntry) {
-                // Add this attendance record as a history entry
-                const historyEntry = {
-                  id: record.appointmentId,
-                  appointmentId: record.appointmentId,
-                  date: confirmDate.toISOString().split('T')[0],
-                  title: t('attendance.sessionTypes.session'),
-                  time: t('attendance.messages.timeNotAvailable'),
-                  hours: 0,
-                  status: record.status,
-                  sessionType: 'Session',
-                  sessionCategory: null,
-                  notes: record.notes || '',
-                  volunteerRequestStatus: 'completed',
-                  attendanceConfirmedAt: record.confirmedAt,
-                  source: 'attendance_only'
-                };
-                
-                thisMonthHistory.push(historyEntry);
-                console.log('Added attendance-only entry:', historyEntry);
-              }
-            }
-          }
-        });
+  useEffect(() => {
+    const fetchPastSessions = async () => {
+      if (!username || !userId) {
+        setLoading(false);
+        return;
       }
 
-      // Sort history by date (most recent first)
-      thisMonthHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+      try {
+        setLoading(true);
 
-      console.log('Final monthly stats:', {
-        thisMonthHours,
-        thisMonthSessions: thisMonthHistory.length, // Use actual history length
-        thisMonthHistory: thisMonthHistory
-      });
+        // Get volunteer data
+        const volunteersRef = collection(db, "volunteers");
+        const volunteerSnapshot = await getDocs(volunteersRef);
+        const volunteer = volunteerSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .find(v => v.userId === userId);
 
-      return {
-        thisMonthHours,
-        thisMonthSessions: thisMonthHistory.length,
-        thisMonthHistory
-      };
+        if (!volunteer || !volunteer.appointmentHistory) {
+          setPastSessions([]);
+          setLoading(false);
+          return;
+        }
 
-    } catch (error) {
-      console.error('Error fetching monthly stats from calendar_slots:', error);
-      return { 
-        thisMonthHours: 0, 
-        thisMonthSessions: 0,
-        thisMonthHistory: [] 
-      };
-    }
+        setVolunteer(volunteer);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Filter past sessions from appointmentHistory
+        const pastSessionsData = volunteer.appointmentHistory
+          .filter(appointment => {
+            const appointmentDate = new Date(appointment.date);
+            appointmentDate.setHours(0, 0, 0, 0);
+            return appointmentDate < today;
+          })
+          .map(appointment => {
+            // Parse date and time
+            const appointmentDate = new Date(appointment.date);
+            const startTime = appointment.startTime || 'TBD';
+            const endTime = appointment.endTime || "";
+            const timeRange = endTime ? `${startTime} - ${endTime}` : startTime;
+
+            // Format display date
+            const displayDate = appointmentDate.toLocaleDateString('he-IL', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric'
+            });
+
+            return {
+              id: appointment.appointmentId,
+              time: timeRange,
+              date: displayDate,
+              residents: appointment.residentIds || [],
+              status: 'completed', // Past sessions are always completed
+              sessionType: 'General Session',
+              sessionCategory: 'general',
+              isCustom: false,
+              customLabel: null,
+              appointmentId: appointment.appointmentId,
+              startTime: appointment.startTime,
+              endTime: appointment.endTime
+            };
+          });
+
+        // Sort by date (most recent first)
+        pastSessionsData.sort((a, b) => {
+          const dateA = new Date(a.appointmentId.split('_')[0]); // Extract date from appointmentId
+          const dateB = new Date(b.appointmentId.split('_')[0]);
+          return dateB - dateA;
+        });
+
+        setPastSessions(pastSessionsData);
+      } catch (error) {
+        console.error('Error fetching past sessions:', error);
+        setPastSessions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPastSessions();
+  }, [username, userId]);
+
+  return {
+    pastSessions,
+    setPastSessions,
+    loading,
+    volunteer
   };
+};
 
-  // Fetch monthly stats
-  useEffect(() => {
-    if (userId || username) {
-      fetchMonthlyStats().then(stats => {
-        setMonthlyStats(stats);
-      });
-    }
-  }, [userId, username]);
+const useTodaySessions = (username, userId) => {
+  const [todaySessions, setTodaySessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [volunteer, setVolunteer] = useState(null);
 
-  // Updated fetchTodaySessions with deduplication
   useEffect(() => {
     const fetchTodaySessions = async () => {
       if (!username || !userId) return;
@@ -366,592 +332,330 @@ const Attendance = () => {
       try {
         setLoading(true);
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
         today.setHours(0, 0, 0, 0);
 
-        let allTodaySessions = [];
+        // Get volunteer's appointmentHistory
+        const volunteerSnapshot = await getDocs(volunteersRef);
+        const volunteer = volunteerSnapshot.docs
+          .map(doc => docToObject(doc))
+          .find(v => v.userId === userId || v.userId === username);
 
-        // 1. Fetch from calendar_slots
-        try {
-          const calendarRef = collection(db, 'calendar_slots');
-          const calendarSnapshot = await getDocs(calendarRef);
-
-          const calendarTodayData = calendarSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
-            .filter(slot => {
-              // Check if date matches today
-              let slotDate;
-              if (slot.date && slot.date.toDate) {
-                slotDate = slot.date.toDate();
-              } else if (slot.date) {
-                slotDate = new Date(slot.date);
-              } else {
-                return false;
-              }
-
-              slotDate.setHours(0, 0, 0, 0);
-              const isToday = slotDate.getTime() === today.getTime();
-              
-              // Check if user is approved volunteer
-              const userVolunteer = slot.volunteerRequests?.find(request =>
-                (request.userId === userId || request.volunteerId === userId) && 
-                request.status === 'approved'
-              );
-
-              // Check if session is within time window (30 minutes before to session end)
-              const inTimeWindow = isSessionInTimeWindow(slot.startTime, slot.endTime, 30);
-
-              return isToday && userVolunteer && inTimeWindow;
-            });
-
-          // Format calendar sessions
-          const formattedCalendarSessions = calendarTodayData.map(slot => ({
-            id: slot.id,
-            time: `${slot.startTime} - ${slot.endTime}`,
-            residents: slot.residentIds || [],
-            description: slot.notes || t('attendance.messages.defaultDescription'),
-            status: 'not_confirmed',
-            sessionType: slot.customLabel || slot.sessionCategory || slot.type || 'Session',
-            sessionCategory: slot.sessionCategory,
-            date: slot.date,
-            appointmentId: slot.appointmentId || slot.id,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            source: 'calendar_slots'
-          }));
-
-          allTodaySessions = [...allTodaySessions, ...formattedCalendarSessions];
-        } catch (calendarError) {
-          console.error('Error fetching calendar slots:', calendarError);
+        if (!volunteer || !volunteer.appointmentHistory) {
+          setTodaySessions([]);
+          setVolunteer(null);
+          return;
         }
 
-        // 2. Fetch from appointmentHistory
-        try {
-          const volunteersRef = collection(db, 'volunteers');
-          const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
-          const volunteerSnapshot = await getDocs(volunteerQuery);
+        console.log('Found volunteer for attendance:', {
+          volunteerId: volunteer.id,
+          userId: volunteer.userId,
+          fullName: volunteer.fullName,
+          appointmentHistoryCount: volunteer.appointmentHistory?.length || 0
+        });
 
-          if (!volunteerSnapshot.empty) {
-            const volunteerDoc = volunteerSnapshot.docs[0];
-            const appointmentHistory = volunteerDoc.data().appointmentHistory || [];
+        // Store the volunteer object for later use
+        setVolunteer(volunteer);
 
-            const appointmentHistoryData = appointmentHistory.filter(appointment => {
-              const isToday = appointment.date === todayStr;
-              const isUpcoming = appointment.status === 'upcoming';
-              const inTimeWindow = isSessionInTimeWindow(appointment.startTime, appointment.endTime, 30);
+        // Filter today's sessions from appointmentHistory
+        const todayAppointments = volunteer.appointmentHistory.filter(appointment => {
+          const appointmentDate = new Date(appointment.date);
+          appointmentDate.setHours(0, 0, 0, 0);
+          return appointmentDate.getTime() === today.getTime();
+        });
 
-              return isToday && isUpcoming && inTimeWindow;
-            });
+        if (todayAppointments.length === 0) {
+          setTodaySessions([]);
+          return;
+        }
 
-            // Format appointment history sessions
-            const formattedAppointmentSessions = appointmentHistoryData.map(appointment => ({
-              id: `appointment_${appointment.appointmentId}`,
+        // Get calendar slot data for enrichment
+        const calendarSnapshot = await getDocs(calendar_slotsRef);
+        const calendarData = {};
+        calendarSnapshot.docs.forEach(doc => {
+          const data = docToObject(doc);
+          calendarData[data.appointmentId || doc.id] = data;
+        });
+
+        // Build sessions for all today's appointments
+        const sessionsWithAttendance = await Promise.all(
+          todayAppointments.map(async (appointment) => {
+            // Get calendar slot data for this appointment
+            const calendarSlot = calendarData[appointment.appointmentId];
+
+            // Determine session type
+            let sessionType = 'General Session';
+            
+            if (calendarSlot) {
+              if (calendarSlot.isCustom && calendarSlot.customLabel) {
+                sessionType = calendarSlot.customLabel;
+              } else if (calendarSlot.sessionCategory) {
+                sessionType = calendarSlot.sessionCategory;
+              }
+            }
+
+            // Check if attendance already exists
+            let attendanceRecord = null;
+            let sessionStatus = 'not_confirmed';
+            
+            try {
+              const existingAttendanceQuery = query(
+                attendanceRef,
+                where('appointmentId', '==', appointment.appointmentId),
+                where('volunteerId.id', '==', volunteer.id)
+              );
+
+              const existingAttendanceSnapshot = await getDocs(existingAttendanceQuery);
+
+              if (!existingAttendanceSnapshot.empty) {
+                attendanceRecord = existingAttendanceSnapshot.docs[0].data();
+                // Determine status based on attendance record
+                if (attendanceRecord.status === 'present' || attendanceRecord.status === 'late') {
+                  sessionStatus = 'confirmed';
+                } else if (attendanceRecord.status === 'absent') {
+                  sessionStatus = 'cancelled';
+                }
+              }
+            } catch (attendanceError) {
+              // Fallback check - use volunteer.id instead of userId
+              const allAttendanceSnapshot = await getDocs(attendanceRef);
+              const existingRecord = allAttendanceSnapshot.docs.find(doc => {
+                const data = doc.data();
+                return (data.appointmentId === appointment.appointmentId) &&
+                  (data.volunteerId?.id === volunteer.id || data.volunteerId === volunteer.id);
+              });
+
+              if (existingRecord) {
+                attendanceRecord = existingRecord.data();
+                if (attendanceRecord.status === 'present' || attendanceRecord.status === 'late') {
+                  sessionStatus = 'confirmed';
+                } else if (attendanceRecord.status === 'absent') {
+                  sessionStatus = 'cancelled';
+                }
+              }
+            }
+
+            return {
+              id: appointment.appointmentId,
               time: `${appointment.startTime} - ${appointment.endTime}`,
-              residents: appointment.residentIds || [],
-              description: appointment.notes || t('attendance.messages.defaultDescription'),
-              status: 'not_confirmed',
-              sessionType: appointment.sessionType || 'Session',
-              sessionCategory: appointment.sessionCategory,
-              date: appointment.date,
+              residents: appointment.residentIds || calendarSlot?.residentIds || [],
+              status: sessionStatus,
+              sessionType: sessionType,
+              sessionCategory: calendarSlot?.sessionCategory || 'general',
+              isCustom: calendarSlot?.isCustom || false,
+              customLabel: calendarSlot?.customLabel,
               appointmentId: appointment.appointmentId,
               startTime: appointment.startTime,
               endTime: appointment.endTime,
-              source: 'appointmentHistory'
-            }));
+              attendanceRecord: attendanceRecord
+            };
+          })
+        );
 
-            allTodaySessions = [...allTodaySessions, ...formattedAppointmentSessions];
-          }
-        } catch (appointmentError) {
-          console.error('Error fetching appointment history:', appointmentError);
-        }
+        const availableSessions = sessionsWithAttendance.filter(session => session !== null);
 
-        // 3. DEDUPLICATION: Remove duplicates based on appointmentId
-        // Keep the calendar_slots version over appointmentHistory if both exist
-        const uniqueSessions = [];
-        const seenAppointmentIds = new Set();
-        
-        // First pass: Add all calendar_slots sessions
-        allTodaySessions
-          .filter(session => session.source === 'calendar_slots')
-          .forEach(session => {
-            if (!seenAppointmentIds.has(session.appointmentId)) {
-              uniqueSessions.push(session);
-              seenAppointmentIds.add(session.appointmentId);
-            }
+        // Sort by start time
+        availableSessions.sort((a, b) => {
+          const timeA = parseTimeString(a.startTime);
+          const timeB = parseTimeString(b.startTime);
+          
+          console.log('Sorting sessions:', {
+            sessionA: { startTime: a.startTime, parsed: timeA },
+            sessionB: { startTime: b.startTime, parsed: timeB },
+            comparison: timeA - timeB
           });
-        
-        // Second pass: Add appointmentHistory sessions only if not already seen
-        allTodaySessions
-          .filter(session => session.source === 'appointmentHistory')
-          .forEach(session => {
-            if (!seenAppointmentIds.has(session.appointmentId)) {
-              uniqueSessions.push(session);
-              seenAppointmentIds.add(session.appointmentId);
-            }
-          });
+          
+          return timeA - timeB;
+        });
 
-        // 4. Filter out sessions that already have attendance records
-        if (uniqueSessions.length > 0) {
-          const sessionsWithoutAttendance = await Promise.all(
-            uniqueSessions.map(async (session) => {
-              const attendanceRef = collection(db, 'attendance');
-              const appointmentId = session.appointmentId || session.id;
-
-              try {
-                const existingAttendanceQuery = query(
-                  attendanceRef,
-                  where('appointmentId', '==', appointmentId),
-                  where('volunteerId', 'in', [userId, username].filter(Boolean))
-                );
-
-                const existingAttendanceSnapshot = await getDocs(existingAttendanceQuery);
-
-                if (!existingAttendanceSnapshot.empty) {
-                  return null; // Attendance already recorded
-                }
-              } catch (attendanceError) {
-                console.error('Error checking attendance:', attendanceError);
-                // If query fails, include the session to be safe
-              }
-
-              return session;
-            })
-          );
-
-          // Filter out null values and sort by start time
-          const availableSessions = sessionsWithoutAttendance
-            .filter(session => session !== null)
-            .sort((a, b) => {
-              const timeA = parseTimeString(a.startTime);
-              const timeB = parseTimeString(b.startTime);
-              return timeA - timeB;
-            });
-
-          setTodaySessions(availableSessions);
-        } else {
-          setTodaySessions([]);
-        }
-
-        setSelectedSessions({});
+        setTodaySessions(availableSessions);
       } catch (error) {
         console.error('Error fetching today\'s sessions:', error);
         setTodaySessions([]);
+        setVolunteer(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchTodaySessions();
-    
-    // Refresh every 2 minutes to check for new sessions or time changes
-    const interval = setInterval(fetchTodaySessions, 120000);
-    return () => clearInterval(interval);
-  }, [username, userId, t]);
+  }, [username, userId]);
 
-  // Updated handleConfirm function
-  const handleConfirm = async (sessionId) => {
-    const session = todaySessions.find(s => s.id === sessionId);
-    if (!session) return;
+  return { todaySessions, setTodaySessions, loading, volunteer };
+};
 
+const useAttendanceHistory = (username, userId) => {
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [allUserRecords, setAllUserRecords] = useState([]);
+  const [totalHistoryCount, setTotalHistoryCount] = useState(0);
+  const [volunteer, setVolunteer] = useState(null);
+
+  const enrichHistoryData = async (records) => {
     try {
-      const [startTime, endTime] = session.time.split(' - ');
-      const attendanceStatus = getAttendanceStatus(startTime, endTime);
+      const calendarSnapshot = await getDocs(calendar_slotsRef);
+      const calendarData = {};
 
-      if (attendanceStatus === 'auto-absent') {
-        showNotification(t('attendance.notifications.sessionEnded'), 'error');
-        return;
-      }
-
-      let finalStatus;
-      let statusMessage;
-
-      switch (attendanceStatus) {
-        case 'present':
-          finalStatus = 'present';
-          statusMessage = t('attendance.notifications.confirmedPresent');
-          break;
-        case 'grace-period':
-          finalStatus = 'present';
-          statusMessage = t('attendance.notifications.confirmedGrace');
-          break;
-        case 'late':
-          finalStatus = 'late';
-          statusMessage = t('attendance.notifications.confirmedLate');
-          break;
-        default:
-          finalStatus = 'present';
-          statusMessage = t('attendance.notifications.confirmed');
-      }
-
-      // Check if attendance record already exists
-      const attendanceRef = collection(db, 'attendance');
-      const existingQuery = query(
-        attendanceRef,
-        where('appointmentId', '==', session.appointmentId || session.id),
-        where('volunteerId', '==', userId || username)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-
-      if (!existingSnapshot.empty) {
-        showNotification(t('attendance.notifications.alreadyRecorded'), 'warning');
-        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-        return;
-      }
-
-      let notes;
-      switch (attendanceStatus) {
-        case 'present':
-          notes = t('attendance.notes.beforeStart');
-          break;
-        case 'grace-period':
-          notes = t('attendance.notes.graceConfirmed');
-          break;
-        case 'late':
-          notes = t('attendance.notes.lateConfirmed');
-          break;
-        default:
-          notes = t('attendance.notes.confirmed');
-      }
-
-      // Add attendance record
-      await addDoc(collection(db, 'attendance'), {
-        appointmentId: session.appointmentId || session.id,
-        volunteerId: userId || username,
-        confirmedBy: username,
-        confirmedAt: Timestamp.now(),
-        status: finalStatus,
-        notes: notes
+      calendarSnapshot.docs.forEach(doc => {
+        const data = docToObject(doc);
+        const appointmentId = data.appointmentId || doc.id;
+        calendarData[appointmentId] = {
+          ...data,
+          id: doc.id
+        };
       });
 
-      // Update calendar_slots volunteer status to "completed"
-      if (session.source === 'calendar_slots') {
-        try {
-          const calendarRef = collection(db, 'calendar_slots');
-          const calendarQuery = query(
-            calendarRef, 
-            where('appointmentId', '==', session.appointmentId || session.id)
-          );
-          const calendarSnapshot = await getDocs(calendarQuery);
+      const enrichedHistory = records.map(record => {
+        const appointmentData = calendarData[record.appointmentId];
 
-          if (!calendarSnapshot.empty) {
-            const calendarDoc = calendarSnapshot.docs[0];
-            const calendarData = calendarDoc.data();
-            
-            const updatedVolunteerRequests = calendarData.volunteerRequests?.map(request => {
-              if (request.userId === userId || request.volunteerId === userId) {
-                return {
-                  ...request,
-                  status: 'completed',
-                  completedAt: Timestamp.now()
-                };
-              }
-              return request;
-            });
+        console.log('Enriching attendance record:', {
+          recordId: record.id,
+          appointmentId: record.appointmentId,
+          status: record.status,
+          appointmentData: appointmentData ? {
+            startTime: appointmentData.startTime,
+            endTime: appointmentData.endTime,
+            customLabel: appointmentData.customLabel
+          } : null
+        });
 
-            if (updatedVolunteerRequests) {
-              await updateDoc(calendarDoc.ref, {
-                volunteerRequests: updatedVolunteerRequests
-              });
-            }
+        let recordDate;
+        if (record.confirmedAt) {
+          recordDate = record.confirmedAt.toDate();
+        } else if (record.date) {
+          recordDate = new Date(record.date);
+        } else {
+          recordDate = new Date();
+        }
+
+        // Calculate hours - try multiple sources
+        let hours = 0;
+        if (appointmentData?.startTime && appointmentData?.endTime) {
+          hours = getHoursFromTimeRange(appointmentData.startTime, appointmentData.endTime);
+          console.log('Hours from appointmentData:', hours);
+        } else if (record.startTime && record.endTime) {
+          hours = getHoursFromTimeRange(record.startTime, record.endTime);
+          console.log('Hours from record data:', hours);
+        } else if (record.time) {
+          // Try to parse from time string like "9:00 AM - 11:00 AM"
+          const timeParts = record.time.split(' - ');
+          if (timeParts.length === 2) {
+            hours = getHoursFromTimeRange(timeParts[0], timeParts[1]);
+            console.log('Hours from time string:', hours);
           }
-        } catch (error) {
-          console.error('Error updating calendar slot status:', error);
         }
-      }
 
-      // Update appointmentHistory status to "completed"
-      if (session.source === 'appointmentHistory') {
-        try {
-          const volunteersRef = collection(db, 'volunteers');
-          const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
-          const volunteerSnapshot = await getDocs(volunteerQuery);
-
-          if (!volunteerSnapshot.empty) {
-            const volunteerDocRef = volunteerSnapshot.docs[0].ref;
-            const volunteerData = volunteerSnapshot.docs[0].data();
-            
-            const updatedAppointmentHistory = volunteerData.appointmentHistory?.map(appointment => {
-              if (appointment.appointmentId === (session.appointmentId || session.id)) {
-                return {
-                  ...appointment,
-                  status: 'completed'
-                };
-              }
-              return appointment;
-            });
-
-            if (updatedAppointmentHistory) {
-              await updateDoc(volunteerDocRef, {
-                appointmentHistory: updatedAppointmentHistory
-              });
-            }
+        // Determine session type and title
+        let sessionType = 'General Session';
+        let title = 'Volunteer Session';
+        
+        if (appointmentData) {
+          if (appointmentData.isCustom && appointmentData.customLabel) {
+            sessionType = appointmentData.customLabel;
+            title = appointmentData.customLabel;
+          } else if (appointmentData.sessionCategory) {
+            sessionType = appointmentData.sessionCategory;
+            // Use the session category as the title for translation
+            title = appointmentData.sessionCategory;
           }
-        } catch (error) {
-          console.error('Error updating appointment status:', error);
         }
-      }
 
-      // Update totalAttendance statistics
-      try {
-        const volunteersRef = collection(db, 'volunteers');
-        const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
-        const volunteerSnapshot = await getDocs(volunteerQuery);
-
-        if (!volunteerSnapshot.empty) {
-          const volunteerDocRef = volunteerSnapshot.docs[0].ref;
-          const volunteerData = volunteerSnapshot.docs[0].data();
-          
-          const currentAttendance = volunteerData.totalAttendance || {
-            present: 0,
-            late: 0,
-            absent: 0,
-            totalSessions: 0,
-            totalHours: 0
-          };
-
-          const sessionHours = getHoursFromTimeRange(session.startTime, session.endTime);
-
-          const updatedAttendance = {
-            ...currentAttendance,
-            [finalStatus]: (currentAttendance[finalStatus] || 0) + 1,
-            totalSessions: (currentAttendance.totalSessions || 0) + 1,
-            totalHours: (currentAttendance.totalHours || 0) + sessionHours
-          };
-
-          await updateDoc(volunteerDocRef, {
-            totalAttendance: updatedAttendance
-          });
+        // Determine the correct status for history display
+        let historyStatus = 'completed';
+        if (record.status === 'present') {
+          historyStatus = 'completed';
+        } else if (record.status === 'absent') {
+          historyStatus = 'missed';
+        } else {
+          // Skip records with other statuses - they shouldn't be in history
+          return null;
         }
-      } catch (error) {
-        console.error('Error updating attendance statistics:', error);
-      }
 
-      showNotification(statusMessage, 'success');
-      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-      await fetchInitialAttendanceHistory();
-      
-      // Refresh monthly stats
-      const newMonthlyStats = await fetchMonthlyStats();
-      setMonthlyStats(newMonthlyStats);
+        return {
+          id: record.id,
+          date: recordDate.toISOString().split('T')[0],
+          title: title,
+          time: appointmentData ?
+            `${appointmentData.startTime} - ${appointmentData.endTime}` :
+            record.time || 'Time not available',
+          status: historyStatus,
+          hours: hours,
+          notes: record.notes || '',
+          appointmentId: record.appointmentId,
+          sessionType: sessionType,
+          sessionCategory: appointmentData?.sessionCategory || 'general',
+          isCustom: appointmentData?.isCustom || false,
+          customLabel: appointmentData?.customLabel,
+          source: 'attendance'
+        };
+      });
 
+      // Filter out null values (records with invalid statuses)
+      return enrichedHistory.filter(record => record !== null);
     } catch (error) {
-      console.error('Error confirming attendance:', error);
-      showNotification(t('attendance.notifications.confirmError'), 'error');
+      console.error('Error enriching history data:', error);
+      return records;
     }
   };
 
-  // Updated handleCancel function
-  const handleCancel = async (sessionId) => {
-    const session = todaySessions.find(s => s.id === sessionId);
-    if (!session) return;
-
-    try {
-      const attendanceRef = collection(db, 'attendance');
-      const existingQuery = query(
-        attendanceRef,
-        where('appointmentId', '==', session.appointmentId || session.id),
-        where('volunteerId', '==', userId || username)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-
-      if (!existingSnapshot.empty) {
-        showNotification(t('attendance.notifications.alreadyRecorded'), 'warning');
-        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-        return;
-      }
-
-      // Create absent attendance record
-      await addDoc(collection(db, 'attendance'), {
-        appointmentId: session.appointmentId || session.id,
-        volunteerId: userId || username,
-        confirmedBy: username,
-        confirmedAt: Timestamp.now(),
-        status: 'absent',
-        notes: t('attendance.notes.cancelledByVolunteer')
-      });
-
-      // Update calendar_slots volunteer status to "canceled"
-      if (session.source === 'calendar_slots') {
-        try {
-          const calendarRef = collection(db, 'calendar_slots');
-          const calendarQuery = query(
-            calendarRef, 
-            where('appointmentId', '==', session.appointmentId || session.id)
-          );
-          const calendarSnapshot = await getDocs(calendarQuery);
-
-          if (!calendarSnapshot.empty) {
-            const calendarDoc = calendarSnapshot.docs[0];
-            const calendarData = calendarDoc.data();
-            
-            const updatedVolunteerRequests = calendarData.volunteerRequests?.map(request => {
-              if (request.userId === userId || request.volunteerId === userId) {
-                return {
-                  ...request,
-                  status: 'canceled',
-                  canceledAt: Timestamp.now(),
-                  cancelReason: t('attendance.cancelReasons.volunteerCanceled')
-                };
-              }
-              return request;
-            });
-
-            if (updatedVolunteerRequests) {
-              await updateDoc(calendarDoc.ref, {
-                volunteerRequests: updatedVolunteerRequests
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Error updating calendar slot status:', error);
-        }
-      }
-
-      // Update appointmentHistory status to "completed"
-      if (session.source === 'appointmentHistory') {
-        try {
-          const volunteersRef = collection(db, 'volunteers');
-          const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
-          const volunteerSnapshot = await getDocs(volunteerQuery);
-
-          if (!volunteerSnapshot.empty) {
-            const volunteerDocRef = volunteerSnapshot.docs[0].ref;
-            const volunteerData = volunteerSnapshot.docs[0].data();
-            
-            const updatedAppointmentHistory = volunteerData.appointmentHistory?.map(appointment => {
-              if (appointment.appointmentId === (session.appointmentId || session.id)) {
-                return {
-                  ...appointment,
-                  status: 'completed'
-                };
-              }
-              return appointment;
-            });
-
-            if (updatedAppointmentHistory) {
-              await updateDoc(volunteerDocRef, {
-                appointmentHistory: updatedAppointmentHistory
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Error updating appointment status:', error);
-        }
-      }
-
-      // Update totalAttendance statistics
-      try {
-        const volunteersRef = collection(db, 'volunteers');
-        const volunteerQuery = query(volunteersRef, where('userId', '==', userId));
-        const volunteerSnapshot = await getDocs(volunteerQuery);
-
-        if (!volunteerSnapshot.empty) {
-          const volunteerDocRef = volunteerSnapshot.docs[0].ref;
-          const volunteerData = volunteerSnapshot.docs[0].data();
-          
-          const currentAttendance = volunteerData.totalAttendance || {
-            present: 0,
-            late: 0,
-            absent: 0,
-            totalSessions: 0,
-            totalHours: 0
-          };
-
-          const updatedAttendance = {
-            ...currentAttendance,
-            absent: (currentAttendance.absent || 0) + 1,
-            totalSessions: (currentAttendance.totalSessions || 0) + 1
-          };
-
-          await updateDoc(volunteerDocRef, {
-            totalAttendance: updatedAttendance
-          });
-        }
-      } catch (error) {
-        console.error('Error updating attendance statistics:', error);
-      }
-
-      showNotification(t('attendance.notifications.markedAbsent'), 'info');
-      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
-      await fetchInitialAttendanceHistory();
-
-    } catch (error) {
-      console.error('Error cancelling attendance:', error);
-      showNotification(t('attendance.notifications.cancelError'), 'error');
-    }
-  };
-
-  // Auto-absent logic with grace period consideration
-  useEffect(() => {
-    const checkAndCreateAbsentRecords = async () => {
-      if (!username || todaySessions.length === 0) return;
-
-      for (const session of todaySessions) {
-        const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-
-        if (attendanceStatus === 'auto-absent') {
-          try {
-            const attendanceRef = collection(db, 'attendance');
-            const existingQuery = query(
-              attendanceRef,
-              where('appointmentId', '==', session.appointmentId || session.id),
-              where('volunteerId', '==', userId || username)
-            );
-            const existingSnapshot = await getDocs(existingQuery);
-
-            if (existingSnapshot.empty) {
-              await addDoc(collection(db, 'attendance'), {
-                appointmentId: session.appointmentId || session.id,
-                volunteerId: userId || username,
-                confirmedBy: username,
-                confirmedAt: Timestamp.now(),
-                status: 'absent',
-                notes: t('attendance.notes.autoAbsent')
-              });
-              
-              setTodaySessions(prev => prev.filter(s => s.id !== session.id));
-              await fetchInitialAttendanceHistory();
-            }
-          } catch (error) {
-            console.error('Error creating automatic absent record:', error);
-          }
-        }
-      }
-    };
-
-    const interval = setInterval(checkAndCreateAbsentRecords, 60000);
-    checkAndCreateAbsentRecords();
-
-    return () => clearInterval(interval);
-  }, [todaySessions, username, userId, t]);
-
-  // Fetch initial attendance history
   const fetchInitialAttendanceHistory = async () => {
     if (!userId && !username) return;
 
     try {
-      const attendanceRef = collection(db, 'attendance');
-      const snapshot = await getDocs(attendanceRef);
-      
-      let userRecords = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(record => {
-          return record.volunteerId === userId ||
-            record.volunteerId === username ||
-            record.confirmedBy === username;
-        });
+      // Get volunteer info first
+      const volunteerSnapshot = await getDocs(volunteersRef);
+      const volunteer = volunteerSnapshot.docs
+        .map(doc => docToObject(doc))
+        .find(v => v.userId === userId || v.userId === username);
 
-      userRecords.sort((a, b) => {
-        const dateA = a.confirmedAt?.toDate ? a.confirmedAt.toDate() : new Date(a.confirmedAt || 0);
-        const dateB = b.confirmedAt?.toDate ? b.confirmedAt.toDate() : new Date(b.confirmedAt || 0);
+      if (!volunteer) {
+        setVolunteer(null);
+        return;
+      }
+
+      setVolunteer(volunteer);
+
+      console.log('Found volunteer for history:', {
+        volunteerId: volunteer.id,
+        userId: volunteer.userId,
+        fullName: volunteer.fullName
+      });
+
+      // Fetch actual attendance records from the attendance collection
+      const attendanceQuery = query(
+        attendanceRef,
+        where('volunteerId.id', '==', volunteer.id)
+      );
+
+      const attendanceSnapshot = await getDocs(attendanceQuery);
+      const attendanceRecords = attendanceSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        source: 'attendance'
+      }));
+
+      console.log('Found attendance records:', attendanceRecords.length, attendanceRecords);
+
+      // Filter to only include completed or missed sessions
+      const validAttendanceRecords = attendanceRecords.filter(record => 
+        record.status === 'present' || record.status === 'absent'
+      );
+
+      console.log('Valid attendance records:', validAttendanceRecords.length, validAttendanceRecords);
+
+      // Sort records by date (most recent first)
+      validAttendanceRecords.sort((a, b) => {
+        const dateA = a.confirmedAt?.toDate() || new Date(a.date || 0);
+        const dateB = b.confirmedAt?.toDate() || new Date(b.date || 0);
         return dateB - dateA;
       });
 
-      setAllUserRecords(userRecords);
-      setTotalHistoryCount(userRecords.length);
+      setAllUserRecords(validAttendanceRecords);
+      setTotalHistoryCount(validAttendanceRecords.length);
 
-      const initialRecords = userRecords.slice(0, RECORDS_PER_PAGE);
-      setHasMoreHistory(userRecords.length > RECORDS_PER_PAGE);
+      const initialRecords = validAttendanceRecords.slice(0, RECORDS_PER_PAGE);
+      setHasMoreHistory(validAttendanceRecords.length > RECORDS_PER_PAGE);
       setHistoryPage(0);
 
       const enrichedHistory = await enrichHistoryData(initialRecords);
@@ -959,10 +663,10 @@ const Attendance = () => {
 
     } catch (error) {
       console.error('Error fetching attendance history:', error);
+      setVolunteer(null);
     }
   };
 
-  // Load more history records
   const loadMoreHistory = async () => {
     if (historyLoading || !hasMoreHistory) return;
 
@@ -977,8 +681,10 @@ const Attendance = () => {
 
       if (nextPageRecords.length > 0) {
         const enrichedNewRecords = await enrichHistoryData(nextPageRecords);
+
         setAttendanceHistory(prev => [...prev, ...enrichedNewRecords]);
         setHistoryPage(nextPage);
+
         setHasMoreHistory(endIndex < allUserRecords.length);
       } else {
         setHasMoreHistory(false);
@@ -991,72 +697,641 @@ const Attendance = () => {
     }
   };
 
-  // Helper function to enrich history data with appointment details
-  const enrichHistoryData = async (records) => {
-    try {
-      const calendarRef = collection(db, 'calendar_slots');
-      const calendarSnapshot = await getDocs(calendarRef);
-      const calendarData = {};
-
-      calendarSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const appointmentId = data.appointmentId || doc.id;
-        calendarData[appointmentId] = {
-          ...data,
-          id: doc.id
-        };
-      });
-
-      const enrichedHistory = records.map(record => {
-        const appointmentData = calendarData[record.appointmentId];
-
-        let recordDate;
-        if (record.confirmedAt?.toDate) {
-          recordDate = record.confirmedAt.toDate();
-        } else if (record.confirmedAt) {
-          recordDate = new Date(record.confirmedAt);
-        } else {
-          recordDate = new Date();
-        }
-
-        const sessionType = appointmentData?.customLabel ||
-          appointmentData?.sessionCategory ||
-          appointmentData?.sessionType ||
-          appointmentData?.type ||
-          appointmentData?.notes ||
-          'Session';
-
-        const sessionCategory = appointmentData?.sessionCategory;
-
-        return {
-          id: record.id,
-          date: recordDate.toISOString().split('T')[0],
-          title: translateSessionType(sessionType, sessionCategory),
-          time: appointmentData ?
-            `${appointmentData.startTime} - ${appointmentData.endTime}` :
-            t('attendance.messages.timeNotAvailable'),
-          status: record.status || 'present',
-          hours: getHoursFromTimeRange(appointmentData?.startTime, appointmentData?.endTime),
-          notes: record.notes || t('attendance.notes.confirmed'),
-          appointmentId: record.appointmentId
-        };
-      });
-
-      return enrichedHistory;
-    } catch (error) {
-      console.error('Error enriching history data:', error);
-      return records;
-    }
-  };
-
-  // Fetch attendance history on component mount
   useEffect(() => {
     if (userId || username) {
       fetchInitialAttendanceHistory();
     }
   }, [userId, username]);
 
-  // Function to get the appropriate tab icon
+  return {
+    attendanceHistory,
+    historyLoading,
+    hasMoreHistory,
+    totalHistoryCount,
+    loadMoreHistory,
+    refreshHistory: fetchInitialAttendanceHistory,
+    volunteer
+  };
+};
+
+// Components
+
+const LanguageToggle = ({ i18n, showLangOptions, setShowLangOptions, langToggleRef, setCurrentLanguage, applyLanguageDirection }) => {
+  return (
+    <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`} ref={langToggleRef}>
+      <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
+        <Globe className="lang-icon" />
+      </button>
+      {showLangOptions && (
+        <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
+          <button onClick={async () => {
+            localStorage.setItem('language', 'en');
+            await i18n.changeLanguage('en');
+            setCurrentLanguage('en');
+            applyLanguageDirection('en');
+            setShowLangOptions(false);
+          }}>
+            English
+          </button>
+          <button onClick={async () => {
+            localStorage.setItem('language', 'he');
+            await i18n.changeLanguage('he');
+            setCurrentLanguage('he');
+            applyLanguageDirection('he');
+            setShowLangOptions(false);
+          }}>
+            עברית
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Helper function to get translated session type
+const getSessionTypeDisplay = (session, t) => {
+  if (session.isCustom && session.customLabel) {
+    return session.customLabel;
+  }
+  if (session.sessionCategory) {
+    return t(`attendance.sessionCategories.${session.sessionCategory}`) || 
+           `${session.sessionCategory.charAt(0).toUpperCase() + session.sessionCategory.slice(1)} Session`;
+  }
+  return t('attendance.sessionCategories.general') || 'General Session';
+};
+
+const SessionCard = ({ session, index, onConfirm, onCancel, t, loadingState }) => {
+  const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
+  const canLogSession = isWithinSessionWindow(session.startTime, session.endTime);
+
+  const getSessionTimeStatus = () => {
+    const now = new Date();
+    const sessionStart = parseTimeString(session.startTime);
+
+    // Check if session has ended
+    if (attendanceStatus === 'ended') {
+      return {
+        message: t('attendance.timeStatus.sessionEnded'),
+        type: 'error',
+        canConfirm: false
+      };
+    }
+
+    // Check if within valid logging window
+    if (!canLogSession) {
+      const oneHourBeforeStart = new Date(sessionStart.getTime() - 60 * 60 * 1000);
+      if (now < oneHourBeforeStart) {
+        const minutesUntilWindow = Math.ceil((oneHourBeforeStart - now) / (60 * 1000));
+        let timeMessage;
+        if (minutesUntilWindow >= 60) {
+          const hours = (minutesUntilWindow / 60).toFixed(1);
+          timeMessage = `Session starts in ${hours} hour${hours !== '1.0' ? 's' : ''}`;
+        } else {
+          timeMessage = `Session starts in ${minutesUntilWindow} minute${minutesUntilWindow !== 1 ? 's' : ''}`;
+        }
+        return {
+          message: timeMessage,
+          type: 'info',
+          canConfirm: false
+        };
+      } else {
+        return {
+          message: t('attendance.timeStatus.sessionEnded'),
+          type: 'error',
+          canConfirm: false
+        };
+      }
+    }
+
+    // Within valid window
+    if (attendanceStatus === 'in-progress') {
+      return {
+        message: t('attendance.timeStatus.sessionInProgress'),
+        type: 'info',
+        canConfirm: true
+      };
+    } else if (attendanceStatus === 'upcoming') {
+      const minutesUntilStart = Math.ceil((sessionStart - now) / (60 * 1000));
+      let timeMessage;
+      if (minutesUntilStart >= 60) {
+        const hours = (minutesUntilStart / 60).toFixed(1);
+        timeMessage = `Session starts in ${hours} hour${hours !== '1.0' ? 's' : ''}`;
+      } else {
+        timeMessage = `Session starts in ${minutesUntilStart} minute${minutesUntilStart !== 1 ? 's' : ''}`;
+      }
+      return {
+        message: timeMessage,
+        type: 'info',
+        canConfirm: true
+      };
+    }
+
+    return {
+      message: t('attendance.timeStatus.unknownStatus'),
+      type: 'info',
+      canConfirm: true
+    };
+  };
+
+
+  const timeStatus = getSessionTimeStatus();
+  const canConfirm = timeStatus?.canConfirm !== false;
+
+  return (
+    <div className="session-card">
+      <div className="session-card-content">
+        <div className="session-card-header">
+          <h3 className="session-card-title">
+            {t('attendance.sessionNumber', { number: index + 1 })}
+          </h3>
+          <span className="session-card-time">{session.time}</span>
+        </div>
+
+        <div className="detail-divider"></div>
+
+        <div className="session-type">
+          <span className="session-type-label">{t('attendance.sessionType')}:</span>
+          <span className="session-type-value">{getSessionTypeDisplay(session, t)}</span>
+        </div>
+
+         {session.status === 'confirmed' ? (
+           <div className="status-message status-success">
+             <div className="status-message-header">
+               <CheckCircle2 className="status-message-icon" />
+               <p className="status-message-title">{t('attendance.attendanceConfirmed')}</p>
+             </div>
+             <p className="status-message-text">{t('attendance.youAttended')}</p>
+           </div>
+         ) : session.status === 'cancelled' ? (
+           <div className="status-message status-warning">
+             <div className="status-message-header">
+               <XCircle className="status-message-icon" />
+               <p className="status-message-title">{t('attendance.attendanceCancelled')}</p>
+             </div>
+             <p className="status-message-text">{t('attendance.youCancelled')}</p>
+           </div>
+         ) : !canConfirm ? (
+           <div className="status-message status-error">
+             <div className="status-message-header">
+               <XCircle className="status-message-icon" />
+               <p className="status-message-title">{t('attendance.sessionEnded')}</p>
+             </div>
+             <p className="status-message-text">{t('attendance.cannotConfirm')}</p>
+           </div>
+         ) : (
+           <>
+             <div className="status-message status-info">
+               <div className="status-message-header">
+                 <AlertCircle className="status-message-icon" />
+                 <p className="status-message-title">{t('attendance.confirmTitle')}</p>
+               </div>
+               <p className="status-message-text">{t('attendance.confirmMessage')}</p>
+             </div>
+
+             <div className="action-buttons">
+               <button
+                 onClick={() => onCancel(session.id)}
+                 className="btn btn-cancel"
+                 disabled={loadingState}
+               >
+                 {loadingState === 'cancelling' ? (
+                   <>
+                     <div className="loading-spinner"></div>
+                     <span className="btn-text">{t('attendance.cancelling')}</span>
+                   </>
+                 ) : (
+                   <>
+                     <X className="btn-icon" />
+                     <span className="btn-text">{t('attendance.unableToAttend')}</span>
+                   </>
+                 )}
+               </button>
+               <button
+                 onClick={() => onConfirm(session.id)}
+                 className="btn btn-confirm"
+                 disabled={loadingState}
+               >
+                 {loadingState === 'confirming' ? (
+                   <>
+                     <div className="loading-spinner"></div>
+                     <span className="btn-text">{t('attendance.confirming')}</span>
+                   </>
+                 ) : (
+                   <>
+                     <Check className="btn-icon" />
+                     <span className="btn-text">{t('attendance.confirm')}</span>
+                   </>
+                 )}
+               </button>
+             </div>
+           </>
+         )}
+      </div>
+    </div>
+  );
+};
+
+const PastSessionCard = ({ session, index, t }) => {
+  const getSessionTypeDisplay = (session, t) => {
+    if (session.isCustom && session.customLabel) {
+      return session.customLabel;
+    }
+    return t(`attendance.sessionCategories.${session.sessionCategory || 'general'}`);
+  };
+
+  return (
+    <div className="session-card">
+      <div className="session-card-content">
+        <div className="session-card-header">
+          <h3 className="session-card-title">{t('attendance.session')} {index + 1}</h3>
+          <div className="session-time-date">
+            <span className="session-card-time">{session.time}</span>
+            <span className="session-card-date">{session.date}</span>
+          </div>
+        </div>
+        
+        <div className="session-type">
+          <span className="session-type-label">{t('attendance.sessionType')}:</span>
+          <span className="session-type-value">{getSessionTypeDisplay(session, t)}</span>
+        </div>
+
+        {/* Status message for completed sessions */}
+        <div className="status-message status-success">
+          <div className="status-message-header">
+            <CheckCircle2 className="status-message-icon" />
+            <p className="status-message-title">{t('attendance.sessionCompleted')}</p>
+          </div>
+          <p className="status-message-text">{t('attendance.sessionCompletedDesc')}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HistoryItem = ({ session, t, i18n }) => {
+  const getSessionTypeDisplay = (session, t) => {
+    if (session.isCustom && session.customLabel) {
+      return session.customLabel;
+    }
+    if (session.sessionCategory) {
+      return t(`attendance.sessionCategories.${session.sessionCategory}`) || 
+             `${session.sessionCategory.charAt(0).toUpperCase() + session.sessionCategory.slice(1)} Session`;
+    }
+    return t('attendance.sessionCategories.general') || 'General Session';
+  };
+  const getStatusClass = (status) => {
+    const statusClasses = {
+      not_confirmed: 'status-not-confirmed',
+      confirmed: 'status-confirmed',
+      cancelled: 'status-cancelled',
+      ended: 'status-ended',
+      'in-progress': 'status-in-progress',
+      upcoming: 'status-upcoming',
+      present: 'status-attended',
+      absent: 'status-missed',
+      completed: 'status-completed',
+      approved: 'status-approved',
+      pending: 'status-pending',
+      rejected: 'status-rejected'
+    };
+    return statusClasses[status] || '';
+  };
+
+  const getStatusText = (status) => {
+    return t(`attendance.statuses.${status}`) || status;
+  };
+
+  return (
+    <div className="history-item">
+      <div>
+        <div className="history-item-header">
+          <h3 className="history-item-title">
+            {session.isCustom && session.customLabel 
+              ? session.customLabel 
+              : t('attendance.sessionCategories.' + (session.sessionCategory || 'general')) || session.title
+            }
+          </h3>
+          <span className={`status-badge ${getStatusClass(session.status)}`}>
+            {getStatusText(session.status)}
+          </span>
+        </div>
+        
+
+        <div className="history-item-details">
+          <div className="history-detail">
+            <CalendarDays className="history-detail-icon" />
+            <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            })}</span>
+          </div>
+          <div className="history-detail">
+            <Clock className="history-detail-icon" />
+            <span>{session.time}</span>
+          </div>
+        </div>
+
+        {(session.status === 'present' || session.status === 'completed') && (
+          <div className="history-metrics">
+            <div className="metric-item">
+              <TrendingUp className="metric-icon" />
+              <span className="metric-text">
+                {session.hours < 1
+                  ? t('attendance.minutesCompleted', { minutes: Math.round(session.hours * 60) })
+                  : t('attendance.hoursCompleted', { hours: session.hours.toFixed(2).replace(/\.?0+$/, '') })
+                }
+              </span>
+            </div>
+          </div>
+        )}
+
+        {session.notes && (
+          <p className="reason-text">
+            <span className="reason-label">{t('attendance.notes')}: </span>
+            {session.notes}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Main Component
+const Attendance = () => {
+  const { t, i18n } = useTranslation('attendance');
+  const [activeTab, setActiveTab] = useState('today');
+  const [showLangOptions, setShowLangOptions] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const [loadingStates, setLoadingStates] = useState({});
+  const langToggleRef = useRef(null);
+
+  // Custom hooks
+  const { username, userId } = useAuth();
+  const { toast } = useToast();
+  const { todaySessions, setTodaySessions, loading, volunteer: todayVolunteer } = useTodaySessions(username, userId);
+  const { pastSessions, loading: pastLoading } = usePastSessions(username, userId);
+  const {
+    attendanceHistory,
+    historyLoading,
+    hasMoreHistory,
+    totalHistoryCount,
+    loadMoreHistory,
+    refreshHistory,
+    volunteer: historyVolunteer
+  } = useAttendanceHistory(username, userId);
+
+  // Use the volunteer from today's sessions as the primary volunteer object
+  const volunteer = todayVolunteer || historyVolunteer;
+
+  // Robust language direction management
+  const applyLanguageDirection = (lang) => {
+    const dir = lang === 'he' ? 'rtl' : 'ltr';
+
+    // 1. Set the dir attribute on html element
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', lang);
+
+    // 2. Remove any stale RTL/LTR classes
+    document.body.classList.remove('rtl', 'ltr');
+    document.documentElement.classList.remove('rtl', 'ltr');
+
+    // 3. Add the correct direction class
+    document.body.classList.add(dir);
+    document.documentElement.classList.add(dir);
+
+    // 4. Set CSS direction property explicitly
+    document.body.style.direction = dir;
+    document.documentElement.style.direction = dir;
+
+    // 5. Remove any conflicting inline styles
+    const rootElements = document.querySelectorAll('[style*="direction"]');
+    rootElements.forEach(el => {
+      if (el !== document.body && el !== document.documentElement) {
+        el.style.direction = '';
+      }
+    });
+  };
+
+  useEffect(() => {
+    applyLanguageDirection(currentLanguage);
+  }, [currentLanguage]);
+
+  // Sync currentLanguage with i18n.language
+  useEffect(() => {
+    if (i18n.language !== currentLanguage) {
+      setCurrentLanguage(i18n.language);
+    }
+  }, [i18n.language, currentLanguage]);
+
+  // Handle click outside language toggle to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (langToggleRef.current && !langToggleRef.current.contains(event.target)) {
+        setShowLangOptions(false);
+      }
+    };
+
+    if (showLangOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLangOptions]);
+
+  // Attendance handlers
+  const handleConfirm = async (sessionId) => {
+    const session = todaySessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    // Check if volunteer object is available
+    if (!volunteer) {
+      toast({ 
+  title: t('attendance.notifications.volunteerInfoNotAvailable'), 
+  variant: "destructive" 
+});
+      return;
+    }
+
+    console.log('Confirming attendance with volunteer ID:', volunteer.id, 'for session:', sessionId);
+
+    // Set loading state for this session
+    setLoadingStates(prev => ({ ...prev, [sessionId]: 'confirming' }));
+
+    try {
+      const [startTime, endTime] = session.time.split(' - ');
+      const canLogSession = isWithinSessionWindow(startTime, endTime);
+
+      if (!canLogSession) {
+        toast({ 
+  title: t('attendance.notifications.sessionAlreadyEnded'), 
+  variant: "destructive" 
+});
+        return;
+      }
+
+      // Check for existing attendance record
+      const existingQuery = query(
+        attendanceRef,
+        where('appointmentId', '==', session.appointmentId || session.id),
+        where('volunteerId.id', '==', volunteer.id)
+      );
+      const existingSnapshot = await getDocs(existingQuery);
+
+      if (!existingSnapshot.empty) {
+        toast({ 
+  title: t('attendance.notifications.attendanceAlreadyRecorded'), 
+  variant: "default" 
+});
+        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+        return;
+      }
+
+      // Determine attendance status based on timing
+      const attendanceStatus = getAttendanceLoggingStatus(startTime, endTime);
+      
+      // Create attendance record with appropriate status
+      const attendanceData = {
+        appointmentId: session.appointmentId || session.id,
+        volunteerId: { id: volunteer.id, type: 'volunteer' },
+        status: attendanceStatus,
+        confirmedBy: 'volunteer',
+        confirmedAt: Timestamp.now(),
+        notes: `Session logged by volunteer at ${new Date().toLocaleTimeString()}`
+      };
+
+      console.log('Creating attendance record:', attendanceData);
+      await addDoc(attendanceRef, attendanceData);
+
+      // Show appropriate notification based on status
+      const notificationTitle = attendanceStatus === 'late' 
+        ? t('attendance.notifications.attendanceConfirmedLate')
+        : t('attendance.notifications.attendanceConfirmed');
+        
+      toast({ 
+        title: notificationTitle, 
+        variant: "default" 
+      });
+      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+      await refreshHistory();
+
+    } catch (error) {
+      console.error('Error confirming attendance:', error);
+      toast({ 
+  title: t('attendance.notifications.errorConfirmingAttendance'), 
+  variant: "destructive" 
+});
+    } finally {
+      // Clear loading state
+      setLoadingStates(prev => ({ ...prev, [sessionId]: null }));
+    }
+  };
+
+  const handleCancel = async (sessionId) => {
+    const session = todaySessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    // Check if volunteer object is available
+    if (!volunteer) {
+      toast({ 
+  title: t('attendance.notifications.volunteerInfoNotAvailable'), 
+  variant: "destructive" 
+});
+      return;
+    }
+
+    console.log('Cancelling attendance with volunteer ID:', volunteer.id, 'for session:', sessionId);
+
+    // Set loading state for this session
+    setLoadingStates(prev => ({ ...prev, [sessionId]: 'cancelling' }));
+
+    try {
+      const [startTime, endTime] = session.time.split(' - ');
+      const canLogSession = isWithinSessionWindow(startTime, endTime);
+
+      if (!canLogSession) {
+        toast({ 
+  title: t('attendance.notifications.sessionAlreadyEnded'), 
+  variant: "destructive" 
+});
+        return;
+      }
+
+      // Check for existing attendance record
+      const existingQuery = query(
+        attendanceRef,
+        where('appointmentId', '==', session.appointmentId || session.id),
+        where('volunteerId.id', '==', volunteer.id)
+      );
+      const existingSnapshot = await getDocs(existingQuery);
+
+      if (!existingSnapshot.empty) {
+        toast({ 
+  title: t('attendance.notifications.attendanceAlreadyRecorded'), 
+  variant: "default" 
+});
+        setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+        return;
+      }
+
+      // Create attendance record with absent status
+      const attendanceData = {
+        appointmentId: session.appointmentId || session.id,
+        volunteerId: { id: volunteer.id, type: 'volunteer' },
+        status: 'absent',
+        confirmedBy: 'volunteer',
+        confirmedAt: Timestamp.now(),
+        notes: `Session cancelled by volunteer at ${new Date().toLocaleTimeString()}`
+      };
+
+      console.log('Creating attendance record:', attendanceData);
+      await addDoc(attendanceRef, attendanceData);
+
+      toast({ 
+  title: t('attendance.notifications.markedAsUnableToAttend'), 
+  variant: "default" 
+});
+      setTodaySessions(prev => prev.filter(s => s.id !== sessionId));
+      await refreshHistory();
+
+    } catch (error) {
+      console.error('Error cancelling attendance:', error);
+      toast({ 
+  title: t('attendance.notifications.errorCancellingAttendance'), 
+  variant: "destructive" 
+});
+    } finally {
+      // Clear loading state
+      setLoadingStates(prev => ({ ...prev, [sessionId]: null }));
+    }
+  };
+
+  // Calculate stats
+  const stats = useMemo(() => ({
+    totalHours: attendanceHistory.reduce((sum, session) =>
+      sum + ((session.status === 'present' || session.status === 'completed') ? session.hours : 0), 0
+    ),
+    completedSessions: attendanceHistory.filter(session =>
+      session.status === 'present' || session.status === 'completed'
+    ).length,
+    attendanceRate: attendanceHistory.length > 0
+      ? ((attendanceHistory.filter(session => session.status === 'present' || session.status === 'completed').length / attendanceHistory.length) * 100).toFixed(1)
+      : 0,
+    thisMonthHours: attendanceHistory
+      .filter(session => {
+        const sessionDate = new Date(session.date);
+        const now = new Date();
+        return sessionDate.getMonth() === now.getMonth() &&
+          sessionDate.getFullYear() === now.getFullYear() &&
+          (session.status === 'present' || session.status === 'completed');
+      })
+      .reduce((sum, session) => sum + session.hours, 0)
+  }), [attendanceHistory]);
+
+  // Tab icon helper
   const getTabIcon = (key) => {
     switch (key) {
       case 'Today':
@@ -1068,125 +1343,6 @@ const Attendance = () => {
     }
   };
 
-  // Updated getSessionTimeStatus function with grace period logic
-  const getSessionTimeStatus = (session) => {
-    if (!session) return null;
-
-    const [startTime, endTime] = session.time.split(' - ');
-    const status = getAttendanceStatus(startTime, endTime);
-    const now = new Date();
-    const sessionStart = parseTimeString(startTime);
-    const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000);
-
-    switch (status) {
-      case 'auto-absent':
-        return {
-          message: t('attendance.timeStatus.sessionEnded'),
-          type: 'error',
-          canConfirm: false
-        };
-      case 'late':
-        return {
-          message: t('attendance.timeStatus.graceExpired'),
-          type: 'error',
-          canConfirm: true
-        };
-      case 'grace-period':
-        const remainingMinutes = Math.ceil((gracePeriodEnd - now) / (60 * 1000));
-        return {
-          message: t('attendance.timeStatus.graceActive', { minutes: remainingMinutes }),
-          type: 'warning',
-          canConfirm: true,
-          remainingTime: remainingMinutes
-        };
-      default:
-        const minutesUntilStart = Math.ceil((sessionStart - now) / (60 * 1000));
-        return {
-          message: t('attendance.timeStatus.sessionStarts', { minutes: minutesUntilStart }),
-          type: 'info',
-          canConfirm: true
-        };
-    }
-  };
-
-  // Updated status class function to handle grace period
-  const getStatusClass = (status) => {
-    const statusClasses = {
-      not_confirmed: 'status-not-confirmed',
-      confirmed: 'status-confirmed',
-      cancelled: 'status-cancelled',
-      'auto-absent': 'status-missed',
-      'grace-period': 'status-grace-period',
-      present: 'status-attended',
-      absent: 'status-missed',
-      late: 'status-late'
-    };
-    return statusClasses[status] || '';
-  };
-
-  // Updated status text function to handle grace period
-  const getStatusText = (status) => {
-    return t(`attendance.statuses.${status}`) || status;
-  };
-
-  // Real-time countdown component for grace period
-  const GracePeriodCountdown = ({ session }) => {
-    const [timeLeft, setTimeLeft] = useState(null);
-
-    useEffect(() => {
-      const updateCountdown = () => {
-        const now = new Date();
-        const sessionStart = parseTimeString(session.startTime);
-        const gracePeriodEnd = new Date(sessionStart.getTime() + 15 * 60 * 1000);
-        const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-
-        if (attendanceStatus === 'grace-period') {
-          const remaining = Math.ceil((gracePeriodEnd - now) / (60 * 1000));
-          setTimeLeft(remaining > 0 ? remaining : 0);
-        } else {
-          setTimeLeft(null);
-        }
-      };
-
-      updateCountdown();
-      const interval = setInterval(updateCountdown, 30000);
-
-      return () => clearInterval(interval);
-    }, [session]);
-
-    if (timeLeft === null) return null;
-
-    return (
-      <div className="grace-period-countdown">
-        <div className="countdown-container">
-          <div className="countdown-circle">
-            <span className="countdown-time">{timeLeft}</span>
-          </div>
-          <p className="countdown-text">
-            {timeLeft === 1
-              ? t('attendance.countdown.minuteLeft')
-              : t('attendance.countdown.minutesLeft', { count: timeLeft })}
-          </p>
-        </div>
-      </div>
-    );
-  };
-
-  // Updated stats calculation to use the separate monthly stats
-  const stats = {
-    totalHours: attendanceHistory.reduce((sum, session) =>
-      sum + (session.status === 'present' || session.status === 'late' ? session.hours : 0), 0
-    ),
-    completedSessions: attendanceHistory.filter(session =>
-      session.status === 'present' || session.status === 'late'
-    ).length,
-    attendanceRate: attendanceHistory.length > 0
-      ? ((attendanceHistory.filter(session => session.status === 'present' || session.status === 'late').length / attendanceHistory.length) * 100).toFixed(1)
-      : 0,
-    thisMonthHours: monthlyStats.thisMonthHours,
-    thisMonthSessions: monthlyStats.thisMonthSessions
-  };
-
   if (loading) {
     return <LoadingScreen />;
   }
@@ -1194,82 +1350,18 @@ const Attendance = () => {
   return (
     <Layout>
       <div className="attendance-container" dir={i18n.language === 'he' ? 'rtl' : 'ltr'}>
-        {/* Notification Toast */}
-        {notification.show && (
-          <div
-            className={`notification-toast ${notification.type}`}
-            style={{
-              position: 'fixed',
-              top: '20px',
-              right: '20px',
-              zIndex: 9999,
-              padding: '1rem 1.5rem',
-              borderRadius: '0.5rem',
-              color: 'white',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-              backgroundColor: notification.type === 'error' ? '#ef4444' :
-                notification.type === 'success' ? '#10b981' :
-                  notification.type === 'warning' ? '#f59e0b' : '#3b82f6',
-              transform: 'translateX(0)',
-              transition: 'all 0.3s ease',
-              maxWidth: '300px',
-              wordWrap: 'break-word'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {notification.type === 'error' && <span>❌</span>}
-              {notification.type === 'success' && <span>✅</span>}
-              {notification.type === 'warning' && <span>⚠️</span>}
-              {notification.type === 'info' && <span>ℹ️</span>}
-              <span>{notification.message}</span>
-              <button
-                onClick={() => setNotification({ show: false, message: "", type: "" })}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'white',
-                  fontSize: '1.2rem',
-                  cursor: 'pointer',
-                  marginLeft: 'auto',
-                  padding: '0',
-                  lineHeight: '1'
-                }}
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className={`language-toggle ${i18n.language === 'he' ? 'left' : 'right'}`}>
-          <button className="lang-button" onClick={() => setShowLangOptions(!showLangOptions)}>
-            <Globe size={35} />
-          </button>
-          {showLangOptions && (
-            <div className={`lang-options ${i18n.language === 'he' ? 'rtl-popup' : 'ltr-popup'}`}>
-              <button onClick={() => { i18n.changeLanguage('en'); setShowLangOptions(false); }}>
-                {t('attendance.language.english')}
-              </button>
-              <button onClick={() => { i18n.changeLanguage('he'); setShowLangOptions(false); }}>
-                {t('attendance.language.hebrew')}
-              </button>
-            </div>
-          )}
-        </div>
 
         <div className="attendance-wrapper">
           {/* Header */}
-          <div className="attendance-header">
-            <h1 className="attendance-title">{t('attendance.title')}</h1>
-            <p className="attendance-subtitle">{t('attendance.subtitle')}</p>
+          <div className="profile-header">
+            <h1 className="profile-title">{t('attendance.title')}</h1>
+            <p className="profile-subtitle">{t('attendance.subtitle')}</p>
           </div>
 
           {/* Tab Navigation */}
           <div className="profile-tabs">
             <div className="tabs">
-              {["Today", "History"].map((key) => (
+              {["today", "history"].map((key) => (
                 <button
                   key={key}
                   className={`tab-item ${activeTab === key ? "active" : ""}`}
@@ -1282,175 +1374,37 @@ const Attendance = () => {
           </div>
 
           {/* Today's Session Tab */}
-          {activeTab === 'Today' && (
+          {activeTab === 'today' && (
             <div className="responsive-content-grid">
               <div className="main-session-area">
                 {todaySessions.length > 0 ? (
                   <div className="sessions-container">
                     <h2 className="sessions-title">
-                      {t('attendance.messages.todaysSessions')} ({todaySessions.length})
+                      {t('attendance.todaysSessions')} ({todaySessions.length})
                     </h2>
                     {todaySessions.map((session, index) => (
-                      <div key={session.id} className="session-card">
-                        <div className="session-card-content">
-                          <div className="session-card-header">
-                            <h3 className="session-card-title">
-                              {t('attendance.messages.sessionNumber', { number: index + 1 })}: {translateSessionType(session.sessionType, session.sessionCategory)}
-                            </h3>
-                            <span className="session-time-badge">{session.time}</span>
-                          </div>
-                          <p className="session-card-description">{t('attendance.messages.pleaseConfirm')}</p>
-
-                          {/* Progress Bar */}
-                          <div className="session-progress-bar">
-                            <div className={`session-progress-fill ${getAttendanceStatus(session.startTime, session.endTime)}`}></div>
-                          </div>
-
-                          <div className="session-details">
-                            <div className="detail-row detail-row-responsive">
-                              <div className="detail-content">
-                                <Clock className="detail-icon" />
-                                <div>
-                                  <p className="detail-label">{t('attendance.fields.time')}</p>
-                                  <p className="detail-value">{session.time}</p>
-                                </div>
-                              </div>
-                              <div className="detail-section">
-                                <p className="detail-label">{t('attendance.fields.date')}</p>
-                                <p className="detail-value">{t('attendance.messages.today')}</p>
-                              </div>
-                            </div>
-
-                            <div className="detail-row">
-                              <Users className="detail-icon" />
-                              <div className="detail-content">
-                                <p className="detail-label">{t('attendance.fields.sessionType')}</p>
-                                <p className="detail-value">{translateSessionType(session.sessionType, session.sessionCategory)}</p>
-                              </div>
-                            </div>
-
-                            <div className="detail-divider"></div>
-
-                            <div className="detail-row">
-                              <FileText className="detail-icon" />
-                              <div className="detail-content">
-                                <p className="detail-label" style={{ marginBottom: '0.5rem' }}>{t('attendance.fields.description')}</p>
-                                <p className="detail-value">{session.description}</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="status-section">
-                            <div className="status-row">
-                              <span className="status-label">{t('attendance.fields.status')}:</span>
-                              <span className={`status-badge ${getStatusClass(selectedSessions[session.id]?.status || session.status)}`}>
-                                {getStatusText(selectedSessions[session.id]?.status || session.status)}
-                              </span>
-                            </div>
-
-                            {/* Time Status Indicator */}
-                            {(() => {
-                              const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-                              return (
-                                <div className={`time-status-indicator ${attendanceStatus}`}>
-                                  {attendanceStatus === 'present' && `✅ ${t('attendance.timeStatus.onTime')}`}
-                                  {attendanceStatus === 'grace-period' && `⏰ ${t('attendance.timeStatus.graceActive')}`}
-                                  {attendanceStatus === 'late' && `⚠️ ${t('attendance.timeStatus.late')}`}
-                                  {attendanceStatus === 'auto-absent' && `❌ ${t('attendance.timeStatus.ended')}`}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Grace Period Countdown */}
-                            {getAttendanceStatus(session.startTime, session.endTime) === 'grace-period' && (
-                              <GracePeriodCountdown session={session} />
-                            )}
-
-                            {/* Show time-based status information */}
-                            {(() => {
-                              const timeStatus = getSessionTimeStatus(session);
-                              if (timeStatus && !selectedSessions[session.id]) {
-                                return (
-                                  <div className={`alert-box alert-${timeStatus.type}`}>
-                                    <AlertCircle className="alert-icon" />
-                                    <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.messages.sessionTiming')}</p>
-                                      <p className="alert-message">{timeStatus.message}</p>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-
-                            {(!selectedSessions[session.id] || selectedSessions[session.id].status === 'not_confirmed') && (() => {
-                              const timeStatus = getSessionTimeStatus(session);
-                              const attendanceStatus = getAttendanceStatus(session.startTime, session.endTime);
-                              const canConfirm = timeStatus?.canConfirm !== false;
-
-                              if (!canConfirm) {
-                                return (
-                                  <div className="status-message status-error">
-                                    <div className="status-message-header">
-                                      <XCircle className="status-message-icon" />
-                                      <p className="status-message-title">{t('attendance.messages.sessionEnded')}</p>
-                                    </div>
-                                    <p className="status-message-text">{t('attendance.messages.autoMarkedAbsent')}</p>
-                                  </div>
-                                );
-                              }
-
-                              return (
-                                <>
-                                  <div className="alert-box alert-warning">
-                                    <AlertCircle className="alert-icon" />
-                                    <div className="alert-content">
-                                      <p className="alert-title">{t('attendance.messages.confirmTitle')}</p>
-                                      <p className="alert-message">{t('attendance.messages.confirmMessage')}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="action-buttons">
-                                    <button
-                                      onClick={() => handleCancel(session.id)}
-                                      className="btn btn-cancel"
-                                    >
-                                      <X className="btn-icon" />
-                                      <span className="btn-text">{t('attendance.buttons.unableToAttend')}</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleConfirm(session.id)}
-                                      className={`btn btn-confirm ${attendanceStatus === 'grace-period' ? 'grace-period' : ''} ${attendanceStatus === 'late' ? 'late' : ''}`}
-                                    >
-                                      <Check className="btn-icon" />
-                                      <span className="btn-text">
-                                        {attendanceStatus === 'late'
-                                          ? t('attendance.buttons.confirmLate')
-                                          : attendanceStatus === 'grace-period'
-                                            ? t('attendance.buttons.confirmGrace')
-                                            : t('attendance.buttons.confirm')}
-                                      </span>
-                                    </button>
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      </div>
+                      <SessionCard
+                        key={session.id}
+                        session={session}
+                        index={index}
+                        onConfirm={handleConfirm}
+                        onCancel={handleCancel}
+                        t={t}
+                        loadingState={loadingStates[session.id]}
+                      />
                     ))}
                   </div>
                 ) : (
                   <div className="session-card">
                     <div className="session-card-content">
-                      <h2 className="session-card-title">{t('attendance.messages.noSessions')}</h2>
-                      <p className="session-card-description">{t('attendance.messages.noSessionsDesc')}</p>
-                      <div className="alert-box alert-info">
-                        <AlertCircle className="alert-icon" />
-                        <div className="alert-content">
-                          <p className="alert-title">{t('attendance.messages.noSessionsTitle')}</p>
-                          <p className="alert-message">{t('attendance.messages.noSessionsMessage')}</p>
+                      <h2 className="session-card-title">{t('attendance.noSessions')}</h2>
+                      <p className="session-card-description">{t('attendance.noSessionsDesc')}</p>
+                      <div className="status-message status-info">
+                        <div className="status-message-header">
+                          <AlertCircle className="status-message-icon" />
+                          <p className="status-message-title">{t('attendance.noSessionsTitle')}</p>
                         </div>
+                        <p className="status-message-text">{t('attendance.noSessionsMessage')}</p>
                       </div>
                     </div>
                   </div>
@@ -1460,196 +1414,53 @@ const Attendance = () => {
           )}
 
           {/* History Tab */}
-          {activeTab === 'History' && (
-            <div>
-              {/* Monthly Summary */}
-              <div className="monthly-summary">
-                <h3 className="monthly-summary-title">{t('attendance.history.thisMonth')}</h3>
-                <div className="monthly-stats" style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
-                  <div>
-                    <p className="monthly-stat-label">{t('attendance.stats.sessions')}</p>
-                    <p className="monthly-stat-value">{monthlyStats.thisMonthSessions}</p>
-                  </div>
-                  <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                    <p className="monthly-stat-label">{t('attendance.stats.hours')}</p>
-                    <p className="monthly-stat-value">{monthlyStats.thisMonthHours.toFixed(1)}</p>
-                  </div>
-                  <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                    <p className="monthly-stat-label">{t('attendance.stats.attendanceRate')}</p>
-                    <p className="monthly-stat-value">{stats.attendanceRate}%</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* History List */}
-              <div className="history-list">
-                {monthlyStats.thisMonthHistory.length > 0 ? (
-                  <>
-                    <h3 className="history-section-title">{t('attendance.history.monthlyHistory')}</h3>
-                    {monthlyStats.thisMonthHistory.map((session) => (
-                      <div key={session.id} className="history-item">
-                        <div>
-                          <div className="history-item-header">
-                            <h3 className="history-item-title">
-                              {translateSessionType(session.sessionType, session.sessionCategory)}
-                            </h3>
-                            <span className={`status-badge ${getStatusClass(session.status)}`}>
-                              {getStatusText(session.status)}
-                            </span>
-                          </div>
-
-                          <div className="history-item-details">
-                            <div className="history-detail">
-                              <CalendarDays className="history-detail-icon" />
-                              <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}</span>
-                            </div>
-                            <div className="history-detail">
-                              <Clock className="history-detail-icon" />
-                              <span>{session.time}</span>
-                            </div>
-                          </div>
-
-                          {(session.status === 'present' || session.status === 'late') && (
-                            <div className="history-metrics">
-                              <div className="metric-item">
-                                <TrendingUp className="metric-icon" />
-                                <span className="metric-text">
-                                  {t('attendance.history.hoursCompleted', { hours: session.hours.toFixed(1) })}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          {session.notes && (
-                            <p className="reason-text">
-                              <span className="reason-label">{t('attendance.fields.notes')}: </span>
-                              {/* Translate notes if they match known patterns */}
-                              {session.notes === 'Cancelled by volunteer' ? t('attendance.notes.cancelledByVolunteer') : 
-                               session.notes === 'Confirmed before session start' ? t('attendance.notes.beforeStart') :
-                               session.notes === 'Confirmed during grace period' ? t('attendance.notes.graceConfirmed') :
-                               session.notes === 'Confirmed after grace period - marked late' ? t('attendance.notes.lateConfirmed') :
-                               session.notes === 'Attendance confirmed by volunteer' ? t('attendance.notes.confirmed') :
-                               session.notes === 'Automatically marked absent - session ended without confirmation' ? t('attendance.notes.autoAbsent') :
-                               session.notes}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+          {activeTab === 'history' && (
+            <div className="responsive-content-grid">
+              <div className="main-session-area">
+                {pastSessions.length > 0 ? (
+                  <div className="sessions-container">
+                    <h2 className="sessions-title">
+                      {t('attendance.pastSessions')} ({pastSessions.length})
+                    </h2>
+                    {pastSessions.map((session, index) => (
+                      <PastSessionCard
+                        key={session.id}
+                        session={session}
+                        index={index}
+                        t={t}
+                      />
                     ))}
-                  </>
+                  </div>
                 ) : (
-                  <div className="history-item">
-                    <p>{t('attendance.history.noMonthlyHistory')}</p>
-                  </div>
-                )}
-
-                {/* All Time History */}
-                {attendanceHistory.length > 0 && (
-                  <>
-                    <h3 className="history-section-title">{t('attendance.history.allTimeHistory')}</h3>
-                    {attendanceHistory.map((session) => (
-                      <div key={session.id} className="history-item">
-                        <div>
-                          <div className="history-item-header">
-                            <h3 className="history-item-title">
-                              {translateSessionType(session.title, session.sessionCategory)}
-                            </h3>
-                            <span className={`status-badge ${getStatusClass(session.status)}`}>
-                              {getStatusText(session.status)}
-                            </span>
-                          </div>
-
-                          <div className="history-item-details">
-                            <div className="history-detail">
-                              <CalendarDays className="history-detail-icon" />
-                              <span>{new Date(session.date).toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}</span>
-                            </div>
-                            <div className="history-detail">
-                              <Clock className="history-detail-icon" />
-                              <span>{session.time}</span>
-                            </div>
-                          </div>
-
-                          {(session.status === 'present' || session.status === 'late') && (
-                            <div className="history-metrics">
-                              <div className="metric-item">
-                                <TrendingUp className="metric-icon" />
-                                <span className="metric-text">
-                                  {t('attendance.history.hoursCompleted', { hours: session.hours.toFixed(1) })}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          {session.notes && (
-                            <p className="reason-text">
-                              <span className="reason-label">{t('attendance.fields.notes')}: </span>
-                              {/* Translate notes if they match known patterns */}
-                              {session.notes === 'Cancelled by volunteer' ? t('attendance.notes.cancelledByVolunteer') : 
-                               session.notes === 'Confirmed before session start' ? t('attendance.notes.beforeStart') :
-                               session.notes === 'Confirmed during grace period' ? t('attendance.notes.graceConfirmed') :
-                               session.notes === 'Confirmed after grace period - marked late' ? t('attendance.notes.lateConfirmed') :
-                               session.notes === 'Attendance confirmed by volunteer' ? t('attendance.notes.confirmed') :
-                               session.notes === 'Automatically marked absent - session ended without confirmation' ? t('attendance.notes.autoAbsent') :
-                               session.notes}
-                            </p>
-                          )}
+                  <div className="session-card">
+                    <div className="session-card-content">
+                      <h2 className="session-card-title">{t('attendance.noPastSessions')}</h2>
+                      <p className="session-card-description">{t('attendance.noPastSessionsDesc')}</p>
+                      <div className="status-message status-info">
+                        <div className="status-message-header">
+                          <AlertCircle className="status-message-icon" />
+                          <p className="status-message-title">{t('attendance.noPastSessionsTitle')}</p>
                         </div>
+                        <p className="status-message-text">{t('attendance.noPastSessionsMessage')}</p>
                       </div>
-                    ))}
-
-                    {/* Load More Button */}
-                    {hasMoreHistory && (
-                      <div className="load-more">
-                        <button
-                          className={`load-more-btn ${historyLoading ? 'loading' : ''}`}
-                          onClick={loadMoreHistory}
-                          disabled={historyLoading}
-                        >
-                          {historyLoading ? (
-                            <>
-                              <div className="loading-spinner"></div>
-                              <span>{t('attendance.buttons.loading')}</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>{t('attendance.buttons.loadMore')}</span>
-                              <ChevronRight className="load-more-icon" />
-                            </>
-                          )}
-                        </button>
-                        <p className="load-more-info">
-                          {t('attendance.history.showingRecords', { showing: attendanceHistory.length, total: totalHistoryCount })}
-                        </p>
-                      </div>
-                    )}
-
-                    {!hasMoreHistory && attendanceHistory.length >= RECORDS_PER_PAGE && (
-                      <div className="load-more">
-                        <p className="all-loaded-text">
-                          ✅ {t('attendance.history.allLoaded', { count: attendanceHistory.length })}
-                        </p>
-                      </div>
-                    )}
-                  </>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+      <LanguageToggle
+        i18n={i18n}
+        showLangOptions={showLangOptions}
+        setShowLangOptions={setShowLangOptions}
+        langToggleRef={langToggleRef}
+        setCurrentLanguage={setCurrentLanguage}
+        applyLanguageDirection={applyLanguageDirection}
+      />
     </Layout>
   );
 };
 
-export default Attendance;
+export default Attendance; 
